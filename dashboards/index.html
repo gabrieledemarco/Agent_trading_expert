@@ -108,17 +108,17 @@
         <nav class="sidebar">
             <div class="sidebar-section">
                 <div class="sidebar-title">Dashboard</div>
-                <div class="sidebar-item active"><span>&#x25CF;</span> Overview</div>
+                <a href="index.html" class="sidebar-item active"><span>&#x25CF;</span> Overview</a>
             </div>
             <div class="sidebar-section">
                 <div class="sidebar-title">Analisi</div>
-                <div class="sidebar-item" onclick="openPage('dashboard_performance.html')"><span>&#x25A3;</span> Performance</div>
-                <div class="sidebar-item" onclick="openPage('dashboard_documentation.html')"><span>&#x25A4;</span> Documentation</div>
-                <div class="sidebar-item" onclick="openPage('dashboard_live.html')"><span>&#x25B6;</span> Live Monitor</div>
+                <a href="dashboard_performance.html" class="sidebar-item"><span>&#x25A3;</span> Performance</a>
+                <a href="dashboard_documentation.html" class="sidebar-item"><span>&#x25A4;</span> Documentation</a>
+                <a href="dashboard_live.html" class="sidebar-item"><span>&#x25B6;</span> Live Monitor</a>
             </div>
             <div class="sidebar-section">
                 <div class="sidebar-title">Sistema</div>
-                <div class="sidebar-item" onclick="openPage('dashboard_with_chat.html')"><span>&#x25A8;</span> Chat</div>
+                <a href="dashboard_with_chat.html" class="sidebar-item"><span>&#x25A8;</span> Chat</a>
             </div>
             <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
         </nav>
@@ -158,9 +158,10 @@
                 <div class="table-section half-row">
                     <div class="table-title">QUICK ACCESS</div>
                     <div class="quick-grid">
-                        <div class="quick-box" onclick="openPage('dashboard_performance.html')"><div class="quick-box-title">PERFORMANCE</div><div class="quick-box-desc">Metriche e backtest</div></div>
-                        <div class="quick-box" onclick="openPage('dashboard_documentation.html')"><div class="quick-box-title">DOCUMENTATION</div><div class="quick-box-desc">Research e modelli</div></div>
-                        <div class="quick-box" onclick="openPage('dashboard_live.html')"><div class="quick-box-title">LIVE MONITOR</div><div class="quick-box-desc">Streaming real-time</div></div>
+                        <a href="dashboard_performance.html" class="quick-box" style="text-decoration:none;color:inherit;"><div class="quick-box-title">PERFORMANCE</div><div class="quick-box-desc">Metriche e backtest</div></a>
+                        <a href="dashboard_documentation.html" class="quick-box" style="text-decoration:none;color:inherit;"><div class="quick-box-title">DOCUMENTATION</div><div class="quick-box-desc">Research e modelli</div></a>
+                        <a href="dashboard_live.html" class="quick-box" style="text-decoration:none;color:inherit;"><div class="quick-box-title">LIVE MONITOR</div><div class="quick-box-desc">Streaming real-time</div></a>
+                        <a href="dashboard_with_chat.html" class="quick-box" style="text-decoration:none;color:inherit;"><div class="quick-box-title">CHAT ASSISTANT</div><div class="quick-box-desc">Interagisci con il sistema</div></a>
                     </div>
                 </div>
                 
