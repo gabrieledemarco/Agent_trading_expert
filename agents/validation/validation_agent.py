@@ -336,6 +336,7 @@ The model generates trading signals based on:
             risk_return["max_drawdown"],
             risk_return["risk_score"],
             risk_return["win_rate"],
+            risk_return["return_score"],
         )
 
         doc += """

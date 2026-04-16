@@ -45,8 +45,9 @@ class SpecAgent:
         abstract_lines = []
 
         for line in lines:
-            # Match numbered heading (e.g., "### 1. Title")
-            match = re.match(r"^###\s+\d+\.\s+(.+)$", line)
+            # Match numbered heading (handle both plain text and $ formats)
+            clean_line = line.replace("$", "")
+            match = re.match(r"^###\s+\d+\.\s+(.+)$", clean_line)
             if match:
                 if current_paper:
                     papers.append(current_paper)
@@ -55,18 +56,22 @@ class SpecAgent:
                 abstract_lines = []
                 continue
 
-            # Match metadata fields
-            if line.startswith("- **ID**:"):
-                current_paper["id"] = line.split(":**")[1].strip()
-            elif line.startswith("- **Published**:"):
-                current_paper["published"] = line.split(":**")[1].strip()
-            elif line.startswith("- **Authors**:"):
-                current_paper["authors"] = line.split(":**")[1].strip()
-            elif line.startswith("- **Categories**:"):
-                current_paper["categories"] = line.split(":**")[1].strip()
-            elif line.startswith("- **PDF**:"):
-                current_paper["pdf_url"] = line.split(":**")[1].strip()
-            elif "**Abstract**" in line:
+            # Match metadata fields - handle all bold formats
+            clean_line = line.replace("$", "").replace("**", "").replace("*", "")
+            # Now format is "- ID:" so strip the "- " prefix first
+            if clean_line.startswith("- "):
+                field_line = clean_line[2:]  # Remove "- " prefix
+                if field_line.startswith("ID:"):
+                    current_paper["id"] = field_line[3:].strip()
+                elif field_line.startswith("Published:"):
+                    current_paper["published"] = field_line[10:].strip()
+                elif field_line.startswith("Authors:"):
+                    current_paper["authors"] = field_line[8:].strip()
+                elif field_line.startswith("Categories:"):
+                    current_paper["categories"] = field_line[12:].strip()
+                elif field_line.startswith("PDF:"):
+                    current_paper["pdf_url"] = field_line[4:].strip()
+            elif "Abstract" in clean_line:
                 in_abstract = True
                 continue
 

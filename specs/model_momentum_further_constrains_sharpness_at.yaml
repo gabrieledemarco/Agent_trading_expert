@@ -1,0 +1,72 @@
+action_plan:
+- Clone/fork paper implementation if available
+- Set up data pipeline for time_series_forecasting
+- Implement model architecture
+- Train on historical data
+- Run backtesting validation
+- Test with paper trading
+architecture:
+  input_features:
+  - close_price
+  - volume
+  - price_returns
+  - moving_averages
+  layers:
+  - shape: '[None, 60, 10]'
+    type: Input
+  - return_sequences: true
+    type: LSTM
+    units: 128
+  - rate: 0.2
+    type: Dropout
+  - type: LSTM
+    units: 64
+  - rate: 0.2
+    type: Dropout
+  - activation: relu
+    type: Dense
+    units: 32
+  - type: Output
+    units: 1
+  output_type: price_prediction
+data_requirements:
+  frequency: daily
+  lookback_period: 2 years
+  required_columns:
+  - open
+  - high
+  - low
+  - close
+  - volume
+  sources:
+  - yfinance
+  - alpha_vantage
+generated_at: '2026-04-16T15:37:36.941585'
+model:
+  description: Recent work suggests that (stochastic) gradient descent self-organizes
+    near an instability boundary, shaping both optimization and the solutions found.
+    Momentum and mini-batch gradients are widely used in practical deep learning optimization,
+    but it remains unclear whether they operate in a comparable regime of instability.
+    We demonstrate that SGD with momentum exhibits an Edge of Stochastic Stability
+    (EoSS)-like regime with batch-size-dependent behavior that cannot be explained
+    by a single mome
+  name: model_momentum_further_constrains_sharpness_at
+  type: time_series_forecasting
+source_paper:
+  id: http://arxiv.org/abs/2604.14108v1
+  published: '2026-04-15'
+  title: Momentum Further Constrains Sharpness at the Edge of Stochastic Stability
+spec_version: '1.0'
+training:
+  batch_size: 32
+  early_stopping_patience: 10
+  epochs: 100
+  framework: pytorch
+  validation_split: 0.2
+validation:
+  backtest_period: 1 year
+  metrics:
+  - sharpe_ratio
+  - max_drawdown
+  - total_return
+  out_of_sample_testing: true
