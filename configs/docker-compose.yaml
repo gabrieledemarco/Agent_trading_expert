@@ -1,0 +1,163 @@
+# Trading Agents - Docker Compose Configuration
+
+version: '3.8'
+
+services:
+  # PostgreSQL for state persistence
+  postgres:
+    image: postgres:15-alpine
+    container_name: trading-agents-db
+    environment:
+      POSTGRES_DB: trading_agents
+      POSTGRES_USER: trading_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: trading-agents-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # MLflow for model registry
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.12.0
+    container_name: trading-agents-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      MLFLOW_S3_ENDPOINT_URL: ${MLFLOW_S3_ENDPOINT_URL:-}
+      MLFLOW_TRACKING_URI: postgresql://trading_user:${DB_PASSWORD:-changeme}@postgres:5432/trading_agents
+    volumes:
+      - mlflow_data:/mlflow
+    depends_on:
+      - postgres
+
+  # Research Agent
+  research-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-agents-research
+    environment:
+      PYTHONUNBUFFERED: 1
+      LOG_LEVEL: INFO
+    volumes:
+      - ./data:/app/data
+      - ./specs:/app/specs
+    depends_on:
+      - postgres
+      - redis
+    command: python -m agents.research.research_agent
+    restart: on-failure
+
+  # Spec Agent
+  spec-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-agents-spec
+    environment:
+      PYTHONUNBUFFERED: 1
+      LOG_LEVEL: INFO
+    volumes:
+      - ./data:/app/data
+      - ./specs:/app/specs
+    depends_on:
+      - postgres
+      - redis
+    command: python -m agents.spec.spec_agent
+    restart: on-failure
+
+  # ML Engineer Agent
+  ml-engineer-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-agents-ml-engineer
+    environment:
+      PYTHONUNBUFFERED: 1
+      LOG_LEVEL: INFO
+      CUDA_VISIBLE_DEVICES: "0"
+    volumes:
+      - ./models:/app/models
+      - ./specs:/app/specs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      - postgres
+      - redis
+      - mlflow
+    command: python -m agents.ml_engineer.ml_engineer_agent
+    restart: on-failure
+
+  # Trading Executor Agent
+  trading-executor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-agents-executor
+    environment:
+      PYTHONUNBUFFERED: 1
+      LOG_LEVEL: INFO
+      TRADING_MODE: ${TRADING_MODE:-paper}
+      INITIAL_CAPITAL: ${INITIAL_CAPITAL:-10000}
+    volumes:
+      - ./models:/app/models
+      - ./trading_logs:/app/trading_logs
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    command: python -m agents.trading.trading_executor
+    restart: unless-stopped
+
+  # API Server (optional)
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-agents-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://trading_user:${DB_PASSWORD:-changeme}@postgres:5432/trading_agents
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - ./models:/app/models
+      - ./trading_logs:/app/trading_logs
+    depends_on:
+      - postgres
+      - redis
+      - mlflow
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  mlflow_data:
+
+networks:
+  default:
+    name: trading-agents-network

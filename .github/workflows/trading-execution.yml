@@ -1,0 +1,112 @@
+name: Trading Execution
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: 'Model version to trade'
+        required: true
+        type: string
+      symbols:
+        description: 'Trading symbols (comma separated)'
+        required: false
+        default: 'AAPL,MSFT,GOOG'
+        type: string
+      paper_trading:
+        description: 'Use paper trading (no real money)'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  execute-trading:
+    runs-on: self-hosted
+    environment: trading
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance pandas numpy torch scikit-learn
+
+      - name: Verify model exists
+        run: |
+          if [ -f "models/versions/${{ inputs.model_version }}.pth" ]; then
+            echo "Model found: ${{ inputs.model_version }}"
+          else
+            echo "Model not found, using default"
+            echo "model_version=default" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Trading Executor
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'agents')
+          from trading.trading_executor import TradingExecutorAgent
+          
+          symbols = '${{ inputs.symbols }}'.split(',')
+          agent = TradingExecutorAgent(
+              paper_trading=${{ inputs.paper_trading }},
+              initial_capital=10000
+          )
+          
+          metrics = agent.run_trading_loop(
+              symbols=symbols,
+              interval_seconds=30,
+              max_iterations=5
+          )
+          
+          summary = agent.get_performance_summary()
+          print('Trading Summary:')
+          for k, v in summary.items():
+              print(f'  {k}: {v}')
+          "
+
+      - name: Monitor performance
+        run: |
+          # Check latest metrics
+          if ls trading_logs/metrics_*.jsonl 1> /dev/null 2>&1; then
+            echo "Latest metrics:"
+            tail -1 "$(ls -t trading_logs/metrics_*.jsonl | head -1)"
+          fi
+
+      - name: Alert on issues
+        if: failure()
+        run: |
+          echo "Trading execution failed - check logs"
+
+  generate-report:
+    needs: execute-trading
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate trading report
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+          
+          log_dir = Path('trading_logs')
+          if not log_dir.exists():
+              print('No trading logs found')
+              exit(0)
+          
+          # Read latest metrics
+          metrics_files = sorted(log_dir.glob('metrics_*.jsonl'))
+          if metrics_files:
+              with open(metrics_files[-1]) as f:
+                  lines = f.readlines()
+                  if lines:
+                      last_metrics = json.loads(lines[-1])
+                      print('Trading Report:')
+                      print(json.dumps(last_metrics, indent=2))
+          "

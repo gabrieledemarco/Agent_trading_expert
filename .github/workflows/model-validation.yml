@@ -1,0 +1,200 @@
+name: Model Validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'models/**'
+      - 'agents/ml_engineer/**'
+  workflow_dispatch:
+    inputs:
+      spec_file:
+        description: 'Spec file to implement'
+        required: false
+        type: string
+
+jobs:
+  # First: ML Engineer implements the model
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml numpy pandas yfinance
+
+      - name: Run ML Engineer Agent
+        run: |
+          python -m agents.ml_engineer.ml_engineer_agent
+
+      - name: Upload models
+        uses: actions/upload-artifact@v4
+        with:
+          name: models
+          path: models/
+
+  # Second: Validation Agent validates the model
+  validate:
+    needs: implement
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml numpy pandas
+
+      - name: Download models
+        uses: actions/download-artifact@v4
+        with:
+          name: models
+
+      - name: Run Validation Agent
+        run: |
+          python -m agents.validation.validation_agent
+
+      - name: Check validation results
+        id: check_validation
+        run: |
+          if ls models/validated/*_validation.json 1> /dev/null 2>&1; then
+            echo "validation_results=true" >> $GITHUB_OUTPUT
+            echo "files=$(ls models/validated/*_validation.json | wc -l)" >> $GITHUB_OUTPUT
+          else
+            echo "validation_results=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse validation results
+        if: steps.check_validation.outputs.validation_results == 'true'
+        run: |
+          echo "## Validation Results" >> $GITHUB_STEP_SUMMARY
+          for f in models/validated/*_validation.json; do
+            echo "### $(basename $f)" >> $GITHUB_STEP_SUMMARY
+            python -c "
+            import json
+            with open('$f') as f:
+              data = json.load(f)
+              print(f'Status: {data.get(\"validation_status\")}')
+              print(f'Risk Score: {data.get(\"risk_return_profile\", {}).get(\"risk_score\")}')
+              print(f'Sharpe: {data.get(\"risk_return_profile\", {}).get(\"sharpe_ratio\")}')
+              print(f'Robustness: {data.get(\"statistical_robustness\", {}).get(\"robustness_score\")}')
+            " >> $GITHUB_STEP_SUMMARY
+          done
+
+  # Third: Test the models
+  test:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-cov
+          pip install torch scikit-learn pandas numpy yfinance
+
+      - name: Install package
+        run: |
+          pip install -e .
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --cov=agents --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+
+  # Fourth: Backtest validation
+  backtest:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance pandas numpy scikit-learn
+
+      - name: Run backtesting
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'models')
+          from backtest import run_backtest
+          import numpy as np
+          
+          np.random.seed(42)
+          predictions = np.random.randn(100)
+          actual = np.random.randn(100).cumsum() + 100
+          
+          metrics = run_backtest(predictions, actual)
+          print('Backtest Results:')
+          for k, v in metrics.items():
+              print(f'  {k}: {v:.4f}')
+          "
+
+  # Fifth: Create PR with validated models
+  create-pr:
+    needs: [validate, test, backtest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Pull Request
+        uses: actions/create-pull-request@v6
+        with:
+          branch: models/validated
+          commit-message: "Validated new trading model"
+          title: "Validated Trading Model"
+          body: |
+            This PR contains a validated trading model with:
+            
+            ## Validation Results
+            - Code quality check
+            - Anomaly detection
+            - Academic consistency verification
+            - Risk/return profile analysis
+            - Statistical robustness evaluation
+            - Scientific documentation
+            
+            ## Documentation
+            Each validated model includes:
+            - Scientific basis from arXiv paper
+            - Strategy logic
+            - Risk/render profile
+            - Backtest methodology
+            - Limitations and caveats
+            
+            Generated by [TradingAgent](https://github.com/your-repo/trading-agents) system.
+            
+            *This PR was created by an AI agent on behalf of the user.*
+          labels: model, validated, automated

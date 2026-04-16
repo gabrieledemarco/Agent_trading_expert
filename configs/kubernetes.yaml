@@ -1,0 +1,212 @@
+# Kubernetes Deployment Configuration
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trading-agents
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: trading-agents-secrets
+  namespace: trading-agents
+type: Opaque
+stringData:
+  DB_PASSWORD: changeme
+  API_KEYS: ""
+  GITHUB_TOKEN: ""
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trading-agents-config
+  namespace: trading-agents
+data:
+  LOG_LEVEL: "INFO"
+  TRADING_MODE: "paper"
+  INITIAL_CAPITAL: "10000"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: trading-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_DB
+              value: trading_agents
+            - name: POSTGRES_USER
+              value: trading_user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trading-agents-secrets
+                  key: DB_PASSWORD
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: trading-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+      volumes:
+        - name: redis-storage
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  namespace: trading-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+        - name: mlflow
+          image: ghcr.io/mlflow/mlflow:v2.12.0
+          ports:
+            - containerPort: 5000
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: postgresql://trading_user:changeme@postgres:5432/trading_agents
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trading-executor
+  namespace: trading-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trading-executor
+  template:
+    metadata:
+      labels:
+        app: trading-executor
+    spec:
+      containers:
+        - name: executor
+          image: trading-agents:latest
+          env:
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-agents-config
+                  key: LOG_LEVEL
+            - name: TRADING_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-agents-config
+                  key: TRADING_MODE
+            - name: INITIAL_CAPITAL
+              valueFrom:
+                configMapKeyRef:
+                  name: trading-agents-config
+                  key: INITIAL_CAPITAL
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: trading-agents-secrets
+                  key: DB_PASSWORD
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trading-executor
+  namespace: trading-agents
+spec:
+  selector:
+    app: trading-executor
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: trading-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-server
+  template:
+    metadata:
+      labels:
+        app: api-server
+    spec:
+      containers:
+        - name: api
+          image: trading-agents:latest
+          command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              value: postgresql://trading_user:changeme@postgres:5432/trading_agents
+            - name: REDIS_URL
+              value: redis://redis:6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-server
+  namespace: trading-agents
+spec:
+  selector:
+    app: api-server
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: LoadBalancer

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Agents Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --border-color: #475569;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: var(--bg-secondary);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-running { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .status-stopped { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        
+        .container {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .card-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .card-value.positive { color: var(--accent-green); }
+        .card-value.negative { color: var(--accent-red); }
+        .card-value.neutral { color: var(--accent-blue); }
+        
+        .card-change {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+        
+        .card-change.up { color: var(--accent-green); }
+        .card-change.down { color: var(--accent-red); }
+        
+        .section-title {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 1.25rem;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-card {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+        
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .agent-card {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .agent-name {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .agent-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .agent-status.active { background: var(--accent-green); }
+        .agent-status.idle { background: var(--accent-yellow); }
+        .agent-status.error { background: var(--accent-red); }
+        
+        .agent-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .agent-stat {
+            text-align: center;
+        }
+        
+        .agent-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .agent-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .activity-item:last-child { border-bottom: none; }
+        
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+        }
+        
+        .activity-agent {
+            font-weight: 500;
+            min-width: 120px;
+        }
+        
+        .activity-message {
+            color: var(--text-secondary);
+            flex: 1;
+        }
+        
+        .activity-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .status-completed { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .status-running { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .status-failed { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        
+        .refresh-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+        
+        .last-update {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Trading Agents Dashboard</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span class="last-update" id="lastUpdate">Last update: --</span>
+            <button class="refresh-btn" onclick="refreshData()">↻ Refresh</button>
+            <span class="status-badge status-running">● System Active</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Summary Cards -->
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Total Equity</div>
+                <div class="card-value neutral" id="totalEquity">$10,000</div>
+                <div class="card-change" id="equityChange">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Total Return</div>
+                <div class="card-value neutral" id="totalReturn">0.00%</div>
+                <div class="card-change" id="returnChange">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Sharpe Ratio</div>
+                <div class="card-value neutral" id="sharpeRatio">0.00</div>
+                <div class="card-change" id="sharpeChange">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Max Drawdown</div>
+                <div class="card-value negative" id="maxDrawdown">0.00%</div>
+                <div class="card-change" id="ddChange">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Total Trades</div>
+                <div class="card-value neutral" id="totalTrades">0</div>
+                <div class="card-change" id="tradesChange">--</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Win Rate</div>
+                <div class="card-value neutral" id="winRate">0.00%</div>
+                <div class="card-change" id="winRateChange">--</div>
+            </div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="section-title">Equity Curve</div>
+                <div class="chart-container">
+                    <canvas id="equityChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="section-title">Daily Returns</div>
+                <div class="chart-container">
+                    <canvas id="returnsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Agents Status -->
+        <div class="section-title">Agent Status</div>
+        <div class="agents-grid" style="margin-bottom: 2rem;">
+            <div class="agent-card">
+                <div class="agent-header">
+                    <span class="agent-name">🔍 ResearchAgent</span>
+                    <span class="agent-status idle"></span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="researchPapers">0</div>
+                        <div class="agent-stat-label">Papers Found</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="lastResearch">--</div>
+                        <div class="agent-stat-label">Last Run</div>
+                    </div>
+                </div>
+            </div>
+            <div class="agent-card">
+                <div class="agent-header">
+                    <span class="agent-name">📋 SpecAgent</span>
+                    <span class="agent-status idle"></span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="specsCreated">0</div>
+                        <div class="agent-stat-label">Specs Created</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="lastSpec">--</div>
+                        <div class="agent-stat-label">Last Run</div>
+                    </div>
+                </div>
+            </div>
+            <div class="agent-card">
+                <div class="agent-header">
+                    <span class="agent-name">⚙️ MLEngineerAgent</span>
+                    <span class="agent-status idle"></span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="modelsImplemented">0</div>
+                        <div class="agent-stat-label">Models Built</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="lastModel">--</div>
+                        <div class="agent-stat-label">Last Run</div>
+                    </div>
+                </div>
+            </div>
+            <div class="agent-card">
+                <div class="agent-header">
+                    <span class="agent-name">✅ ValidationAgent</span>
+                    <span class="agent-status idle"></span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="modelsValidated">0</div>
+                        <div class="agent-stat-label">Models Validated</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="lastValidation">--</div>
+                        <div class="agent-stat-label">Last Run</div>
+                    </div>
+                </div>
+            </div>
+            <div class="agent-card">
+                <div class="agent-header">
+                    <span class="agent-name">📈 TradingExecutor</span>
+                    <span class="agent-status idle"></span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="tradesExecuted">0</div>
+                        <div class="agent-stat-label">Trades Today</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="activeStrategies">0</div>
+                        <div class="agent-stat-label">Active Strategies</div>
+                    </div>
+                </div>
+            </div>
+            <div class="agent-card">
+                <div class="agent-header">
+                    <span class="agent-name">📊 MonitoringAgent</span>
+                    <span class="agent-status active"></span>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="alertsGenerated">0</div>
+                        <div class="agent-stat-label">Alerts Today</div>
+                    </div>
+                    <div class="agent-stat">
+                        <div class="agent-stat-value" id="lastMonitor">--</div>
+                        <div class="agent-stat-label">Last Check</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activity Log -->
+        <div class="section-title">Recent Activity</div>
+        <div class="card">
+            <div class="activity-list" id="activityList">
+                <!-- Activity items will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Chart instances
+        let equityChart = null;
+        let returnsChart = null;
+        
+        // Mock data for demonstration
+        const mockData = {
+            summary: {
+                equity: 10542.00,
+                totalReturn: 0.0542,
+                sharpeRatio: 1.23,
+                maxDrawdown: 0.082,
+                totalTrades: 47,
+                winRate: 0.62
+            },
+            equityHistory: [10000, 10050, 10120, 10080, 10150, 10200, 10180, 10250, 10300, 10280, 10350, 10400, 10450, 10500, 10542],
+            returnsHistory: [0.005, 0.007, -0.004, 0.007, 0.005, -0.002, 0.007, 0.005, -0.002, 0.007, 0.005, 0.005, 0.005, 0.005, 0.004],
+            agents: {
+                research: { papers: 23, lastRun: '2 hours ago' },
+                spec: { specs: 8, lastRun: '1 hour ago' },
+                mlEngineer: { models: 5, lastRun: '30 min ago' },
+                validation: { validated: 3, lastRun: '15 min ago' },
+                trading: { trades: 12, strategies: 2 },
+                monitoring: { alerts: 0, lastCheck: 'Now' }
+            },
+            activities: [
+                { time: '05:45', agent: 'ResearchAgent', message: 'Completed weekly research', status: 'completed' },
+                { time: '05:30', agent: 'ResearchAgent', message: 'Found 5 new papers', status: 'completed' },
+                { time: '04:00', agent: 'SpecAgent', message: 'Generated 2 specifications', status: 'completed' },
+                { time: '03:00', agent: 'MLEngineerAgent', message: 'Implemented model_lstm_v1', status: 'completed' },
+                { time: '02:30', agent: 'ValidationAgent', message: 'Validated model_lstm_v1', status: 'completed' },
+                { time: '02:00', agent: 'TradingExecutor', message: 'Selected strategy: MEDIUM risk', status: 'completed' },
+                { time: '01:00', agent: 'MonitoringAgent', message: 'All metrics normal', status: 'completed' }
+            ]
+        };
+        
+        function updateDashboard(data) {
+            // Update summary cards
+            document.getElementById('totalEquity').textContent = '$' + data.summary.equity.toLocaleString();
+            document.getElementById('totalReturn').textContent = (data.summary.totalReturn * 100).toFixed(2) + '%';
+            document.getElementById('totalReturn').className = 'card-value ' + (data.summary.totalReturn >= 0 ? 'positive' : 'negative');
+            document.getElementById('sharpeRatio').textContent = data.summary.sharpeRatio.toFixed(2);
+            document.getElementById('maxDrawdown').textContent = (data.summary.maxDrawdown * 100).toFixed(2) + '%';
+            document.getElementById('totalTrades').textContent = data.summary.totalTrades;
+            document.getElementById('winRate').textContent = (data.summary.winRate * 100).toFixed(2) + '%';
+            
+            // Update agent stats
+            document.getElementById('researchPapers').textContent = data.agents.research.papers;
+            document.getElementById('lastResearch').textContent = data.agents.research.lastRun;
+            document.getElementById('specsCreated').textContent = data.agents.spec.specs;
+            document.getElementById('lastSpec').textContent = data.agents.spec.lastRun;
+            document.getElementById('modelsImplemented').textContent = data.agents.mlEngineer.models;
+            document.getElementById('lastModel').textContent = data.agents.mlEngineer.lastRun;
+            document.getElementById('modelsValidated').textContent = data.agents.validation.validated;
+            document.getElementById('lastValidation').textContent = data.agents.validation.lastRun;
+            document.getElementById('tradesExecuted').textContent = data.agents.trading.trades;
+            document.getElementById('activeStrategies').textContent = data.agents.trading.strategies;
+            document.getElementById('alertsGenerated').textContent = data.agents.monitoring.alerts;
+            document.getElementById('lastMonitor').textContent = data.agents.monitoring.lastCheck;
+            
+            // Update activity list
+            const activityList = document.getElementById('activityList');
+            activityList.innerHTML = data.activities.map(a => `
+                <div class="activity-item">
+                    <span class="activity-time">${a.time}</span>
+                    <span class="activity-agent">${a.agent}</span>
+                    <span class="activity-message">${a.message}</span>
+                    <span class="activity-status status-${a.status}">${a.status}</span>
+                </div>
+            `).join('');
+            
+            // Update charts
+            updateCharts(data);
+            
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = 'Last update: ' + new Date().toLocaleTimeString();
+        }
+        
+        function updateCharts(data) {
+            const labels = data.equityHistory.map((_, i) => `Day ${i + 1}`);
+            
+            // Equity Chart
+            const equityCtx = document.getElementById('equityChart').getContext('2d');
+            if (equityChart) equityChart.destroy();
+            equityChart = new Chart(equityCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Equity',
+                        data: data.equityHistory,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+            
+            // Returns Chart
+            const returnsCtx = document.getElementById('returnsChart').getContext('2d');
+            if (returnsChart) returnsChart.destroy();
+            returnsChart = new Chart(returnsCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Daily Return',
+                        data: data.returnsHistory.map(r => r * 100),
+                        backgroundColor: data.returnsHistory.map(r => r >= 0 ? '#22c55e' : '#ef4444')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+        
+        function refreshData() {
+            // In production, fetch from API
+            updateDashboard(mockData);
+        }
+        
+        // Initial load
+        refreshData();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>

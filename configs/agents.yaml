@@ -1,0 +1,122 @@
+# Agent Configuration
+
+research:
+  enabled: true
+  schedule: "0 6 * * 1"  # Weekly on Monday
+  output_dir: "data/research_findings"
+  arxiv_categories:
+    - "q-fin.PR"
+    - "cs.LG"
+    - "stat.ML"
+  search_query: "trading OR quantitative finance OR portfolio optimization OR reinforcement learning"
+  max_results: 20
+
+spec:
+  enabled: true
+  input_dir: "data/research_findings"
+  output_dir: "specs"
+  models_to_process: 3
+
+ml_engineer:
+  enabled: true
+  specs_dir: "specs"
+  models_dir: "models"
+  training:
+    epochs: 100
+    batch_size: 32
+    learning_rate: 0.001
+    validation_split: 0.2
+    early_stopping_patience: 10
+  backtest:
+    period: "1 year"
+    metrics:
+      - sharpe_ratio
+      - max_drawdown
+      - total_return
+      - win_rate
+
+validation:
+  enabled: true
+  models_dir: "models"
+  specs_dir: "specs"
+  output_dir: "models/validated"
+  validation_checks:
+    - code_quality
+    - anomaly_detection
+    - academic_consistency
+    - risk_return_analysis
+    - statistical_robustness
+  approval_threshold:
+    min_sharpe: 0.5
+    max_risk: "MEDIUM"
+    min_robustness: "LOW"
+
+monitoring:
+  enabled: true
+  trading_log_dir: "trading_logs"
+  validated_dir: "models/validated"
+  monitoring_log_dir: "trading_logs/monitoring"
+  alert_thresholds:
+    max_drawdown: 0.15
+    min_sharpe: 0.5
+    max_daily_loss: 0.05
+    min_win_rate: 0.40
+    max_positions: 10
+    min_equity: 8000
+  alert_channels:
+    - webhook
+    - email
+  check_interval_seconds: 300
+
+trading:
+  enabled: true
+  model_path: "models/versions"
+  trading_log_dir: "trading_logs"
+  paper_trading: true
+  initial_capital: 10000
+  max_position_size: 0.1  # 10% of capital
+  risk_management:
+    max_drawdown: 0.2
+    stop_loss: 0.05
+    take_profit: 0.15
+  symbols:
+    - AAPL
+    - MSFT
+    - GOOG
+    - AMZN
+    - TSLA
+  check_interval_seconds: 60
+
+# GitHub Actions Integration
+github:
+  token: ${GITHUB_TOKEN}
+  repo: ${GITHUB_REPOSITORY}
+  workflow_dispatch: true
+
+# Self-hosted Configuration
+self_hosted:
+  docker_compose_file: "configs/docker-compose.yaml"
+  kubernetes_manifest: "configs/kubernetes.yaml"
+  postgres_host: "postgres"
+  postgres_port: 5432
+  redis_host: "redis"
+  redis_port: 6379
+  mlflow_port: 5000
+
+# Monitoring
+monitoring:
+  metrics_port: 9090
+  health_check_interval: 60
+  alert_webhook: ${ALERT_WEBHOOK_URL}
+
+# Data Sources
+data_sources:
+  yfinance:
+    enabled: true
+    cache_ttl: 3600
+  alpha_vantage:
+    enabled: false
+    api_key: ${ALPHA_VANTAGE_API_KEY}
+  polygon:
+    enabled: false
+    api_key: ${POLYGON_API_KEY}

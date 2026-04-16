@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy Performance Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --accent-purple: #a855f7;
+            --border-color: #475569;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: var(--bg-secondary);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .header h1 span {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .strategy-selector {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .strategy-selector select {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .container {
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .strategy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .strategy-info h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .strategy-meta {
+            display: flex;
+            gap: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .strategy-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .risk-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .risk-low { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .risk-medium { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+        .risk-high { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        
+        .metric-value.positive { color: var(--accent-green); }
+        .metric-value.negative { color: var(--accent-red); }
+        .metric-value.neutral { color: var(--text-primary); }
+        
+        .metric-change {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        
+        .metric-change.up { color: var(--accent-green); }
+        .metric-change.down { color: var(--accent-red); }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-card {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .chart-title {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+        
+        .section-title {
+            font-size: 1.125rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .positions-table {
+            width: 100%;
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        
+        .positions-table th,
+        .positions-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .positions-table th {
+            background: var(--bg-card);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+        
+        .positions-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .positions-table tr:hover {
+            background: var(--bg-card);
+        }
+        
+        .position-pnl {
+            font-weight: 600;
+        }
+        
+        .position-pnl.positive { color: var(--accent-green); }
+        .position-pnl.negative { color: var(--accent-red); }
+        
+        .doc-section {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            margin-top: 2rem;
+        }
+        
+        .doc-section h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .doc-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .doc-item h4 {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-blue);
+        }
+        
+        .doc-item p {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        
+        .tab {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .tab:hover {
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
+        
+        .tab.active {
+            color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📈 <span>Strategy Performance</span></h1>
+        <div class="strategy-selector">
+            <select id="strategySelect" onchange="loadStrategy(this.value)">
+                <option value="model_lstm_v1">Model LSTM v1</option>
+                <option value="model_rl_v1">Model RL v1</option>
+                <option value="model_portfolio_v1">Model Portfolio v1</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Strategy Header -->
+        <div class="strategy-header">
+            <div class="strategy-info">
+                <h2 id="strategyName">Model LSTM v1</h2>
+                <div class="strategy-meta">
+                    <span>📅 Created: <span id="createdDate">2024-01-15</span></span>
+                    <span>📄 Source: arXiv:2401.12345</span>
+                    <span>🔬 Type: Time Series Forecasting</span>
+                </div>
+            </div>
+            <div class="risk-badge risk-medium" id="riskBadge">MEDIUM RISK</div>
+        </div>
+        
+        <!-- Performance Metrics -->
+        <div class="grid">
+            <div class="metric-card">
+                <div class="metric-label">Expected Return</div>
+                <div class="metric-value positive" id="expectedReturn">8.5%</div>
+                <div class="metric-change up" id="returnVsBaseline">+2.3% vs baseline</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Actual Return</div>
+                <div class="metric-value positive" id="actualReturn">5.4%</div>
+                <div class="metric-change" id="actualReturnChange">Since inception</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Sharpe Ratio</div>
+                <div class="metric-value neutral" id="sharpeRatio">1.23</div>
+                <div class="metric-change" id="sharpeVsBaseline">Target: >1.0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Max Drawdown</div>
+                <div class="metric-value negative" id="maxDrawdown">8.2%</div>
+                <div class="metric-change" id="ddVsBaseline">Target: <15%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Win Rate</div>
+                <div class="metric-value positive" id="winRate">62%</div>
+                <div class="metric-change" id="winRateChange">47 trades</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Robustness Score</div>
+                <div class="metric-value neutral" id="robustnessScore">HIGH</div>
+                <div class="metric-change" id="robustnessDetails">100 MC simulations</div>
+            </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('performance')">Performance</button>
+            <button class="tab" onclick="switchTab('positions')">Positions</button>
+            <button class="tab" onclick="switchTab('documents')">Documentation</button>
+        </div>
+        
+        <!-- Performance Tab -->
+        <div class="tab-content active" id="tab-performance">
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Equity Curve vs Benchmark</div>
+                    <div class="chart-container">
+                        <canvas id="equityVsBenchmark"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Drawdown Over Time</div>
+                    <div class="chart-container">
+                        <canvas id="drawdownChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Monthly Returns Distribution</div>
+                    <div class="chart-container">
+                        <canvas id="monthlyReturns"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Risk Metrics Evolution</div>
+                    <div class="chart-container">
+                        <canvas id="riskMetrics"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Positions Tab -->
+        <div class="tab-content" id="tab-positions">
+            <div class="section-title">Current Positions</div>
+            <table class="positions-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Entry Price</th>
+                        <th>Current Price</th>
+                        <th>Quantity</th>
+                        <th>Value</th>
+                        <th>P&L</th>
+                        <th>Return</th>
+                    </tr>
+                </thead>
+                <tbody id="positionsBody">
+                    <tr>
+                        <td>AAPL</td>
+                        <td>$182.50</td>
+                        <td>$185.20</td>
+                        <td>10</td>
+                        <td>$1,852</td>
+                        <td class="position-pnl positive">+$27</td>
+                        <td class="position-pnl positive">+1.5%</td>
+                    </tr>
+                    <tr>
+                        <td>MSFT</td>
+                        <td>$378.00</td>
+                        <td>$382.50</td>
+                        <td>5</td>
+                        <td>$1,913</td>
+                        <td class="position-pnl positive">+$23</td>
+                        <td class="position-pnl positive">+1.2%</td>
+                    </tr>
+                    <tr>
+                        <td>GOOG</td>
+                        <td>$142.00</td>
+                        <td>$140.50</td>
+                        <td>15</td>
+                        <td>$2,108</td>
+                        <td class="position-pnl negative">-$23</td>
+                        <td class="position-pnl negative">-1.1%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Documentation Tab -->
+        <div class="tab-content" id="tab-documents">
+            <div class="doc-section">
+                <h3>Scientific Documentation</h3>
+                <div class="doc-content">
+                    <div class="doc-item">
+                        <h4>📚 Scientific Basis</h4>
+                        <p>Model based on LSTM architecture for sequential pattern recognition in financial time series. Research paper: "Deep Learning for Stock Trading" arXiv:2401.12345</p>
+                    </div>
+                    <div class="doc-item">
+                        <h4>🎯 Strategy Logic</h4>
+                        <p>Uses 60-day lookback window with technical indicators (RSI, MACD, Bollinger Bands) to predict price movements. Signal generation via MA crossover.</p>
+                    </div>
+                    <div class="doc-item">
+                        <h4>⚠️ Risk Profile</h4>
+                        <p>Expected annual return: 8.5%. Maximum historical drawdown: 8.2%. Risk level: MEDIUM. Suitable for moderate risk tolerance.</p>
+                    </div>
+                    <div class="doc-item">
+                        <h4>📊 Backtest Methodology</h4>
+                        <p>1-year out-of-sample testing, walk-forward validation, 100 Monte Carlo simulations for stress testing.</p>
+                    </div>
+                    <div class="doc-item">
+                        <h4>📈 Performance History</h4>
+                        <p>Live since 2024-01-15. Total return: 5.4%. Sharpe: 1.23. Win rate: 62%. All metrics within expected ranges.</p>
+                    </div>
+                    <div class="doc-item">
+                        <h4>🔒 Limitations</h4>
+                        <p>Cannot predict black swan events. May underperform in strong trending markets. Past performance does not guarantee future results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let equityChart, drawdownChart, monthlyChart, riskChart;
+        
+        // Mock data for different strategies
+        const strategyData = {
+            'model_lstm_v1': {
+                name: 'Model LSTM v1',
+                created: '2024-01-15',
+                source: 'arXiv:2401.12345',
+                type: 'Time Series Forecasting',
+                risk: 'MEDIUM',
+                metrics: {
+                    expectedReturn: 0.085,
+                    actualReturn: 0.054,
+                    sharpe: 1.23,
+                    maxDrawdown: 0.082,
+                    winRate: 0.62,
+                    trades: 47,
+                    robustness: 'HIGH'
+                },
+                equity: [10000, 10150, 10200, 10180, 10250, 10350, 10400, 10500, 10542],
+                benchmark: [10000, 10080, 10150, 10120, 10180, 10200, 10250, 10300, 10320],
+                drawdown: [0, 0.01, 0.02, 0.01, 0.03, 0.05, 0.04, 0.06, 0.082]
+            },
+            'model_rl_v1': {
+                name: 'Model RL v1',
+                created: '2024-02-01',
+                source: 'arXiv:2402.06789',
+                type: 'Reinforcement Learning',
+                risk: 'HIGH',
+                metrics: {
+                    expectedReturn: 0.12,
+                    actualReturn: 0.078,
+                    sharpe: 0.95,
+                    maxDrawdown: 0.15,
+                    winRate: 0.55,
+                    trades: 32,
+                    robustness: 'MEDIUM'
+                },
+                equity: [10000, 10200, 10400, 10350, 10500, 10600, 10500, 10700, 10780],
+                benchmark: [10000, 10080, 10150, 10120, 10180, 10200, 10250, 10300, 10320],
+                drawdown: [0, 0.02, 0.04, 0.05, 0.08, 0.10, 0.12, 0.14, 0.15]
+            },
+            'model_portfolio_v1': {
+                name: 'Model Portfolio v1',
+                created: '2024-02-15',
+                source: 'arXiv:2403.01234',
+                type: 'Portfolio Optimization',
+                risk: 'LOW',
+                metrics: {
+                    expectedReturn: 0.06,
+                    actualReturn: 0.042,
+                    sharpe: 1.45,
+                    maxDrawdown: 0.045,
+                    winRate: 0.70,
+                    trades: 15,
+                    robustness: 'HIGH'
+                },
+                equity: [10000, 10100, 10150, 10200, 10250, 10300, 10350, 10400, 10420],
+                benchmark: [10000, 10080, 10150, 10120, 10180, 10200, 10250, 10300, 10320],
+                drawdown: [0, 0.005, 0.01, 0.015, 0.02, 0.03, 0.035, 0.04, 0.045]
+            }
+        };
+        
+        function loadStrategy(strategyId) {
+            const data = strategyData[strategyId];
+            if (!data) return;
+            
+            // Update header
+            document.getElementById('strategyName').textContent = data.name;
+            document.getElementById('createdDate').textContent = data.created;
+            
+            // Update risk badge
+            const badge = document.getElementById('riskBadge');
+            badge.textContent = data.risk + ' RISK';
+            badge.className = 'risk-badge risk-' + data.risk.toLowerCase();
+            
+            // Update metrics
+            document.getElementById('expectedReturn').textContent = (data.metrics.expectedReturn * 100).toFixed(1) + '%';
+            document.getElementById('actualReturn').textContent = (data.metrics.actualReturn * 100).toFixed(1) + '%';
+            document.getElementById('sharpeRatio').textContent = data.metrics.sharpe.toFixed(2);
+            document.getElementById('maxDrawdown').textContent = (data.metrics.maxDrawdown * 100).toFixed(1) + '%';
+            document.getElementById('winRate').textContent = (data.metrics.winRate * 100).toFixed(0) + '%';
+            document.getElementById('robustnessScore').textContent = data.metrics.robustness;
+            
+            // Update charts
+            updateCharts(data);
+        }
+        
+        function updateCharts(data) {
+            const labels = data.equity.map((_, i) => `Day ${i + 1}`);
+            
+            // Equity vs Benchmark
+            const equityCtx = document.getElementById('equityVsBenchmark').getContext('2d');
+            if (equityChart) equityChart.destroy();
+            equityChart = new Chart(equityCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Strategy',
+                            data: data.equity,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Benchmark',
+                            data: data.benchmark,
+                            borderColor: '#94a3b8',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+            
+            // Drawdown
+            const ddCtx = document.getElementById('drawdownChart').getContext('2d');
+            if (drawdownChart) drawdownChart.destroy();
+            drawdownChart = new Chart(ddCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Drawdown',
+                        data: data.drawdown.map(d => -d * 100),
+                        backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                        fill: true,
+                        borderColor: '#ef4444'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { 
+                            grid: { color: '#334155' }, 
+                            ticks: { color: '#94a3b8' },
+                            max: 0
+                        }
+                    }
+                }
+            });
+            
+            // Monthly Returns
+            const monthlyCtx = document.getElementById('monthlyReturns').getContext('2d');
+            if (monthlyChart) monthlyChart.destroy();
+            const monthlyData = Array.from({length: 8}, () => (Math.random() - 0.3) * 10);
+            monthlyChart = new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+                    datasets: [{
+                        label: 'Monthly Return %',
+                        data: monthlyData,
+                        backgroundColor: monthlyData.map(v => v >= 0 ? '#22c55e' : '#ef4444')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+            
+            // Risk Metrics
+            const riskCtx = document.getElementById('riskMetrics').getContext('2d');
+            if (riskChart) riskChart.destroy();
+            riskChart = new Chart(riskCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Volatility',
+                            data: Array.from({length: data.equity.length}, () => 0.02 + Math.random() * 0.02),
+                            borderColor: '#eab308',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'VaR (95%)',
+                            data: Array.from({length: data.equity.length}, () => 0.01 + Math.random() * 0.01),
+                            borderColor: '#ef4444',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+        
+        // Initialize
+        loadStrategy('model_lstm_v1');
+    </script>
+</body>
+</html>
