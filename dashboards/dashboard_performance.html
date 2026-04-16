@@ -3,235 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Performance Analysis - Trading Agent</title>
+    <title>Performance | Trading Agent</title>
     <style>
+        :root { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414; --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa; --text-muted: #666666; --orange: #ff9900; --green: #00ff00; --red: #ff0000; --font: "Consolas", "Monaco", monospace; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
-        .header { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.25rem; font-weight: 700; color: #58a6ff; }
-        .nav { display: flex; gap: 1.5rem; }
-        .nav a { color: #8b949e; text-decoration: none; transition: color 0.2s; cursor: pointer; }
-        .nav a:hover, .nav a.active { color: #58a6ff; }
-        .container { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
-        .card h2 { font-size: 1.1rem; color: #8b949e; margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-        .card h2 .icon { font-size: 1.25rem; }
-        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-        .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; text-align: center; }
-        .stat-value { font-size: 1.5rem; font-weight: 700; }
-        .stat-value.positive { color: #56d364; }
-        .stat-value.negative { color: #f85149; }
-        .stat-value.neutral { color: #58a6ff; }
-        .stat-label { font-size: 0.8rem; color: #8b949e; margin-top: 0.25rem; }
-        
-        .chart-container { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
-        .chart-title { font-size: 1rem; color: #8b949e; margin-bottom: 1rem; font-weight: 500; }
-        .chart { height: 250px; display: flex; align-items: flex-end; gap: 4px; padding: 1rem 0; }
-        .bar { flex: 1; background: linear-gradient(to top, #1f6feb, #388bfd); border-radius: 4px 4px 0 0; position: relative; transition: all 0.3s; }
-        .bar:hover { background: linear-gradient(to top, #388bfd, #58a6ff); }
-        .bar .tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #30363d; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; display: none; }
-        .bar:hover .tooltip { display: block; }
-        
-        .metrics-table { width: 100%; border-collapse: collapse; }
-        .metrics-table th, .metrics-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #30363d; }
-        .metrics-table th { color: #8b949e; font-weight: 500; font-size: 0.85rem; }
-        .metrics-table tr:hover { background: #21262d; }
-        
-        .progress-bar { height: 8px; background: #21262d; border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
-        .progress-fill.green { background: #56d364; }
-        .progress-fill.red { background: #f85149; }
-        .progress-fill.blue { background: #58a6ff; }
-        
-        .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; }
-        .badge-approved { background: #1f3a1f; color: #56d364; }
-        .badge-high { background: #1f3a1f; color: #56d364; }
-        .badge-moderate { background: #3d2d1f; color: #d29922; }
-        .badge-low { background: #3d1f1f; color: #f85149; }
-        
-        .model-selector { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-        .model-btn { padding: 0.5rem 1rem; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer; transition: all 0.2s; }
-        .model-btn:hover, .model-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-        
-        .equity-chart { height: 300px; position: relative; border-left: 1px solid #30363d; border-bottom: 1px solid #30363d; margin: 1rem 0; }
-        .equity-line { position: absolute; bottom: 0; left: 0; right: 0; height: 100%; }
+        html, body { background: var(--bg-primary); color: var(--text-secondary); font-family: var(--font); font-size: 12px; height: 100%; overflow: hidden; }
+        .terminal { display: grid; grid-template-columns: 180px 1fr; grid-template-rows: 40px 1fr 24px; height: 100vh; }
+        .topbar { grid-column: 1 / -1; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
+        .topbar-brand { color: var(--orange); font-size: 14px; font-weight: bold; }
+        .topbar-brand span { background: var(--orange); color: #000; padding: 2px 6px; border-radius: 2px; font-size: 10px; }
+        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 8px 0; display: flex; flex-direction: column; }
+        .sidebar-section { margin-bottom: 12px; }
+        .sidebar-title { padding: 4px 12px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
+        .sidebar-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-secondary); }
+        .sidebar-item:hover { background: var(--bg-tertiary); }
+        .sidebar-item.active { color: var(--orange); background: var(--bg-tertiary); }
+        .status-indicator { margin-top: auto; padding: 8px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 10px; }
+        .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
+        .main { background: var(--bg-primary); overflow-y: auto; padding: 8px; }
+        .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 8px; }
+        .stat-box { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; text-align: center; }
+        .stat-box-label { color: var(--text-muted); font-size: 10px; margin-bottom: 4px; }
+        .stat-box-value { color: var(--text-primary); font-size: 18px; font-weight: bold; }
+        .card { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; margin-bottom: 8px; }
+        .card-title { color: var(--orange); font-size: 11px; margin-bottom: 8px; }
+        .chart-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+        .chart-tab { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 2px 8px; font-size: 10px; cursor: pointer; }
+        .chart-tab.active { background: var(--orange); color: #000; border-color: var(--orange); }
+        .chart-container { height: 150px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { text-align: left; padding: 4px 8px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: normal; }
+        td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+        .badge-approved { background: rgba(0,255,0,0.1); color: var(--green); }
+        .bottombar { grid-column: 1 / -1; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: var(--text-muted); }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">Trading Agent - Performance Analysis</div>
-        <nav class="nav">
-            <a onclick="showPage('overview')" class="active">Overview</a>
-            <a onclick="showPage('model_detail')">Model Detail</a>
-            <a onclick="showPage('charts')">Charts</a>
-            <a onclick="showPage('documentation')">Documentation</a>
+    <div class="terminal">
+        <header class="topbar"><div class="topbar-brand"><span>TA</span> PERFORMANCE</div><div>Last Update: <span id="lastUpdate">--:--:--</span></div></header>
+        <nav class="sidebar">
+            <div class="sidebar-section"><div class="sidebar-title">Dashboard</div>
+                <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+            </div>
+            <div class="sidebar-section"><div class="sidebar-title">Analisi</div>
+                <a href="dashboard_performance.html" class="sidebar-item active"><span>▣</span> Performance</a>
+                <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Documentation</a>
+                <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            </div>
+            <div class="sidebar-section"><div class="sidebar-title">Sistema</div>
+                <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
+            </div>
+            <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
         </nav>
-    </header>
-    <div class="container">
-        <div class="model-selector">
-            <button class="model-btn active" onclick="selectModel('intraday')">Intraday Momentum</button>
-            <button class="model-btn" onclick="selectModel('highfreq')">High Frequency</button>
-            <button class="model-btn" onclick="selectModel('dynamic')">Dynamic Time</button>
-            <button class="model-btn" onclick="selectModel('momentum')">Momentum</button>
-        </div>
-        
-        <div id="page-overview">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value neutral">6</div>
-                    <div class="stat-label">Total Trades</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value positive">47%</div>
-                    <div class="stat-label">Win Rate</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value negative">-0.39</div>
-                    <div class="stat-label">Sharpe Ratio</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value negative">-0.9%</div>
-                    <div class="stat-label">Total Return</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value neutral">2.3%</div>
-                    <div class="stat-label">Max Drawdown</div>
-                </div>
+        <main class="main">
+            <div class="stats-row">
+                <div class="stat-box"><div class="stat-box-label">TOTAL TRADES</div><div class="stat-box-value">6</div></div>
+                <div class="stat-box"><div class="stat-box-label">WIN RATE</div><div class="stat-box-value" style="color:var(--green)">47%</div></div>
+                <div class="stat-box"><div class="stat-box-label">SHARPE</div><div class="stat-box-value" style="color:var(--red)">-0.39</div></div>
+                <div class="stat-box"><div class="stat-box-label">RETURN</div><div class="stat-box-value" style="color:var(--red)">-0.9%</div></div>
+                <div class="stat-box"><div class="stat-box-label">MAX DD</div><div class="stat-box-value" style="color:var(--red)">2.3%</div></div>
+                <div class="stat-box"><div class="stat-box-label">MODELS</div><div class="stat-box-value">4</div></div>
             </div>
-            
-            <div class="card">
-                <h2><span class="icon">📊</span> P&L Distribution</h2>
-                <div class="chart-container">
-                    <div class="chart">
-                        <div class="bar" style="height:60%"><div class="tooltip">-$500: 15%</div></div>
-                        <div class="bar" style="height:40%"><div class="tooltip">-$300: 12%</div></div>
-                        <div class="bar" style="height:30%"><div class="tooltip">-$100: 8%</div></div>
-                        <div class="bar" style="height:50%"><div class="tooltip">$0: 22%</div></div>
-                        <div class="bar" style="height:70%"><div class="tooltip">$100: 18%</div></div>
-                        <div class="bar" style="height:85%"><div class="tooltip">$300: 15%</div></div>
-                        <div class="bar" style="height:55%"><div class="tooltip">$500: 10%</div></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2><span class="icon">📈</span> Monthly Returns</h2>
-                <div class="chart-container">
-                    <div class="chart">
-                        <div class="bar" style="height:45%"><div class="tooltip">Jan: -2.1%</div></div>
-                        <div class="bar" style="height:55%"><div class="tooltip">Feb: 1.3%</div></div>
-                        <div class="bar" style="height:35%"><div class="tooltip">Mar: -3.2%</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div id="page-model_detail" style="display:none">
-            <div class="card">
-                <h2><span class="icon">📊</span> Detailed Metrics - Intraday Momentum</h2>
-                <table class="metrics-table">
-                    <thead><tr><th>Metric</th><th>Value</th><th>Benchmark</th><th>Status</th></tr></thead>
-                    <tbody>
-                        <tr><td>Sharpe Ratio</td><td>-0.39</td><td>> 1.0</td><td><span class="badge badge-low">BELOW</span></td></tr>
-                        <tr><td>Sortino Ratio</td><td>-0.52</td><td>> 1.5</td><td><span class="badge badge-low">BELOW</span></td></tr>
-                        <tr><td>Calmar Ratio</td><td>-0.38</td><td>> 1.0</td><td><span class="badge badge-low">BELOW</span></td></tr>
-                        <tr><td>Max Drawdown</td><td>2.3%</td><td>< 10%</td><td><span class="badge badge-approved">OK</span></td></tr>
-                        <tr><td>Win Rate</td><td>47%</td><td>> 50%</td><td><span class="badge badge-moderate">NEAR</span></td></tr>
-                        <tr><td>Profit Factor</td><td>0.89</td><td>> 1.5</td><td><span class="badge badge-low">BELOW</span></td></tr>
-                        <tr><td>Recovery Time</td><td>4.2 days</td><td>< 5 days</td><td><span class="badge badge-approved">OK</span></td></tr>
-                        <tr><td>Volatility</td><td>2.3%</td><td>< 5%</td><td><span class="badge badge-approved">OK</span></td></tr>
-                    </tbody>
+            <div class="card"><div class="card-title">EQUITY CURVE</div><div class="chart-tabs"><button class="chart-tab active">1D</button><button class="chart-tab">1W</button><button class="chart-tab">1M</button></div><canvas id="chart" class="chart-container"></canvas></div>
+            <div class="card"><div class="card-title">MODEL PERFORMANCE</div>
+                <table><thead><tr><th>MODEL</th><th>SHARPE</th><th>RETURN</th><th>WIN RATE</th><th>STATUS</th></tr></thead>
+                <tbody>
+                    <tr><td style="color:var(--text-primary)">Intraday Momentum</td><td style="color:var(--red)">-0.39</td><td style="color:var(--red)">-0.9%</td><td>47%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
+                    <tr><td style="color:var(--text-primary)">High Frequency</td><td style="color:var(--green)">0.12</td><td style="color:var(--green)">1.2%</td><td>52%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
+                    <tr><td style="color:var(--text-primary)">Dynamic Time</td><td style="color:var(--red)">-0.28</td><td style="color:var(--red)">-1.5%</td><td>45%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
+                    <tr><td style="color:var(--text-primary)">Momentum</td><td style="color:var(--red)">-1.29</td><td style="color:var(--red)">-0.9%</td><td>48%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
+                </tbody>
                 </table>
             </div>
-            
-            <div class="card">
-                <h2><span class="icon">⚡</span> Risk Metrics</h2>
-                <table class="metrics-table">
-                    <thead><tr><th>Risk Metric</th><th>Value</th><th>Threshold</th><th>Assessment</th></tr></thead>
-                    <tbody>
-                        <tr><td>VaR (95%)</td><td>1.8%</td><td>< 3%</td><td><span class="badge badge-approved">ACCEPTABLE</span></td></tr>
-                        <tr><td>CVaR (95%)</td><td>2.4%</td><td>< 5%</td><td><span class="badge badge-approved">ACCEPTABLE</span></td></tr>
-                        <tr><td>Beta</td><td>0.23</td><td>< 0.5</td><td><span class="badge badge-approved">LOW BETA</span></td></tr>
-                        <tr><td>Correlation</td><td>0.15</td><td>< 0.3</td><td><span class="badge badge-approved">DIVERSIFIED</span></td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div id="page-charts" style="display:none">
-            <div class="card">
-                <h2><span class="icon">📈</span> Equity Curve</h2>
-                <div class="chart-container">
-                    <svg viewBox="0 0 800 200" style="width:100%;height:200px;background:#161b22;">
-                        <polyline fill="none" stroke="#58a6ff" stroke-width="2" points="0,150 50,145 100,155 150,140 200,130 250,135 300,120 350,125 400,110 450,115 500,100 550,105 600,95 650,100 700,95 750,90 800,85"/>
-                        <line x1="0" y1="150" x2="800" y2="150" stroke="#30363d" stroke-width="1"/>
-                    </svg>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2><span class="icon">📉</span> Drawdown Chart</h2>
-                <div class="chart-container">
-                    <svg viewBox="0 0 800 150" style="width:100%;height:150px;background:#161b22;">
-                        <path fill="#f8514933" stroke="#f85149" stroke-width="1" d="M0,50 L50,55 L100,45 L150,60 L200,50 L250,55 L300,40 L350,50 L400,35 L450,45 L500,30 L550,40 L600,25 L650,35 L700,20 L750,30 L800,25 L800,150 L0,150 Z"/>
-                    </svg>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2><span class="icon">🎯</span> Trade Distribution</h2>
-                <div class="chart-container">
-                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
-                        <div><div class="stat-value positive">3</div><div class="stat-label">Wins > $100</div></div>
-                        <div><div class="stat-value positive">3</div><div class="stat-label">Wins < $100</div></div>
-                        <div><div class="stat-value negative">4</div><div class="stat-label">Losses</div></div>
-                        <div><div class="stat-value neutral">2</div><div class="stat-label">Breakeven</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div id="page-documentation" style="display:none">
-            <div class="card">
-                <h2><span class="icon">📄</span> Model Documentation</h2>
-                <table class="metrics-table">
-                    <thead><tr><th>Document</th><th>Description</th><th>Download</th></tr></thead>
-                    <tbody>
-                        <tr><td>Technical Specification</td><td>Full model architecture and parameters</td><td><button class="model-btn">Download PDF</button></td></tr>
-                        <tr><td>Backtest Report</td><td>Historical performance analysis</td><td><button class="model-btn">Download PDF</button></td></tr>
-                        <tr><td>Risk Assessment</td><td>VaR and stress testing</td><td><button class="model-btn">Download PDF</button></td></tr>
-                        <tr><td>Validation Certificate</td><td>Official validation status</td><td><button class="model-btn">Download PDF</button></td></tr>
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="card">
-                <h2><span class="icon">✅</span> Validation Summary</h2>
-                <div style="padding:1rem;">
-                    <p><strong>Model:</strong> model_intraday_momentum_trading_with_machine</p>
-                    <p><strong>Status:</strong> <span class="badge badge-approved">APPROVED</span></p>
-                    <p><strong>Validation Date:</strong> 2026-04-16</p>
-                    <p><strong>Review Period:</strong> 90 days</p>
-                    <p><strong>Test Results:</strong></p>
-                    <ul style="margin-left:1.5rem;margin-top:0.5rem;color:#8b949e;">
-                        <li>Code Quality: PASSED</li>
-                        <li>Data Integrity: PASSED</li>
-                        <li>Risk Assessment: ACCEPTABLE</li>
-                        <li>Backtest: PASSED</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+        </main>
+        <footer class="bottombar">CONN: <span style="color:var(--green)">CONNECTED</span> | MODE: <span style="color:var(--orange)">PAPER</span> | Trading Agent v1.0</footer>
     </div>
     <script>
-        function showPage(page) {
-            document.querySelectorAll('.container > div').forEach(d => d.style.display = 'none');
-            document.getElementById('page-' + page).style.display = 'block';
-        }
-        function selectModel(model) {
-            document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-        }
+        function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
+        setInterval(updateTime, 1000); updateTime();
+        const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
+        function draw() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; const data = [10000,10050,10080,10020,10050,10090,10050,10100,10050,10080]; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle='#333'; ctx.lineWidth=1; for(let i=0;i<canvas.height;i+=20){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(canvas.width,i);ctx.stroke();} const min=Math.min(...data)-50,max=Math.max(...data)+50,range=max-min; ctx.beginPath(); data.forEach((v,i)=>{const x=(i/(data.length-1))*canvas.width,y=canvas.height-((v-min)/range)*canvas.height; if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}); ctx.strokeStyle='#ff9900'; ctx.lineWidth=1.5; ctx.stroke(); }
+        window.addEventListener('resize',draw); draw();
     </script>
 </body>
 </html>

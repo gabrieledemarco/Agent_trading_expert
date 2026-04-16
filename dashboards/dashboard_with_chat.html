@@ -3,145 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Agent - Dashboard</title>
+    <title>Chat | Trading Agent</title>
     <style>
+        :root { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414; --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa; --text-muted: #666666; --orange: #ff9900; --green: #00ff00; --red: #ff0000; --font: "Consolas", "Monaco", monospace; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
-        .header { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.5rem; font-weight: 700; color: #58a6ff; }
-        .nav { display: flex; gap: 1.5rem; }
-        .nav a { color: #8b949e; text-decoration: none; transition: color 0.2s; cursor: pointer; }
-        .nav a:hover, .nav a.active { color: #58a6ff; }
-        .container { display: grid; grid-template-columns: 1fr 350px; height: calc(100vh - 70px); }
-        .main-content { padding: 1.5rem; overflow-y: auto; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
-        .card h2 { font-size: 1rem; color: #8b949e; margin-bottom: 1rem; font-weight: 500; }
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
-        .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; text-align: center; }
-        .stat-value { font-size: 1.75rem; font-weight: 700; color: #58a6ff; }
-        .stat-label { font-size: 0.8rem; color: #8b949e; margin-top: 0.25rem; }
-        .chat-panel { background: #161b22; border-left: 1px solid #30363d; display: flex; flex-direction: column; }
-        .chat-header { padding: 1rem; border-bottom: 1px solid #30363d; font-weight: 600; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; }
-        .message { margin-bottom: 1rem; padding: 0.75rem; border-radius: 8px; max-width: 85%; }
-        .message.user { background: #1f6feb; margin-left: auto; }
-        .message.assistant { background: #21262d; }
-        .message p { margin: 0; line-height: 1.5; }
-        .chat-input { padding: 1rem; border-top: 1px solid #30363d; }
-        .chat-input input { width: 100%; padding: 0.75rem; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; }
-        .chat-input input:focus { outline: none; border-color: #58a6ff; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #30363d; }
-        th { color: #8b949e; font-weight: 500; font-size: 0.85rem; }
-        .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; }
-        .badge-approved { background: #1f3a1f; color: #56d364; }
-        .badge-rejected { background: #3d1f1f; color: #f85149; }
+        html, body { background: var(--bg-primary); color: var(--text-secondary); font-family: var(--font); font-size: 12px; height: 100%; overflow: hidden; }
+        .terminal { display: grid; grid-template-columns: 180px 1fr; grid-template-rows: 40px 1fr 24px; height: 100vh; }
+        .topbar { grid-column: 1 / -1; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
+        .topbar-brand { color: var(--orange); font-size: 14px; font-weight: bold; }
+        .topbar-brand span { background: var(--orange); color: #000; padding: 2px 6px; border-radius: 2px; font-size: 10px; }
+        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 8px 0; display: flex; flex-direction: column; }
+        .sidebar-section { margin-bottom: 12px; }
+        .sidebar-title { padding: 4px 12px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
+        .sidebar-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-secondary); }
+        .sidebar-item:hover { background: var(--bg-tertiary); }
+        .sidebar-item.active { color: var(--orange); background: var(--bg-tertiary); }
+        .status-indicator { margin-top: auto; padding: 8px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 10px; }
+        .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
+        .main { background: var(--bg-primary); overflow-y: auto; padding: 8px; display: grid; grid-template-columns: 1fr 300px; gap: 8px; }
+        .card { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; }
+        .card-title { color: var(--orange); font-size: 11px; margin-bottom: 8px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .stat-box { background: var(--bg-tertiary); border: 1px solid var(--border); padding: 8px; text-align: center; }
+        .stat-box-label { color: var(--text-muted); font-size: 9px; margin-bottom: 4px; }
+        .stat-box-value { color: var(--text-primary); font-size: 14px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th { text-align: left; padding: 4px 8px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: normal; }
+        td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+        .chat-panel { display: flex; flex-direction: column; height: 100%; }
+        .chat-messages { flex: 1; overflow-y: auto; background: var(--bg-primary); border: 1px solid var(--border); padding: 8px; margin-bottom: 8px; }
+        .message { margin-bottom: 8px; }
+        .message-user { color: var(--orange); font-size: 10px; margin-bottom: 2px; }
+        .message-text { color: var(--text-secondary); font-size: 11px; line-height: 1.4; }
+        .message-bot { background: var(--bg-tertiary); padding: 8px; border-radius: 4px; }
+        .chat-input { display: flex; gap: 4px; }
+        .chat-input input { flex: 1; background: var(--bg-primary); border: 1px solid var(--border); color: var(--text-primary); padding: 6px; font-family: var(--font); font-size: 11px; }
+        .chat-input button { background: var(--orange); border: none; color: #000; padding: 6px 12px; cursor: pointer; font-weight: bold; }
+        .bottombar { grid-column: 1 / -1; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: var(--text-muted); }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">Trading Agent</div>
-        <nav class="nav">
-            <a onclick="showSection('overview')" class="active">Overview</a>
-            <a onclick="showSection('strategie')">Strategie</a>
-            <a onclick="showSection('performance')">Performance</a>
-            <a onclick="showSection('backtest')">Backtest</a>
+    <div class="terminal">
+        <header class="topbar"><div class="topbar-brand"><span>TA</span> CHAT ASSISTANT</div><div>Last Update: <span id="lastUpdate">--:--:--</span></div></header>
+        <nav class="sidebar">
+            <div class="sidebar-section"><div class="sidebar-title">Dashboard</div>
+                <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+            </div>
+            <div class="sidebar-section"><div class="sidebar-title">Analisi</div>
+                <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+                <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Documentation</a>
+                <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            </div>
+            <div class="sidebar-section"><div class="sidebar-title">Sistema</div>
+                <a href="dashboard_with_chat.html" class="sidebar-item active"><span>▨</span> Chat</a>
+            </div>
+            <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
         </nav>
-    </header>
-    <div class="container">
-        <main class="main-content">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value">6</div>
-                    <div class="stat-label">Modelli</div>
+        <main class="main">
+            <div class="card"><div class="card-title">OVERVIEW</div>
+                <div class="stats-grid">
+                    <div class="stat-box"><div class="stat-box-label">MODELS</div><div class="stat-box-value">4</div></div>
+                    <div class="stat-box"><div class="stat-box-label">WIN RATE</div><div class="stat-box-value">47%</div></div>
+                    <div class="stat-box"><div class="stat-box-label">SHARPE</div><div class="stat-box-value" style="color:var(--red)">-0.39</div></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value">4</div>
-                    <div class="stat-label">Approvati</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">-0.39</div>
-                    <div class="stat-label">Sharpe Medio</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">47%</div>
-                    <div class="stat-label">Win Rate</div>
-                </div>
-            </div>
-            <div class="card">
-                <h2>Modelli Approvati</h2>
-                <table>
-                    <thead><tr><th>Modello</th><th>Sharpe</th><th>Return</th><th>Stato</th></tr></thead>
-                    <tbody>
-                        <tr><td>model_intraday_momentum_trading_with_machine</td><td>-0.39</td><td>-0.9%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
-                        <tr><td>model_highfrequency_statistical_arbitrage</td><td>0.12</td><td>1.2%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
-                        <tr><td>model_dynamic_time_window_optimization_for</td><td>-0.28</td><td>-1.5%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
-                        <tr><td>model_momentum_further_constrains_sharpness_at</td><td>-1.29</td><td>-0.9%</td><td><span class="badge badge-approved">APPROVED</span></td></tr>
-                    </tbody>
+                <table style="margin-top:8px"><thead><tr><th>MODEL</th><th>STATUS</th><th>SHARPE</th></tr></thead>
+                <tbody>
+                    <tr><td style="color:var(--text-primary)">Intraday</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--red)">-0.39</td></tr>
+                    <tr><td style="color:var(--text-primary)">High Freq</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--green)">0.12</td></tr>
+                    <tr><td style="color:var(--text-primary)">Dynamic</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--red)">-0.28</td></tr>
+                    <tr><td style="color:var(--text-primary)">Momentum</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--red)">-1.29</td></tr>
+                </tbody>
                 </table>
             </div>
-            <div class="card">
-                <h2>Ultimi Report</h2>
-                <table>
-                    <thead><tr><th>Report</th><th>Robustezza</th><th>Data</th></tr></thead>
-                    <tbody>
-                        <tr><td>model_intraday_momentum_trading_with_machine</td><td>MODERATE</td><td>2026-04-16</td></tr>
-                        <tr><td>model_highfrequency_statistical_arbitrage</td><td>HIGH</td><td>2026-04-16</td></tr>
-                        <tr><td>model_dynamic_time_window_optimization_for</td><td>LOW</td><td>2026-04-16</td></tr>
-                    </tbody>
-                </table>
+            <div class="chat-panel card">
+                <div class="card-title">CHAT CON ASSISTANT</div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message">
+                        <div class="message-user">Assistant</div>
+                        <div class="message-text message-bot">Ciao! Sono il tuo assistente per il trading system.<br>Posso aiutarti con:<br>- Strategie di trading<br>- Performance e rendimenti<br>- Backtest e validazione<br>- Report e documentazione</div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="chat-input" placeholder="Chiedi qualcosa..." onkeypress="if(event.key==='Enter')sendMessage()">
+                    <button onclick="sendMessage()">SEND</button>
+                </div>
             </div>
         </main>
-        <aside class="chat-panel">
-            <div class="chat-header">Chat con Assistant</div>
-            <div class="chat-messages" id="chat-messages">
-                <div class="message assistant">
-                    <p><strong>Ciao!</strong> Sono il tuo assistente per il trading system.</p>
-                    <p style="margin-top:0.5rem;color:#8b949e;font-size:0.85rem">Posso aiutarti con:</p>
-                    <ul style="margin-left:1rem;margin-top:0.5rem;color:#8b949e;font-size:0.85rem">
-                        <li>Strategie di trading</li>
-                        <li>Performance e rendimenti</li>
-                        <li>Backtest e validazione</li>
-                        <li>Report e documentazione</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="chat-input">
-                <input type="text" id="chat-input" placeholder="Chiedi qualcosa..." onkeypress="handleKeyPress(event)">
-            </div>
-        </aside>
+        <footer class="bottombar">CONN: <span style="color:var(--green)">CONNECTED</span> | MODE: <span style="color:var(--orange)">PAPER</span> | Trading Agent v1.0</footer>
     </div>
     <script>
-        function handleKeyPress(e) {
-            if (e.key === 'Enter') {
-                const input = document.getElementById('chat-input');
-                const text = input.value.trim();
-                if (!text) return;
-                addMessage('user', text);
-                input.value = '';
-                setTimeout(() => processChat(text), 300);
-            }
-        }
-        function addMessage(role, text) {
-            const messagesDiv = document.getElementById('chat-messages');
-            messagesDiv.innerHTML += '<div class="message ' + role + '"><p>' + text + '</p></div>';
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-        function processChat(text) {
-            const lower = text.toLowerCase();
-            let response = '';
-            if (lower.includes('strategy') || lower.includes('strategie')) {
-                response = 'Strategie APPROVATE:\n- model_intraday_momentum\n- model_highfrequency\n- model_dynamic_time';
-            } else if (lower.includes('performance') || lower.includes('rendimenti')) {
-                response = 'Sharpe: -0.39\nReturn: -0.9%\nWin Rate: 47%';
-            } else if (lower.includes('backtest') || lower.includes('test')) {
-                response = 'Backtest: 4 modelli completati\nRobustezza: Variabile per modello';
-            } else if (lower.includes('aiuto') || lower.includes('help')) {
-                response = 'Chiedi di: strategy, performance, backtest, report';
-            } else {
-                response = 'Chiedi di strategie, performance, backtest o report.';
-            }
-            setTimeout(() => addMessage('assistant', response), 200);
+        function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
+        setInterval(updateTime, 1000); updateTime();
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+            const msgs = document.getElementById('chat-messages');
+            msgs.innerHTML += '<div class="message"><div class="message-user">Tu</div><div class="message-text">'+text+'</div></div>';
+            msgs.innerHTML += '<div class="message"><div class="message-user">Assistant</div><div class="message-text message-bot">Ricevuto: "'+text+'"<br><br>Posso aiutarti con:<br>- Performance: Sharpe -0.39, Win Rate 47%<br>- 4 modelli approvati<br>- Strategie: Intraday, High Freq, Dynamic</div></div>';
+            msgs.scrollTop = msgs.scrollHeight;
+            input.value = '';
         }
     </script>
 </body>

@@ -3,243 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation & Research - Trading Agent</title>
+    <title>Documentation | Trading Agent</title>
     <style>
+        :root { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414; --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa; --text-muted: #666666; --orange: #ff9900; --green: #00ff00; --red: #ff0000; --font: "Consolas", "Monaco", monospace; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
-        .header { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.25rem; font-weight: 700; color: #58a6ff; }
-        .nav { display: flex; gap: 1.5rem; }
-        .nav a { color: #8b949e; text-decoration: none; cursor: pointer; }
-        .nav a:hover, .nav a.active { color: #58a6ff; }
-        .container { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
-        .card h2 { font-size: 1.1rem; color: #e6edf3; margin-bottom: 1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-        .section-title { font-size: 1.5rem; margin-bottom: 1.5rem; color: #e6edf3; }
-        
-        .paper-card { background: #21262d; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
-        .paper-title { font-weight: 600; color: #58a6ff; margin-bottom: 0.5rem; }
-        .paper-meta { font-size: 0.85rem; color: #8b949e; margin-bottom: 0.75rem; }
-        .paper-abstract { font-size: 0.9rem; line-height: 1.6; color: #c9d1d9; }
-        .paper-tags { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
-        .tag { padding: 0.25rem 0.5rem; background: #30363d; border-radius: 4px; font-size: 0.75rem; color: #8b949e; }
-        
-        .model-doc { background: #21262d; border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
-        .model-name { font-size: 1.25rem; font-weight: 600; color: #58a6ff; margin-bottom: 0.5rem; }
-        .model-status { display: inline-block; padding: 0.25rem 0.5rem; background: #1f3a1f; color: #56d364; border-radius: 4px; font-size: 0.75rem; margin-bottom: 1rem; }
-        .doc-section { margin-bottom: 1.25rem; }
-        .doc-section h3 { font-size: 1rem; color: #8b949e; margin-bottom: 0.5rem; font-weight: 500; }
-        .doc-section p, .doc-section li { font-size: 0.9rem; line-height: 1.6; color: #c9d1d9; }
-        .doc-section ul { margin-left: 1.5rem; }
-        
-        .code-block { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.85rem; overflow-x: auto; }
-        .code-keyword { color: #ff7b72; }
-        .code-string { color: #a5d6ff; }
-        .code-number { color: #79c0ff; }
-        .code-comment { color: #8b949e; }
-        
-        .tree-view { padding-left: 1.5rem; border-left: 2px solid #30363d; }
-        .tree-item { padding: 0.5rem 0; color: #c9d1d9; font-size: 0.9rem; }
-        .tree-item::before { content: "📄"; margin-right: 0.5rem; }
-        
-        .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-        .metric-item { background: #0d1117; padding: 1rem; border-radius: 6px; text-align: center; }
-        .metric-value { font-size: 1.5rem; font-weight: 700; color: #58a6ff; }
-        .metric-label { font-size: 0.8rem; color: #8b949e; margin-top: 0.25rem; }
-        
-        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid #30363d; padding-bottom: 0.5rem; }
-        .tab { padding: 0.5rem 1rem; background: transparent; border: none; color: #8b949e; cursor: pointer; border-radius: 6px 6px 0 0; }
-        .tab:hover, .tab.active { background: #21262d; color: #e6edf3; }
+        html, body { background: var(--bg-primary); color: var(--text-secondary); font-family: var(--font); font-size: 12px; height: 100%; overflow: hidden; }
+        .terminal { display: grid; grid-template-columns: 180px 1fr; grid-template-rows: 40px 1fr 24px; height: 100vh; }
+        .topbar { grid-column: 1 / -1; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
+        .topbar-brand { color: var(--orange); font-size: 14px; font-weight: bold; }
+        .topbar-brand span { background: var(--orange); color: #000; padding: 2px 6px; border-radius: 2px; font-size: 10px; }
+        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 8px 0; display: flex; flex-direction: column; }
+        .sidebar-section { margin-bottom: 12px; }
+        .sidebar-title { padding: 4px 12px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
+        .sidebar-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-secondary); }
+        .sidebar-item:hover { background: var(--bg-tertiary); }
+        .sidebar-item.active { color: var(--orange); background: var(--bg-tertiary); }
+        .status-indicator { margin-top: auto; padding: 8px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 10px; }
+        .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
+        .main { background: var(--bg-primary); overflow-y: auto; padding: 8px; }
+        .card { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; margin-bottom: 8px; }
+        .card-title { color: var(--orange); font-size: 11px; margin-bottom: 8px; }
+        .paper { background: var(--bg-tertiary); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+        .paper-title { color: var(--text-primary); font-size: 12px; margin-bottom: 4px; }
+        .paper-meta { color: var(--text-muted); font-size: 10px; margin-bottom: 4px; }
+        .paper-abstract { color: var(--text-secondary); font-size: 11px; line-height: 1.4; }
+        .paper-tags { display: flex; gap: 4px; margin-top: 6px; }
+        .tag { background: var(--bg-secondary); padding: 2px 6px; border-radius: 2px; font-size: 9px; color: var(--text-muted); }
+        .model-doc { background: var(--bg-tertiary); border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+        .model-name { color: var(--text-primary); font-size: 12px; font-weight: bold; }
+        .model-status { display: inline-block; background: rgba(0,255,0,0.1); color: var(--green); padding: 2px 6px; border-radius: 2px; font-size: 9px; margin-top: 4px; }
+        .code-block { background: var(--bg-primary); border: 1px solid var(--border); padding: 8px; font-family: var(--font); font-size: 10px; overflow-x: auto; }
+        .bottombar { grid-column: 1 / -1; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: var(--text-muted); }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo">Trading Agent - Documentation & Research</div>
-        <nav class="nav">
-            <a onclick="showTab('research')" class="active">Research Papers</a>
-            <a onclick="showTab('models')">Model Docs</a>
-            <a onclick="showTab('architecture')">Architecture</a>
+    <div class="terminal">
+        <header class="topbar"><div class="topbar-brand"><span>TA</span> DOCUMENTATION</div><div>Last Update: <span id="lastUpdate">--:--:--</span></div></header>
+        <nav class="sidebar">
+            <div class="sidebar-section"><div class="sidebar-title">Dashboard</div>
+                <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+            </div>
+            <div class="sidebar-section"><div class="sidebar-title">Analisi</div>
+                <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+                <a href="dashboard_documentation.html" class="sidebar-item active"><span>▤</span> Documentation</a>
+                <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            </div>
+            <div class="sidebar-section"><div class="sidebar-title">Sistema</div>
+                <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
+            </div>
+            <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
         </nav>
-    </header>
-    <div class="container">
-        
-        <div id="tab-research">
-            <h1 class="section-title">📚 Research Papers</h1>
-            
-            <div class="card">
-                <h2><span class="icon">🔬</span> Research Sources</h2>
-                <div class="metrics-grid">
-                    <div class="metric-item"><div class="metric-value">6</div><div class="metric-label">Papers Analyzed</div></div>
-                    <div class="metric-item"><div class="metric-value">3</div><div class="metric-label">Implemented</div></div>
-                    <div class="metric-item"><div class="metric-value">4</div><div class="metric-label">Validated</div></div>
+        <main class="main">
+            <div class="card"><div class="card-title">RESEARCH PAPERS</div>
+                <div class="paper"><div class="paper-title">Intraday Momentum Trading with Machine Learning</div>
+                    <div class="paper-meta">arXiv:2308.12723 | 2023-08-24</div>
+                    <div class="paper-abstract">LSTM networks for 5m/15m intraday prediction with technical indicators.</div>
+                    <div class="paper-tags"><span class="tag">q-fin.TR</span><span class="tag">LSTM</span><span class="tag">Intraday</span></div>
+                </div>
+                <div class="paper"><div class="paper-title">High-Frequency Statistical Arbitrage</div>
+                    <div class="paper-meta">arXiv:2105.07012 | 2021-05-14</div>
+                    <div class="paper-abstract">Cointegration pairs trading with ML filters for 1-minute bars.</div>
+                    <div class="paper-tags"><span class="tag">q-fin.TR</span><span class="tag">Cointegration</span></div>
+                </div>
+                <div class="paper"><div class="paper-title">Dynamic Time Window Optimization</div>
+                    <div class="paper-meta">arXiv:2401.03245 | 2024-01-07</div>
+                    <div class="paper-abstract">RL-based adaptive time window for entry/exit optimization.</div>
+                    <div class="paper-tags"><span class="tag">q-fin.TR</span><span class="tag">RL</span><span class="tag">Adaptive</span></div>
                 </div>
             </div>
-            
-            <div class="paper-card">
-                <div class="paper-title">Intraday Momentum Trading with Machine Learning</div>
-                <div class="paper-meta">arXiv:2308.12723v1 | Published: 2023-08-24 | Authors: John Doe, Jane Smith</div>
-                <div class="paper-abstract">
-                    This paper presents a novel intraday momentum strategy using machine learning for 5-minute and 15-minute time frames. The approach uses LSTM networks combined with technical indicators to predict short-term price movements.
+            <div class="card"><div class="card-title">MODEL DOCUMENTATION</div>
+                <div class="model-doc"><div class="model-name">model_intraday_momentum_trading_with_machine</div><div class="model-status">APPROVED</div>
+                    <div class="code-block">lstm_units_1: 128, lstm_units_2: 64, dropout: 0.2, lr: 0.001</div>
                 </div>
-                <div class="paper-tags">
-                    <span class="tag">q-fin.TR</span><span class="tag">cs.LG</span><span class="tag">LSTM</span><span class="tag">Intraday</span>
+                <div class="model-doc"><div class="model-name">model_highfrequency_statistical_arbitrage</div><div class="model-status">APPROVED</div>
+                    <div class="code-block">pairs: SPY/QQQ, window: 1m, threshold: 2.0</div>
                 </div>
-            </div>
-            
-            <div class="paper-card">
-                <div class="paper-title">High-Frequency Statistical Arbitrage</div>
-                <div class="paper-meta">arXiv:2105.07012v3 | Published: 2021-05-14 | Authors: Alice Johnson, Bob Williams</div>
-                <div class="paper-abstract">
-                    We develop a statistical arbitrage strategy targeting intraday mean reversion across multiple securities. Using cointegration and machine learning filters, we achieve annualized returns of 12.5% with minimal drawdown on 1-minute bars.
-                </div>
-                <div class="paper-tags">
-                    <span class="tag">q-fin.TR</span><span class="tag">Statistical Arbitrage</span><span class="tag">Cointegration</span>
+                <div class="model-doc"><div class="model-name">model_dynamic_time_window_optimization_for</div><div class="model-status">APPROVED</div>
+                    <div class="code-block">rl_agent: PPO, state: volatility, action: window</div>
                 </div>
             </div>
-            
-            <div class="paper-card">
-                <div class="paper-title">Dynamic Time Window Optimization for Intraday Trading</div>
-                <div class="paper-meta">arXiv:2401.03245v1 | Published: 2024-01-07 | Authors: Charlie Brown, Diana Lee</div>
-                <div class="paper-abstract">
-                    This paper introduces adaptive time window selection for intraday strategies using reinforcement learning. The system dynamically adjusts entry/exit times based on market volatility regime. Results show 23% improvement over fixed-window approaches.
-                </div>
-                <div class="paper-tags">
-                    <span class="tag">q-fin.TR</span><span class="tag">RL</span><span class="tag">Adaptive</span>
-                </div>
-            </div>
-        </div>
-        
-        <div id="tab-models" style="display:none">
-            <h1 class="section-title">🤖 Model Documentation</h1>
-            
-            <div class="model-doc">
-                <div class="model-name">model_intraday_momentum_trading_with_machine</div>
-                <div class="model-status">APPROVED</div>
-                
-                <div class="doc-section">
-                    <h3>Architecture</h3>
-                    <p>LSTM-based model with dual LSTM layers (128 and 64 units), dropout regularization (0.2), and dense output layers for price movement prediction.</p>
-                </div>
-                
-                <div class="doc-section">
-                    <h3>Input Features</h3>
-                    <ul>
-                        <li>close_price - Closing price data</li>
-                        <li>volume - Trading volume</li>
-                        <li>price_returns - Daily price returns</li>
-                        <li>moving_averages - 5/10/20 period MAs</li>
-                    </ul>
-                </div>
-                
-                <div class="doc-section">
-                    <h3>Hyperparameters</h3>
-                    <div class="code-block">
-<span class="code-keyword">model</span> = {
-    <span class="code-string">"lstm_units_1"</span>: <span class="code-number">128</span>,
-    <span class="code-string">"lstm_units_2"</span>: <span class="code-number">64</span>,
-    <span class="code-string">"dropout_rate"</span>: <span class="code-number">0.2</span>,
-    <span class="code-string">"learning_rate"</span>: <span class="code-number">0.001</span>,
-    <span class="code-string">"batch_size"</span>: <span class="code-number">32</span>,
-    <span class="code-string">"epochs"</span>: <span class="code-number">100</span>
-}
-                    </div>
-                </div>
-                
-                <div class="doc-section">
-                    <h3>Training Data</h3>
-                    <ul>
-                        <li>Symbol: SPY, QQQ</li>
-                        <li>Timeframe: 5-minute, 15-minute bars</li>
-                        <li>Period: 2023-01 to 2024-12</li>
-                        <li>Samples: ~50,000</li>
-                    </ul>
-                </div>
-                
-                <div class="doc-section">
-                    <h3>Performance Metrics</h3>
-                    <ul>
-                        <li>Sharpe Ratio: -0.39</li>
-                        <li>Win Rate: 47%</li>
-                        <li>Max Drawdown: 2.3%</li>
-                        <li>Volatility: 2.3%</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="model-doc">
-                <div class="model-name">model_highfrequency_statistical_arbitrage</div>
-                <div class="model-status">APPROVED</div>
-                <div class="doc-section">
-                    <h3>Strategy Type</h3>
-                    <p>Statistical arbitrage using cointegration pairs trading with ML-based filtering for 1-minute bars.</p>
-                </div>
-            </div>
-            
-            <div class="model-doc">
-                <div class="model-name">model_dynamic_time_window_optimization_for</div>
-                <div class="model-status">APPROVED</div>
-                <div class="doc-section">
-                    <h3>Strategy Type</h3>
-                    <p>Reinforcement learning-based adaptive time window selection for entry/exit optimization.</p>
-                </div>
-            </div>
-        </div>
-        
-        <div id="tab-architecture" style="display:none">
-            <h1 class="section-title">🏗️ System Architecture</h1>
-            
-            <div class="card">
-                <h2>Project Structure</h2>
-                <div class="tree-view">
-                    <div class="tree-item">agents/</div>
-                    <div class="tree-item">├── research/ - Research agent</div>
-                    <div class="tree-item">├── spec/ - Specification agent</div>
-                    <div class="tree-item">├── ml_engineer/ - ML implementation</div>
-                    <div class="tree-item">├── validation/ - Validation agent</div>
-                    <div class="tree-item">├── trading/ - Trading executor</div>
-                    <div class="tree-item">└── chat/ - Chat assistant</div>
-                    <div class="tree-item">models/ - Implemented models</div>
-                    <div class="tree-item">├── validated/ - Approved models</div>
-                    <div class="tree-item">specs/ - Model specifications</div>
-                    <div class="tree-item">data/ - Research findings</div>
-                    <div class="tree-item">dashboards/ - Web interfaces</div>
-                    <div class="tree-item">api/ - Backend APIs</div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>Pipeline Flow</h2>
-                <div class="doc-section">
-                    <ol>
-                        <li><strong>Research Agent</strong> - Weekly paper discovery from arXiv</li>
-                        <li><strong>Spec Agent</strong> - Extract specifications and action plans</li>
-                        <li><strong>ML Engineer Agent</strong> - Implement models from specs</li>
-                        <li><strong>Validation Agent</strong> - Validate model quality and performance</li>
-                        <li><strong>Chat Agent</strong> - User interaction and queries</li>
-                        <li><strong>Trading Executor</strong> - Execute approved strategies</li>
-                    </ol>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>Available APIs</h2>
-                <table style="width:100%;border-collapse:collapse;">
-                    <tr><th style="text-align:left;padding:0.5rem;border-bottom:1px solid #30363d;">Endpoint</th><th style="text-align:left;padding:0.5rem;border-bottom:1px solid #30363d;">Description</th></tr>
-                    <tr><td style="padding:0.5rem;border-bottom:1px solid #30363d;">/api/chat/data</td><td style="padding:0.5rem;border-bottom:1px solid #30363d;">Dashboard data</td></tr>
-                    <tr><td style="padding:0.5rem;border-bottom:1px solid #30363d;">/api/chat/message</td><td style="padding:0.5rem;border-bottom:1px solid #30363d;">Chat interaction</td></tr>
-                    <tr><td style="padding:0.5rem;border-bottom:1px solid #30363d;">/api/research</td><td style="padding:0.5rem;border-bottom:1px solid #30363d;">Research data</td></tr>
-                    <tr><td style="padding:0.5rem;border-bottom:1px solid #30363d;">/api/performance</td><td style="padding:0.5rem;border-bottom:1px solid #30363d;">Live metrics</td></tr>
-                </table>
-            </div>
-        </div>
+        </main>
+        <footer class="bottombar">CONN: <span style="color:var(--green)">CONNECTED</span> | MODE: <span style="color:var(--orange)">PAPER</span> | Trading Agent v1.0</footer>
     </div>
-    <script>
-        function showTab(tab) {
-            document.getElementById('tab-research').style.display = 'none';
-            document.getElementById('tab-models').style.display = 'none';
-            document.getElementById('tab-architecture').style.display = 'none';
-            document.getElementById('tab-' + tab).style.display = 'block';
-        }
-    </script>
+    <script>function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); } setInterval(updateTime, 1000); updateTime();</script>
 </body>
 </html>
