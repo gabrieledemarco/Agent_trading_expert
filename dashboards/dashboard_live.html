@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Performance - Trading Agent</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+        .header { background: #161b22; padding: 1rem 2rem; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.25rem; font-weight: 700; color: #58a6ff; }
+        .live-indicator { display: flex; align-items: center; gap: 0.5rem; }
+        .live-dot { width: 10px; height: 10px; background: #56d364; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .nav { display: flex; gap: 1.5rem; }
+        .nav a { color: #8b949e; text-decoration: none; cursor: pointer; }
+        .nav a:hover, .nav a.active { color: #58a6ff; }
+        .container { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+        .card h2 { font-size: 1.1rem; color: #8b949e; margin-bottom: 1rem; font-weight: 600; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; text-align: center; }
+        .stat-value { font-size: 1.75rem; font-weight: 700; }
+        .stat-value.positive { color: #56d364; }
+        .stat-value.negative { color: #f85149; }
+        .stat-value.neutral { color: #58a6ff; }
+        .stat-label { font-size: 0.8rem; color: #8b949e; margin-top: 0.25rem; }
+        
+        .realtime-chart { height: 300px; position: relative; overflow: hidden; }
+        .chart-canvas { width: 100%; height: 100%; }
+        
+        .positions-table { width: 100%; border-collapse: collapse; }
+        .positions-table th, .positions-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #30363d; }
+        .positions-table th { color: #8b949e; font-weight: 500; font-size: 0.85rem; }
+        
+        .trade-history { max-height: 400px; overflow-y: auto; }
+        .trade-row { display: flex; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid #30363d; }
+        .trade-row:hover { background: #21262d; }
+        .trade-time { color: #8b949e; font-size: 0.85rem; }
+        .trade-symbol { font-weight: 600; }
+        .trade-action { color: #56d364; }
+        .trade-action.sell { color: #f85149; }
+        .trade-pnl { font-weight: 600; }
+        .trade-pnl.positive { color: #56d364; }
+        .trade-pnl.negative { color: #f85149; }
+        
+        .log-console { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; height: 200px; overflow-y: auto; font-family: 'Monaco', monospace; font-size: 0.8rem; }
+        .log-entry { padding: 0.25rem 0; }
+        .log-entry .time { color: #8b949e; }
+        .log-entry .info { color: #58a6ff; }
+        .log-entry .success { color: #56d364; }
+        .log-entry .error { color: #f85149; }
+        
+        .update-time { font-size: 0.8rem; color: #8b949e; text-align: right; margin-top: 0.5rem; }
+        
+        .metrics-stream { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .metric-stream { background: #21262d; padding: 1rem; border-radius: 6px; }
+        .metric-stream-label { font-size: 0.75rem; color: #8b949e; }
+        .metric-stream-value { font-size: 1.25rem; font-weight: 700; margin-top: 0.25rem; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <span>Trading Agent - Live Monitor</span>
+            <span class="live-indicator"><span class="live-dot"></span>LIVE</span>
+        </div>
+        <div style="font-size: 0.85rem; color: #8b949e;">
+            Last Update: <span id="last-update">Loading...</span>
+        </div>
+    </header>
+    <div class="container">
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value neutral" id="equity-value">$10,000</div>
+                <div class="stat-label">Total Equity</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value negative" id="pnl-value">-$190</div>
+                <div class="stat-label">Total P&L</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="return-value">-1.9%</div>
+                <div class="stat-label">Return</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="sharpe-value">-2.8</div>
+                <div class="stat-label">Live Sharpe</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value positive" id="winrate-value">47%</div>
+                <div class="stat-label">Win Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="positions-value">3</div>
+                <div class="stat-label">Open Positions</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📈 Live Equity Chart (Streaming)</h2>
+            <div class="realtime-chart">
+                <canvas id="equity-chart" class="chart-canvas"></canvas>
+            </div>
+            <div class="update-time">Auto-refresh: 5s | Chart update: 1s</div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div class="card">
+                <h2>📊 Open Positions</h2>
+                <table class="positions-table">
+                    <thead><tr><th>Symbol</th><th>Entry</th><th>Current</th><th>P&L</th><th>Hold</th></tr></thead>
+                    <tbody id="positions-body">
+                        <tr><td>AAPL</td><td>$263.11</td><td>$265.23</td><td class="positive">+$212</td><td>2d</td></tr>
+                        <tr><td>MSFT</td><td>$418.54</td><td>$417.12</td><td class="negative">-$142</td><td>1d</td></tr>
+                        <tr><td>GOOG</td><td>$175.23</td><td>$176.45</td><td class="positive">+$122</td><td>3h</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="card">
+                <h2>⚡ Live Metrics</h2>
+                <div class="metrics-stream">
+                    <div class="metric-stream">
+                        <div class="metric-stream-label">Trade Frequency</div>
+                        <div class="metric-stream-value">2.3/day</div>
+                    </div>
+                    <div class="metric-stream">
+                        <div class="metric-stream-label">Avg Hold Time</div>
+                        <div class="metric-stream-value">4.2h</div>
+                    </div>
+                    <div class="metric-stream">
+                        <div class="metric-stream-label">Max Drawdown</div>
+                        <div class="metric-stream-value negative">2.3%</div>
+                    </div>
+                    <div class="metric-stream">
+                        <div class="metric-stream-label">Alpha</div>
+                        <div class="metric-stream-value negative">-0.8%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📜 Trade History</h2>
+            <div class="trade-history">
+                <div class="trade-row"><span class="trade-time">14:32</span><span class="trade-symbol">AAPL</span><span class="trade-action">BUY</span><span>3.8 @ $263.11</span><span class="trade-pnl positive">+$212</span></div>
+                <div class="trade-row"><span class="trade-time">13:45</span><span class="trade-symbol">MSFT</span><span class="trade-action sell">SELL</span><span>2.1 @ $420.12</span><span class="trade-pnl negative">-$142</span></div>
+                <div class="trade-row"><span class="trade-time">11:22</span><span class="trade-symbol">GOOG</span><span class="trade-action">BUY</span><span>5.2 @ $175.23</span><span class="trade-pnl positive">+$122</span></div>
+                <div class="trade-row"><span class="trade-time">10:15</span><span class="trade-symbol">AAPL</span><span class="trade-action sell">SELL</span><span>3.8 @ $262.45</span><span class="trade-pnl positive">+$98</span></div>
+                <div class="trade-row"><span class="trade-time">09:30</span><span class="trade-symbol">NVDA</span><span class="trade-action">BUY</span><span>1.5 @ $890.12</span><span class="trade-pnl negative">-$45</span></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📝 System Log (Live)</h2>
+            <div class="log-console" id="log-console">
+                <div class="log-entry"><span class="time">[14:35:01]</span> <span class="info">Model loaded: model_intraday_momentum</span></div>
+                <div class="log-entry"><span class="time">[14:35:01]</span> <span class="success">Connected to data feed</span></div>
+                <div class="log-entry"><span class="time">[14:34:58]</span> <span class="info">Fetching live prices...</span></div>
+                <div class="log-entry"><span class="time">[14:34:55]</span> <span class="success">Position opened: AAPL BUY 3.8</span></div>
+                <div class="log-entry"><span class="time">[14:34:30]</span> <span class="info">Signal detected: momentum_bullish</span></div>
+                <div class="log-entry"><span class="time">[14:33:45]</span> <span class="info">Calculating Sharpe ratio...</span></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Real-time data simulation
+        let equity = 10000;
+        let equityHistory = [10000, 10050, 10080, 10020, 9980, 10010, 10050, 10020, 10100, 10080, 10020, 9980, 10050, 10020, 10080, 10100, 10080, 10020, 10050, 10100, 10050, 10020, 10080, 10050, 10100, 10020, 10080, 10050, 10020, 10080];
+        
+        function updateLiveData() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString();
+            
+            // Simulate small equity changes
+            const change = (Math.random() - 0.5) * 20;
+            equity = Math.max(9800, equity + change);
+            
+            document.getElementById('equity-value').textContent = '$' + equity.toFixed(0);
+            document.getElementById('pnl-value').textContent = (equity - 10000 < 0 ? '-' : '+$') + Math.abs(equity - 10000).toFixed(0);
+            document.getElementById('return-value').textContent = ((equity - 10000) / 100 * 100).toFixed(1) + '%';
+            
+            // Update chart
+            drawChart();
+            
+            // Add log entry
+            addLogEntry(now);
+        }
+        
+        function drawChart() {
+            const canvas = document.getElementById('equity-chart');
+            const ctx = canvas.getContext('2d');
+            if (!canvas.width) return;
+            
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.height; i += 30) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+            
+            // Draw equity line
+            ctx.strokeStyle = '#58a6ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            equityHistory.push(equity);
+            if (equityHistory.length > 50) equityHistory.shift();
+            
+            const minVal = Math.min(...equityHistory) - 100;
+            const maxVal = Math.max(...equityHistory) + 100;
+            const range = maxVal - minVal;
+            
+            for (let i = 0; i < equityHistory.length; i++) {
+                const x = (i / (equityHistory.length - 1)) * canvas.width;
+                const y = canvas.height - ((equityHistory[i] - minVal) / range) * canvas.height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+        
+        function addLogEntry(time) {
+            const console = document.getElementById('log-console');
+            const messages = [
+                'Fetching live prices...',
+                'Calculating indicators...',
+                'Checking signals...',
+                'Updating positions...'
+            ];
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="time">[${time.toLocaleTimeString()}]</span> <span class="info">${msg}</span>`;
+            console.insertBefore(entry, console.firstChild);
+            if (console.children.length > 20) console.removeChild(console.lastChild);
+        }
+        
+        // Initialize
+        setInterval(updateLiveData, 5000);
+        updateLiveData();
+    </script>
+</body>
+</html>
