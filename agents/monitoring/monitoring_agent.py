@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -70,6 +71,7 @@ class MonitoringAgent:
         self.baseline_metrics = None
         self.alert_history = []
         self.performance_history = []
+        self._lock = threading.Lock()
 
     def load_performance_data(self, days: int = 30) -> list[PerformanceSnapshot]:
         """Load performance data from trading logs."""
@@ -402,7 +404,8 @@ class MonitoringAgent:
 
     def _log_alert(self, alert: Alert):
         """Log alert to history."""
-        self.alert_history.append(alert)
+        with self._lock:
+            self.alert_history.append(alert)
 
     def get_performance_summary(self) -> dict:
         """Get current performance summary."""
