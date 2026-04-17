@@ -22,17 +22,42 @@
     return `${sign}${n.toFixed(decimals)}%`;
   }
 
-  async function fetchJson(path) {
-    const response = await fetch(path, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-    });
+  function candidateApiPaths(path) {
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    const candidates = [normalized];
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} on ${path}`);
+    // Optional base path for reverse proxy deployments.
+    if (window.__API_BASE_PATH && typeof window.__API_BASE_PATH === 'string') {
+      const base = window.__API_BASE_PATH.replace(/\/$/, '');
+      candidates.unshift(`${base}${normalized}`);
     }
 
-    return response.json();
+    return [...new Set(candidates)];
+  }
+
+  async function fetchJson(path) {
+    const candidates = candidateApiPaths(path);
+    let lastError = null;
+
+    for (const candidate of candidates) {
+      try {
+        const response = await fetch(candidate, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+          lastError = new Error(`HTTP ${response.status} on ${candidate}`);
+          continue;
+        }
+
+        return response.json();
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error(`Unable to fetch ${path}`);
   }
 
   function setText(id, value) {
@@ -52,13 +77,26 @@
     });
   }
 
-  function updateSummaryWidgets(summary, strategies) {
+  function uniqueAgentsCount(activities) {
+    const names = new Set(
+      (activities || [])
+        .map((a) => a && a.agent_name)
+        .filter(Boolean)
+    );
+    return names.size;
+  }
+
+  function updateSummaryWidgets(summary, strategies, activities) {
     const totalStrategies = strategies.length;
     const activeStrategies = strategies.filter((s) => String(s.status || '').toUpperCase() === 'APPROVED').length;
 
     setBadgeByText('Research', asNumber(summary.research_papers));
     setBadgeByText('Strategies', totalStrategies);
-    setBadgeByText('Agents', 6);
+
+    const agentsCount = uniqueAgentsCount(activities);
+    if (agentsCount > 0) {
+      setBadgeByText('Agents', agentsCount);
+    }
 
     setText('portfolioValue', formatCurrency(summary.current_equity));
     setText('totalCapital', formatCurrency(summary.current_equity));
@@ -72,13 +110,15 @@
 
   async function refreshDashboardData() {
     try {
-      const [summary, strategiesResponse] = await Promise.all([
+      const [summary, strategiesResponse, activityResponse] = await Promise.all([
         fetchJson('/dashboard/summary'),
         fetchJson('/strategies').catch(() => ({ strategies: [] })),
+        fetchJson('/dashboard/agent-activity?limit=100').catch(() => ({ activities: [] })),
       ]);
 
       const strategies = Array.isArray(strategiesResponse.strategies) ? strategiesResponse.strategies : [];
-      updateSummaryWidgets(summary || {}, strategies);
+      const activities = Array.isArray(activityResponse.activities) ? activityResponse.activities : [];
+      updateSummaryWidgets(summary || {}, strategies, activities);
       window.__dashboardDataLastUpdate = new Date().toISOString();
     } catch (error) {
       // Keep UI usable with existing static values when API is unavailable.

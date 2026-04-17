@@ -350,8 +350,8 @@ async function hydrateAgentActivityFromApi() {
         if (!activities.length) return;
 
         const console_ = document.getElementById('logConsole');
-        console_.innerHTML = '';
-        logEntryCount = 0;
+        const shouldSeedFromApi = console_.children.length <= 3;
+        if (!shouldSeedFromApi) return;
 
         activities.forEach((a) => {
             const msg = a.message || 'No message';

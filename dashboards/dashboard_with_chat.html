@@ -169,9 +169,7 @@ Fonte: /dashboard/summary`;
 ` +
             (strategies.length
                 ? strategies.map((s, idx) => `  ${idx + 1}. ${s.name || 'Unknown'}
-     Sharpe: ${Number(s.sharpe_ratio || 0).toFixed(2)} | Risk: ${s.risk_level || 'N/A'} | Status: ${s.status || 'N/A'}`).join('
-
-')
+     Sharpe: ${Number(s.sharpe_ratio || 0).toFixed(2)} | Risk: ${s.risk_level || 'N/A'} | Status: ${s.status || 'N/A'}`).join('\n\n')
                 : '  Nessuna strategia disponibile.');
 
         const best = strategies.slice().sort((a, b) => Number(b.sharpe_ratio || -99) - Number(a.sharpe_ratio || -99))[0];
@@ -195,8 +193,7 @@ Fonte: /dashboard/summary`;
 
 ` + Array.from(byAgent.values()).slice(0, 6)
                 .map((a) => `  ● ${a.agent_name}  ${a.status || 'N/A'}  — ${a.timestamp || 'N/A'}`)
-                .join('
-');
+                .join('\n');
         }
     } catch (err) {
         // Fallback to static KB content if API is unavailable.
