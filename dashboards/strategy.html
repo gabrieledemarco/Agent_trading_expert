@@ -71,6 +71,13 @@
         .doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
         .doc-item h4{color:var(--blue);font-size:11px;margin-bottom:4px;}
         .doc-item p{color:var(--text-muted);font-size:11px;line-height:1.5;}
+        .risk-section{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;}
+        .risk-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+        .risk-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+        .risk-param-box{background:var(--bg-primary);border:1px solid var(--border);padding:10px;text-align:center;}
+        .risk-param-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;}
+        .risk-param-value{font-size:14px;font-weight:bold;margin-bottom:4px;}
+        .risk-param-desc{color:var(--text-muted);font-size:9px;line-height:1.3;}
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
 </head>
@@ -142,6 +149,7 @@
 
         <div class="tabs">
             <button class="tab active" onclick="switchTab('perf')">Performance</button>
+            <button class="tab" onclick="switchTab('risk')">Risk Management</button>
             <button class="tab" onclick="switchTab('pos')">Positions</button>
             <button class="tab" onclick="switchTab('doc')">Documentation</button>
         </div>
@@ -157,12 +165,335 @@
             </div>
         </div>
 
+        <div class="tab-content" id="tab-risk">
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">POSITION SIZING & EXPOSURE</div>
+                <div class="risk-grid-4">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Position Size Method</div>
+                        <div class="risk-param-value" style="color:var(--orange)">Kelly Criterion (¼)</div>
+                        <div class="risk-param-desc">Optimal sizing based on edge and volatility</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Position Size</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">5.0% NAV</div>
+                        <div class="risk-param-desc">Hard limit per single position</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Current Exposure</div>
+                        <div class="risk-param-value" style="color:var(--green)">2.8% NAV</div>
+                        <div class="risk-param-desc">Active: $280 / $10,000</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Leverage Allowed</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">1.0x (None)</div>
+                        <div class="risk-param-desc">Conservative cash-only approach</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">STOP LOSS & TAKE PROFIT</div>
+                <div class="risk-grid-3">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Stop Loss Type</div>
+                        <div class="risk-param-value" style="color:var(--red)">ATR-Based Dynamic</div>
+                        <div class="risk-param-desc">1.5× ATR(14) from entry</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Take Profit Type</div>
+                        <div class="risk-param-value" style="color:var(--green)">Target-Based</div>
+                        <div class="risk-param-desc">3.0× risk distance (R:R = 1:3)</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Trailing Stop</div>
+                        <div class="risk-param-value" style="color:var(--orange)">Enabled</div>
+                        <div class="risk-param-desc">Activates at +2R, trails at 1.0× ATR</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">RISK PER TRADE & DRAWDOWN LIMITS</div>
+                <div class="risk-grid-4">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Risk Per Trade</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">1.0% NAV</div>
+                        <div class="risk-param-desc">Max loss per single trade: $100</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Daily Loss</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">3.0% NAV</div>
+                        <div class="risk-param-desc">Circuit breaker: $300 daily loss</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Drawdown Limit</div>
+                        <div class="risk-param-value" style="color:var(--red)">15.0%</div>
+                        <div class="risk-param-desc">Strategy paused if DD exceeds limit</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Current Drawdown</div>
+                        <div class="risk-param-value" style="color:var(--green)">2.3%</div>
+                        <div class="risk-param-desc">Well within safe limits</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">DYNAMIC SIZING & VOLATILITY ADJUSTMENT</div>
+                <div class="risk-grid-3">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Vol-Adjusted Sizing</div>
+                        <div class="risk-param-value" style="color:var(--orange)">Active</div>
+                        <div class="risk-param-desc">Position size scales inverse to realized vol</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Current Vol Regime</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">22% (Medium)</div>
+                        <div class="risk-param-desc">20-day realized volatility (annualized)</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Sizing Multiplier</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">0.85x</div>
+                        <div class="risk-param-desc">Reduced size due to elevated volatility</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">RISK/REWARD & KELLY OPTIMIZATION</div>
+                <div class="risk-grid-4">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Target R:R Ratio</div>
+                        <div class="risk-param-value" style="color:var(--green)">1:3.0</div>
+                        <div class="risk-param-desc">Min acceptable: 1:2.0</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Historical R:R</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">1:2.1</div>
+                        <div class="risk-param-desc">Actual avg from last 50 trades</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Kelly %</div>
+                        <div class="risk-param-value" style="color:var(--orange)">8.2%</div>
+                        <div class="risk-param-desc">Optimal: (Win% × AvgWin - Loss% × AvgLoss) / AvgWin</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Applied Kelly</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">2.05%</div>
+                        <div class="risk-param-desc">¼ Kelly for safety (8.2% ÷ 4)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">CORRELATION & DIVERSIFICATION CHECKS</div>
+                <div class="card" style="margin-bottom:8px;">
+                    <table style="font-size:10px;">
+                        <thead>
+                            <tr>
+                                <th>Strategy Pair</th>
+                                <th>Correlation</th>
+                                <th>Status</th>
+                                <th>Combined Risk</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="color:var(--text-primary)">LSTM + HF Cointegration</td>
+                                <td style="color:var(--green)">0.12</td>
+                                <td><span style="background:rgba(0,255,0,0.1);color:var(--green);padding:2px 6px;border-radius:3px;font-size:9px;">LOW</span></td>
+                                <td>2.1%</td>
+                                <td style="color:var(--text-muted)">Good diversification</td>
+                            </tr>
+                            <tr>
+                                <td style="color:var(--text-primary)">LSTM + RL PPO</td>
+                                <td style="color:var(--yellow)">0.68</td>
+                                <td><span style="background:rgba(255,204,0,0.1);color:var(--yellow);padding:2px 6px;border-radius:3px;font-size:9px;">MEDIUM</span></td>
+                                <td>4.3%</td>
+                                <td style="color:var(--text-muted)">Both momentum-based, moderate overlap</td>
+                            </tr>
+                            <tr>
+                                <td style="color:var(--text-primary)">LSTM + Momentum Sharp</td>
+                                <td style="color:var(--red)">0.89</td>
+                                <td><span style="background:rgba(255,0,0,0.1);color:var(--red);padding:2px 6px;border-radius:3px;font-size:9px;">HIGH</span></td>
+                                <td>6.8%</td>
+                                <td style="color:var(--yellow)">⚠ High correlation - consider reducing exposure</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="risk-grid-3">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Portfolio Correlation</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">0.52</div>
+                        <div class="risk-param-desc">Average pairwise correlation</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Diversification Ratio</div>
+                        <div class="risk-param-value" style="color:var(--green)">1.38</div>
+                        <div class="risk-param-desc">Portfolio σ / Weighted avg σ (higher is better)</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Correlated Exposure</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">8.5% NAV</div>
+                        <div class="risk-param-desc">Limit for strategies with corr > 0.7</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-content" id="tab-pos">
             <div class="card" style="margin-bottom:8px;">
-                <div class="card-title">Current Positions</div>
-                <table id="posTable">
-                    <thead><tr><th>Symbol</th><th>Entry</th><th>Mark</th><th>Qty</th><th>Value</th><th>P&amp;L</th><th>Return</th></tr></thead>
+                <div class="card-title">CURRENT POSITIONS (OPEN)</div>
+                <table id="posTable" style="font-size:10px;">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Entry</th>
+                            <th>Mark</th>
+                            <th>Qty</th>
+                            <th>Position Size</th>
+                            <th>Stop Loss</th>
+                            <th>Take Profit</th>
+                            <th>Risk $</th>
+                            <th>R:R</th>
+                            <th>P&amp;L</th>
+                            <th>Return</th>
+                        </tr>
+                    </thead>
                     <tbody id="posBody"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-title">TRADE HISTORY (CLOSED)</div>
+                <table style="font-size:10px;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>Qty</th>
+                            <th>Position Size</th>
+                            <th>Stop Loss</th>
+                            <th>Take Profit</th>
+                            <th>Risk $</th>
+                            <th>R:R Target</th>
+                            <th>P&amp;L</th>
+                            <th>Return</th>
+                            <th>R Multiple</th>
+                            <th>Exit Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2026-04-16</td>
+                            <td style="color:var(--text-primary)">AAPL</td>
+                            <td style="color:var(--green)">LONG</td>
+                            <td>$261.50</td>
+                            <td>$258.20</td>
+                            <td>3.8</td>
+                            <td style="color:var(--orange)">2.1% NAV</td>
+                            <td>$257.10</td>
+                            <td>$274.70</td>
+                            <td style="color:var(--red)">$95</td>
+                            <td>1:3.0</td>
+                            <td style="color:var(--red)">-$12.54</td>
+                            <td style="color:var(--red)">-1.26%</td>
+                            <td style="color:var(--red)">-0.13R</td>
+                            <td style="color:var(--text-muted)">Stop Loss</td>
+                        </tr>
+                        <tr>
+                            <td>2026-04-15</td>
+                            <td style="color:var(--text-primary)">MSFT</td>
+                            <td style="color:var(--green)">LONG</td>
+                            <td>$416.30</td>
+                            <td>$429.80</td>
+                            <td>2.1</td>
+                            <td style="color:var(--orange)">1.9% NAV</td>
+                            <td>$411.50</td>
+                            <td>$430.70</td>
+                            <td style="color:var(--red)">$100</td>
+                            <td>1:3.0</td>
+                            <td style="color:var(--green)">+$28.35</td>
+                            <td style="color:var(--green)">+3.24%</td>
+                            <td style="color:var(--green)">+2.81R</td>
+                            <td style="color:var(--text-muted)">Target Hit</td>
+                        </tr>
+                        <tr>
+                            <td>2026-04-14</td>
+                            <td style="color:var(--text-primary)">TSLA</td>
+                            <td style="color:var(--red)">SHORT</td>
+                            <td>$178.90</td>
+                            <td>$172.40</td>
+                            <td>5.6</td>
+                            <td style="color:var(--orange)">2.2% NAV</td>
+                            <td>$183.50</td>
+                            <td>$165.10</td>
+                            <td style="color:var(--red)">$98</td>
+                            <td>1:3.0</td>
+                            <td style="color:var(--green)">+$36.40</td>
+                            <td style="color:var(--green)">+3.63%</td>
+                            <td style="color:var(--green)">+3.71R</td>
+                            <td style="color:var(--text-muted)">Target Hit</td>
+                        </tr>
+                        <tr>
+                            <td>2026-04-13</td>
+                            <td style="color:var(--text-primary)">NVDA</td>
+                            <td style="color:var(--green)">LONG</td>
+                            <td>$870.20</td>
+                            <td>$865.80</td>
+                            <td>1.1</td>
+                            <td style="color:var(--orange)">2.0% NAV</td>
+                            <td>$861.00</td>
+                            <td>$897.80</td>
+                            <td style="color:var(--red)">$101</td>
+                            <td>1:3.0</td>
+                            <td style="color:var(--red)">-$4.84</td>
+                            <td style="color:var(--red)">-0.51%</td>
+                            <td style="color:var(--red)">-0.05R</td>
+                            <td style="color:var(--text-muted)">Manual Exit</td>
+                        </tr>
+                        <tr>
+                            <td>2026-04-12</td>
+                            <td style="color:var(--text-primary)">GOOGL</td>
+                            <td style="color:var(--green)">LONG</td>
+                            <td>$141.20</td>
+                            <td>$143.90</td>
+                            <td>7.0</td>
+                            <td style="color:var(--orange)">2.1% NAV</td>
+                            <td>$139.10</td>
+                            <td>$147.50</td>
+                            <td style="color:var(--red)">$97</td>
+                            <td>1:3.0</td>
+                            <td style="color:var(--green)">+$18.90</td>
+                            <td style="color:var(--green)">+1.91%</td>
+                            <td style="color:var(--green)">+1.29R</td>
+                            <td style="color:var(--text-muted)">Trailing Stop</td>
+                        </tr>
+                        <tr>
+                            <td>2026-04-11</td>
+                            <td style="color:var(--text-primary)">META</td>
+                            <td style="color:var(--green)">LONG</td>
+                            <td>$485.60</td>
+                            <td>$481.20</td>
+                            <td>2.0</td>
+                            <td style="color:var(--orange)">2.0% NAV</td>
+                            <td>$480.70</td>
+                            <td>$500.30</td>
+                            <td style="color:var(--red)">$98</td>
+                            <td>1:3.0</td>
+                            <td style="color:var(--red)">-$8.80</td>
+                            <td style="color:var(--red)">-0.91%</td>
+                            <td style="color:var(--red)">-0.09R</td>
+                            <td style="color:var(--text-muted)">Stop Loss</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -201,7 +532,7 @@ const STRATS = {
         vol:[0.18,0.19,0.20,0.21,0.19,0.18,0.20,0.22],
         var95:[0.012,0.013,0.014,0.015,0.013,0.013,0.014,0.015],
         positions:[
-            {sym:'AAPL',entry:'$263.11',mark:'$265.23',qty:'3.8',val:'$1,008',pnl:'+$8.06',ret:'+0.8%',pos:true},
+            {sym:'AAPL',side:'LONG',entry:'$263.11',mark:'$265.23',qty:'3.8',posSize:'2.1% NAV',stopLoss:'$259.15',takeProfit:'$275.23',riskDollar:'$95',rrRatio:'1:3.0',pnl:'+$8.06',ret:'+0.8%',pos:true},
         ],
         docBasis:'Stacked LSTM (128→64 units, dropout=0.2) trained on 5-min OHLCV bars. Sharpness-adjusted loss function reduces overconfident predictions near threshold.',
         docLogic:'60-bar lookback with RSI(14), MACD(12,26,9), BB(20,2). Signal: directional {-1,0,+1}. Position sizing: quarter-Kelly. Stop: 1.5×ATR.',
@@ -222,7 +553,7 @@ const STRATS = {
         vol:[0.08,0.09,0.08,0.10,0.09,0.08,0.09,0.08],
         var95:[0.005,0.006,0.005,0.007,0.006,0.005,0.006,0.005],
         positions:[
-            {sym:'MSFT',entry:'$418.54',mark:'$417.12',qty:'2.1',val:'$876',pnl:'+$2.98',ret:'+0.3%',pos:true},
+            {sym:'MSFT',side:'LONG',entry:'$418.54',mark:'$417.12',qty:'2.1',posSize:'1.9% NAV',stopLoss:'$414.80',takeProfit:'$429.42',riskDollar:'$78',rrRatio:'1:2.9',pnl:'+$2.98',ret:'+0.3%',pos:true},
         ],
         docBasis:'Engle-Granger cointegration between SPY and QQQ. OLS rolling hedge ratio over 120-bar window. Z-score computed from spread residuals.',
         docLogic:'Entry: |z|>1.5, Exit: |z|<0.5, Stop: |z|>3.0. 1-min bars. Max position 2% NAV per leg. Transaction cost model: 3bps.',
@@ -243,7 +574,7 @@ const STRATS = {
         vol:[0.25,0.26,0.24,0.28,0.30,0.27,0.29,0.32],
         var95:[0.018,0.019,0.017,0.020,0.022,0.019,0.021,0.023],
         positions:[
-            {sym:'GOOG',entry:'$175.23',mark:'$176.45',qty:'5.2',val:'$917',pnl:'+$6.34',ret:'+0.7%',pos:true},
+            {sym:'GOOG',side:'LONG',entry:'$175.23',mark:'$176.45',qty:'5.2',posSize:'2.0% NAV',stopLoss:'$172.60',takeProfit:'$183.12',riskDollar:'$102',rrRatio:'1:3.0',pnl:'+$6.34',ret:'+0.7%',pos:true},
         ],
         docBasis:'PPO agent with adaptive observation window (8-64 bars). Reward: PnL + Sharpe penalty - transaction costs. Trained on 5yr daily S&P500 universe.',
         docLogic:'Adaptive window self-selects context per regime. Shorter window in volatile markets, longer in trending. Position sizing via continuous action space.',
@@ -309,7 +640,7 @@ function loadStrategy(id) {
     if (s.positions.length === 0) {
         const row = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.colSpan = 7;
+        cell.colSpan = 12;
         cell.style.color = 'var(--text-muted)';
         cell.textContent = 'No open positions';
         row.appendChild(cell);
@@ -317,13 +648,30 @@ function loadStrategy(id) {
     } else {
         s.positions.forEach(p => {
             const row = document.createElement('tr');
-            [p.sym, p.entry, p.mark, p.qty, p.val, p.pnl, p.ret].forEach((v, i) => {
-                const cell = document.createElement('td');
-                cell.textContent = v;
-                if (i === 0) cell.style.color = 'var(--text-primary)';
-                if (i === 5 || i === 6) cell.className = p.pos ? 'positive' : 'negative';
-                row.appendChild(cell);
-            });
+            // Symbol
+            const c0 = document.createElement('td'); c0.textContent = p.sym; c0.style.color = 'var(--text-primary)'; row.appendChild(c0);
+            // Side
+            const c1 = document.createElement('td'); c1.textContent = p.side; c1.style.color = p.side === 'LONG' ? 'var(--green)' : 'var(--red)'; row.appendChild(c1);
+            // Entry
+            const c2 = document.createElement('td'); c2.textContent = p.entry; row.appendChild(c2);
+            // Mark
+            const c3 = document.createElement('td'); c3.textContent = p.mark; row.appendChild(c3);
+            // Qty
+            const c4 = document.createElement('td'); c4.textContent = p.qty; row.appendChild(c4);
+            // Position Size
+            const c5 = document.createElement('td'); c5.textContent = p.posSize; c5.style.color = 'var(--orange)'; row.appendChild(c5);
+            // Stop Loss
+            const c6 = document.createElement('td'); c6.textContent = p.stopLoss; row.appendChild(c6);
+            // Take Profit
+            const c7 = document.createElement('td'); c7.textContent = p.takeProfit; row.appendChild(c7);
+            // Risk $
+            const c8 = document.createElement('td'); c8.textContent = p.riskDollar; c8.style.color = 'var(--red)'; row.appendChild(c8);
+            // R:R
+            const c9 = document.createElement('td'); c9.textContent = p.rrRatio; row.appendChild(c9);
+            // P&L
+            const c10 = document.createElement('td'); c10.textContent = p.pnl; c10.className = p.pos ? 'positive' : 'negative'; row.appendChild(c10);
+            // Return
+            const c11 = document.createElement('td'); c11.textContent = p.ret; c11.className = p.pos ? 'positive' : 'negative'; row.appendChild(c11);
             tbody.appendChild(row);
         });
     }

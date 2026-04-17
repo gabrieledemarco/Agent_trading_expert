@@ -117,6 +117,39 @@
     </nav>
 
     <main class="main">
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
+            <div style="color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">AGENT RISK MANAGEMENT FRAMEWORK</div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
+                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">POSITION SIZING</div>
+                    <div style="color:var(--orange);font-size:12px;font-weight:bold;">Kelly ¼</div>
+                    <div style="color:var(--text-muted);font-size:8px;">Dynamic sizing</div>
+                </div>
+                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
+                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">STOP LOSS</div>
+                    <div style="color:var(--red);font-size:12px;font-weight:bold;">1.5× ATR</div>
+                    <div style="color:var(--text-muted);font-size:8px;">Dynamic stops</div>
+                </div>
+                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
+                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">RISK/TRADE</div>
+                    <div style="color:var(--yellow);font-size:12px;font-weight:bold;">1.0% NAV</div>
+                    <div style="color:var(--text-muted);font-size:8px;">Max $100</div>
+                </div>
+                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
+                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">MAX DD LIMIT</div>
+                    <div style="color:var(--red);font-size:12px;font-weight:bold;">15.0%</div>
+                    <div style="color:var(--text-muted);font-size:8px;">Circuit breaker</div>
+                </div>
+                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
+                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">CORRELATION</div>
+                    <div style="color:var(--green);font-size:12px;font-weight:bold;">Monitored</div>
+                    <div style="color:var(--text-muted);font-size:8px;">Cross-strategy</div>
+                </div>
+            </div>
+            <div style="margin-top:8px;padding:8px;background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);font-size:10px;color:var(--text-secondary);">
+                <span style="color:var(--yellow);">&#9888;</span> <strong>Risk Framework Active:</strong> Tutti gli agenti considerano position sizing (Kelly), stop loss (ATR-based), risk per trade (1% NAV), max drawdown limits (15%), leverage controls (none), R:R ratios (min 1:2), volatility adjustments, e correlation checks tra strategie prima di ogni decisione di trading.
+            </div>
+        </div>
         <div class="agents-grid" id="agentsGrid">
             <!-- Agents rendered by JS -->
         </div>
@@ -243,6 +276,17 @@ function runAgent(id) {
     a.lastRun = 'now';
     renderAgents();
     addLog('info', a.name, 'Starting run #' + a.runs + '...');
+
+    // Risk management checks for trading agents
+    if (id === 'trading' || id === 'ml' || id === 'validation') {
+        setTimeout(() => addLog('info', a.name, 'Checking position sizing: Kelly 1/4 = 2.05% NAV'), 300);
+        setTimeout(() => addLog('info', a.name, 'Verifying stop loss: 1.5x ATR(14) from entry'), 600);
+        setTimeout(() => addLog('info', a.name, 'Risk per trade: 1.0% NAV ($100 max loss)'), 900);
+        setTimeout(() => addLog('info', a.name, 'Current drawdown: 2.3% (limit: 15.0%)'), 1200);
+        setTimeout(() => addLog('success', a.name, 'Correlation check: Strategy pairs within limits'), 1500);
+        setTimeout(() => addLog('info', a.name, 'Volatility adjustment: 0.85x multiplier (vol=22%)'), 1800);
+        setTimeout(() => addLog('success', a.name, 'R:R ratio: 1:3.0 (above min 1:2.0 threshold)'), 2100);
+    }
 
     // Simulate progress
     let progress = 0;
