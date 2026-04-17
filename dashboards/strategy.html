@@ -68,6 +68,12 @@
         .risk-param-value{font-size:14px;font-weight:bold;margin-bottom:4px;}
         .risk-param-desc{color:var(--text-muted);font-size:9px;line-height:1.3;}
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+        .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
+        .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
+        .resizable-section{transition:all 0.3s ease;position:relative;}
+        .resizable-section.minimized{height:40px;overflow:hidden;}
+        .resizable-section.minimized .chart-container,.resizable-section.minimized table,.resizable-section.minimized .risk-grid-3,.resizable-section.minimized .risk-grid-4{display:none;}
+        .resizable-section.expanded .chart-container{height:300px;}
     </style>
 </head>
 <body>
@@ -143,12 +149,36 @@
 
         <div class="tab-content active" id="tab-perf">
             <div class="charts-2">
-                <div class="card"><div class="card-title">Return % vs Benchmark</div><div class="chart-container"><canvas id="eqChart"></canvas></div></div>
-                <div class="card"><div class="card-title">Drawdown</div><div class="chart-container"><canvas id="ddChart"></canvas></div></div>
+                <div class="card resizable-section" data-section="eq-chart">
+                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>Return % vs Benchmark</span>
+                        <button class="resize-btn" onclick="toggleResize('eq-chart')" title="Minimize/Expand">⊟</button>
+                    </div>
+                    <div class="chart-container"><canvas id="eqChart"></canvas></div>
+                </div>
+                <div class="card resizable-section" data-section="dd-chart-strat">
+                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>Drawdown</span>
+                        <button class="resize-btn" onclick="toggleResize('dd-chart-strat')" title="Minimize/Expand">⊟</button>
+                    </div>
+                    <div class="chart-container"><canvas id="ddChart"></canvas></div>
+                </div>
             </div>
             <div class="charts-2">
-                <div class="card"><div class="card-title">Monthly Returns (Deterministic)</div><div class="chart-container"><canvas id="monthlyChart"></canvas></div></div>
-                <div class="card"><div class="card-title">Risk Metrics Evolution</div><div class="chart-container"><canvas id="riskChart"></canvas></div></div>
+                <div class="card resizable-section" data-section="monthly-chart">
+                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>Monthly Returns (Deterministic)</span>
+                        <button class="resize-btn" onclick="toggleResize('monthly-chart')" title="Minimize/Expand">⊟</button>
+                    </div>
+                    <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
+                </div>
+                <div class="card resizable-section" data-section="risk-chart">
+                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>Risk Metrics Evolution</span>
+                        <button class="resize-btn" onclick="toggleResize('risk-chart')" title="Minimize/Expand">⊟</button>
+                    </div>
+                    <div class="chart-container"><canvas id="riskChart"></canvas></div>
+                </div>
             </div>
         </div>
 
@@ -681,7 +711,61 @@ function switchTab(id) {
     document.getElementById('tab-'+id).classList.add('active');
 }
 
+function toggleResize(sectionId) {
+    const section = document.querySelector(`[data-section="${sectionId}"]`);
+    const btn = section?.querySelector('.resize-btn');
+    if (!section) return;
+
+    const states = ['normal', 'minimized', 'expanded'];
+    let currentState = section.dataset.resizeState || 'normal';
+    let nextIndex = (states.indexOf(currentState) + 1) % states.length;
+    let nextState = states[nextIndex];
+
+    section.classList.remove('minimized', 'expanded');
+
+    if (nextState === 'minimized') {
+        section.classList.add('minimized');
+        if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+    } else if (nextState === 'expanded') {
+        section.classList.add('expanded');
+        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+        // Rebuild charts if expanded
+        const s = STRATS[document.getElementById('stratSelect').value];
+        if (s) buildCharts(s);
+    } else {
+        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+        // Rebuild charts back to normal
+        const s = STRATS[document.getElementById('stratSelect').value];
+        if (s) buildCharts(s);
+    }
+
+    section.dataset.resizeState = nextState;
+
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates_strategy') || '{}');
+    resizeStates[sectionId] = nextState;
+    localStorage.setItem('resizeStates_strategy', JSON.stringify(resizeStates));
+}
+
+function loadResizeStates() {
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates_strategy') || '{}');
+    Object.entries(resizeStates).forEach(([sectionId, state]) => {
+        const section = document.querySelector(`[data-section="${sectionId}"]`);
+        const btn = section?.querySelector('.resize-btn');
+        if (!section) return;
+
+        section.dataset.resizeState = state;
+        if (state === 'minimized') {
+            section.classList.add('minimized');
+            if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+        } else if (state === 'expanded') {
+            section.classList.add('expanded');
+            if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+        }
+    });
+}
+
 loadStrategy('lstm');
+loadResizeStates();
 </script>
 </body>
 </html>

@@ -64,6 +64,13 @@
         .log-error{color:var(--red);}
         .log-tag{color:var(--orange);}
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+        .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
+        .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
+        .resizable-section{transition:all 0.3s ease;position:relative;}
+        .resizable-section.minimized{height:40px;overflow:hidden;}
+        .resizable-section.minimized .agents-grid,.resizable-section.minimized .log-console{display:none;}
+        .resizable-section.expanded .log-console{height:400px;}
+        .resizable-section.expanded .agents-grid{grid-template-columns:repeat(2,1fr);}
     </style>
 </head>
 <body>
@@ -103,8 +110,11 @@
     </nav>
 
     <main class="main">
-        <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
-            <div style="color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">AGENT RISK MANAGEMENT FRAMEWORK</div>
+        <div class="resizable-section" data-section="risk-framework" style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
+            <div style="color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;">
+                <span>AGENT RISK MANAGEMENT FRAMEWORK</span>
+                <button class="resize-btn" onclick="toggleResize('risk-framework')" title="Minimize/Expand">⊟</button>
+            </div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
                 <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
                     <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">POSITION SIZING</div>
@@ -136,11 +146,23 @@
                 <span style="color:var(--yellow);">&#9888;</span> <strong>Risk Framework Active:</strong> Tutti gli agenti considerano position sizing (Kelly), stop loss (ATR-based), risk per trade (1% NAV), max drawdown limits (15%), leverage controls (none), R:R ratios (min 1:2), volatility adjustments, e correlation checks tra strategie prima di ogni decisione di trading.
             </div>
         </div>
-        <div class="agents-grid" id="agentsGrid">
-            <!-- Agents rendered by JS -->
+        <div class="resizable-section" data-section="agents-grid" style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
+            <div style="color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;">
+                <span>AGENTS</span>
+                <button class="resize-btn" onclick="toggleResize('agents-grid')" title="Minimize/Expand">⊟</button>
+            </div>
+            <div class="agents-grid" id="agentsGrid">
+                <!-- Agents rendered by JS -->
+            </div>
         </div>
-        <div class="log-panel">
-            <div class="log-title"><span>AGENT ACTIVITY LOG</span><span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span></div>
+        <div class="log-panel resizable-section" data-section="log-panel">
+            <div class="log-title">
+                <span>AGENT ACTIVITY LOG</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span>
+                    <button class="resize-btn" onclick="toggleResize('log-panel')" title="Minimize/Expand">⊟</button>
+                </div>
+            </div>
             <div class="log-console" id="logConsole"></div>
         </div>
     </main>
@@ -457,12 +479,60 @@ function viewLogs(id) {
     addLog('info', 'System', 'Showing last logs for ' + a.name);
 }
 
+function toggleResize(sectionId) {
+    const section = document.querySelector(`[data-section="${sectionId}"]`);
+    const btn = section?.querySelector('.resize-btn');
+    if (!section) return;
+
+    const states = ['normal', 'minimized', 'expanded'];
+    let currentState = section.dataset.resizeState || 'normal';
+    let nextIndex = (states.indexOf(currentState) + 1) % states.length;
+    let nextState = states[nextIndex];
+
+    section.classList.remove('minimized', 'expanded');
+
+    if (nextState === 'minimized') {
+        section.classList.add('minimized');
+        if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+    } else if (nextState === 'expanded') {
+        section.classList.add('expanded');
+        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+    } else {
+        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+    }
+
+    section.dataset.resizeState = nextState;
+
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates_agents') || '{}');
+    resizeStates[sectionId] = nextState;
+    localStorage.setItem('resizeStates_agents', JSON.stringify(resizeStates));
+}
+
+function loadResizeStates() {
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates_agents') || '{}');
+    Object.entries(resizeStates).forEach(([sectionId, state]) => {
+        const section = document.querySelector(`[data-section="${sectionId}"]`);
+        const btn = section?.querySelector('.resize-btn');
+        if (!section) return;
+
+        section.dataset.resizeState = state;
+        if (state === 'minimized') {
+            section.classList.add('minimized');
+            if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+        } else if (state === 'expanded') {
+            section.classList.add('expanded');
+            if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+        }
+    });
+}
+
 // Init
 renderAgents();
 addLog('success', 'System', 'Agent monitor initialized');
 addLog('info', 'TradingExecutor', 'Active — paper trading mode');
 addLog('info', 'MonitoringAgent', 'All systems nominal');
 updateFooter();
+loadResizeStates();
 </script>
 </body>
 </html>

@@ -70,6 +70,18 @@
         .bottombar { grid-column:1/-1; background:var(--bg-secondary); border-top:1px solid var(--border); display:flex; align-items:center; padding:0 12px; font-size:10px; color:var(--text-muted); justify-content:space-between; }
         .mini-spark { width:60px; height:20px; display:inline-block; vertical-align:middle; margin-left:4px; }
         .alert-bar { grid-column:1/-1; background:rgba(255,204,0,0.05); border:1px solid rgba(255,204,0,0.3); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
+        .resize-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:2px 6px; font-size:11px; cursor:pointer; font-family:var(--font); margin-left:8px; transition:all 0.2s; }
+        .resize-btn:hover { border-color:var(--orange); color:var(--orange); }
+        .resizable-section { transition:all 0.3s ease; position:relative; }
+        .resizable-section.minimized { height:40px; overflow:hidden; }
+        .resizable-section.minimized .chart-container,
+        .resizable-section.minimized table,
+        .resizable-section.minimized .ticker-group,
+        .resizable-section.minimized .stat-box-value,
+        .resizable-section.minimized .stat-box-sub { display:none; }
+        .resizable-section.expanded { grid-column:1/-1 !important; }
+        .resizable-section.expanded .chart-container { height:300px; }
+        .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     </style>
 </head>
 <body>
@@ -117,7 +129,8 @@
                 <strong>Attenzione:</strong> Sharpe ratio negativo (-0.39) su Intraday Momentum. Modello in revisione. Max Drawdown: 2.3% — soglia: 5%.
             </div>
 
-            <div class="ticker">
+            <div class="ticker resizable-section" data-section="ticker">
+                <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
                 <div class="ticker-group">
                     <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value">$40,760</span></div>
                     <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value">$41,000</span></div>
@@ -132,8 +145,11 @@
                 </div>
             </div>
 
-            <div style="background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);padding:8px 12px;margin-bottom:8px;">
-                <div style="color:var(--orange);font-size:10px;margin-bottom:6px;text-transform:uppercase;">PORTFOLIO ALLOCATION</div>
+            <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);padding:8px 12px;margin-bottom:8px;">
+                <div style="color:var(--orange);font-size:10px;margin-bottom:6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;">
+                    <span>PORTFOLIO ALLOCATION</span>
+                    <button class="resize-btn" onclick="toggleResize('allocation')" title="Minimize/Expand">⊟</button>
+                </div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
                     <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
                         <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">LSTM Momentum</div>
@@ -158,7 +174,8 @@
                 </div>
             </div>
 
-            <div class="stats-row">
+            <div class="stats-row resizable-section" data-section="stats">
+                <button class="resize-btn" onclick="toggleResize('stats')" title="Minimize/Expand" style="grid-column:1;padding:4px 8px;">⊟</button>
                 <div class="stat-box"><div class="stat-box-label">Portfolio Return</div><div class="stat-box-value negative">-0.59%</div><div class="stat-box-sub">-$240 total</div></div>
                 <div class="stat-box"><div class="stat-box-label">Daily Return</div><div class="stat-box-value negative">-0.12%</div><div class="stat-box-sub">-$50 today</div></div>
                 <div class="stat-box"><div class="stat-box-label">Avg Win Rate</div><div class="stat-box-value neutral">48.5%</div><div class="stat-box-sub">across strategies</div></div>
@@ -169,27 +186,36 @@
                 <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">1.38</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
             </div>
 
-            <div class="chart-section half-row">
+            <div class="chart-section half-row resizable-section" data-section="equity-chart">
                 <div class="chart-section-title">
                     <span>PORTFOLIO RETURN %</span>
-                    <div class="chart-tabs">
-                        <button class="chart-tab active" onclick="setChartPeriod('1D',this)">1D</button>
-                        <button class="chart-tab" onclick="setChartPeriod('1W',this)">1W</button>
-                        <button class="chart-tab" onclick="setChartPeriod('1M',this)">1M</button>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                        <div class="chart-tabs">
+                            <button class="chart-tab active" onclick="setChartPeriod('1D',this)">1D</button>
+                            <button class="chart-tab" onclick="setChartPeriod('1W',this)">1W</button>
+                            <button class="chart-tab" onclick="setChartPeriod('1M',this)">1M</button>
+                        </div>
+                        <button class="resize-btn" onclick="toggleResize('equity-chart')" title="Minimize/Expand">⊟</button>
                     </div>
                 </div>
                 <div class="chart-container"><canvas id="equityChart"></canvas></div>
             </div>
 
-            <div class="chart-section half-row">
-                <div class="chart-section-title"><span>PORTFOLIO DRAWDOWN %</span></div>
+            <div class="chart-section half-row resizable-section" data-section="dd-chart">
+                <div class="chart-section-title">
+                    <span>PORTFOLIO DRAWDOWN %</span>
+                    <button class="resize-btn" onclick="toggleResize('dd-chart')" title="Minimize/Expand">⊟</button>
+                </div>
                 <div class="chart-container"><canvas id="drawdownChart"></canvas></div>
             </div>
 
-            <div class="table-section full-row">
+            <div class="table-section full-row resizable-section" data-section="strategy-table">
                 <div class="table-title">
                     <span>STRATEGY ALLOCATION & PERFORMANCE</span>
-                    <span style="color:var(--text-muted);font-size:10px;">4 active strategies | Total capital: $41,000</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span style="color:var(--text-muted);font-size:10px;">4 active strategies | Total capital: $41,000</span>
+                        <button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
+                    </div>
                 </div>
                 <table>
                     <thead><tr><th>Strategy</th><th>Type</th><th>Capital Allocated</th><th>% Portfolio</th><th>Return</th><th>Win Rate</th><th>Sharpe</th><th>Max DD</th><th>Trades</th><th>Status</th></tr></thead>
@@ -301,10 +327,77 @@ function setChartPeriod(period, btn) {
 
 function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
 
+function toggleResize(sectionId) {
+    const section = document.querySelector(`[data-section="${sectionId}"]`);
+    const btn = section.querySelector('.resize-btn');
+    if (!section) return;
+
+    const states = ['normal', 'minimized', 'expanded'];
+    let currentState = section.dataset.resizeState || 'normal';
+    let nextIndex = (states.indexOf(currentState) + 1) % states.length;
+    let nextState = states[nextIndex];
+
+    // Remove all state classes
+    section.classList.remove('minimized', 'expanded');
+
+    // Apply new state
+    if (nextState === 'minimized') {
+        section.classList.add('minimized');
+        btn.textContent = '⊞';
+        btn.title = 'Expand';
+    } else if (nextState === 'expanded') {
+        section.classList.add('expanded');
+        btn.textContent = '⊟';
+        btn.title = 'Minimize';
+        // Rebuild charts if expanded
+        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
+        if (sectionId === 'dd-chart') buildDDChart();
+    } else {
+        btn.textContent = '⊟';
+        btn.title = 'Minimize';
+        // Rebuild charts if back to normal
+        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
+        if (sectionId === 'dd-chart') buildDDChart();
+    }
+
+    section.dataset.resizeState = nextState;
+
+    // Save to localStorage
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
+    resizeStates[sectionId] = nextState;
+    localStorage.setItem('resizeStates', JSON.stringify(resizeStates));
+}
+
+// Load resize states from localStorage
+function loadResizeStates() {
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
+    Object.entries(resizeStates).forEach(([sectionId, state]) => {
+        const section = document.querySelector(`[data-section="${sectionId}"]`);
+        const btn = section?.querySelector('.resize-btn');
+        if (!section) return;
+
+        section.dataset.resizeState = state;
+        if (state === 'minimized') {
+            section.classList.add('minimized');
+            if (btn) {
+                btn.textContent = '⊞';
+                btn.title = 'Expand';
+            }
+        } else if (state === 'expanded') {
+            section.classList.add('expanded');
+            if (btn) {
+                btn.textContent = '⊟';
+                btn.title = 'Minimize';
+            }
+        }
+    });
+}
+
 buildEquityChart('1D');
 buildDDChart();
 setInterval(updateTime, 1000);
 updateTime();
+loadResizeStates();
 </script>
 </body>
 </html>
