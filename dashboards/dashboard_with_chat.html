@@ -58,6 +58,7 @@
         .msg-typing .msg-body{color:var(--text-muted);}
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
+    <script src="dashboard_data.js"></script>
 </head>
 <body>
 <div class="terminal">
@@ -123,7 +124,7 @@
 // SECURITY FIX: All chat output uses DOM APIs (createElement, textContent) — never innerHTML with user input.
 // User input is ONLY displayed via textContent, never injected as HTML.
 
-const KB = {
+let KB = {
     performance: `PERFORMANCE SUMMARY (paper trading, ultimo aggiornamento oggi):\n\n  Equity:       $10,000\n  Daily P&L:    -$190 (-1.90%)\n  Win Rate:     47.0% (sotto target 55%)\n  Sharpe:       -0.39 (sotto target 1.0)\n  Sortino:      -0.51\n  Calmar:       -0.83\n  Max DD:       2.3% (limite: 5.0%)\n  Alpha (SPY):  -0.8%\n  VaR 95%:      $210\n\nAttenzione: il sistema sta sottoperformando il benchmark SPY.`,
     models: `MODELLI ATTIVI (4/6 approvati):\n\n  1. Intraday Momentum (LSTM, 5m/15m)\n     Sharpe: -0.39 | Win Rate: 47% | Trades: 6\n     Status: APPROVED — performance al di sotto delle attese\n\n  2. High Frequency (Cointegration, 1m)\n     Sharpe: 0.12 | Win Rate: 52% | Trades: 24\n     Status: APPROVED — il modello migliore attualmente\n\n  3. Dynamic Time (RL PPO, Adaptive)\n     Sharpe: -0.28 | Win Rate: 45% | Trades: 11\n     Status: APPROVED\n\n  4. Momentum Sharpness (XGBoost, Daily)\n     Sharpe: -1.29 | Win Rate: 48% | Trades: 3\n     Status: APPROVED — rischio alto, Max DD 4.7%\n\n  5. Portfolio Opt v2 — IN VALIDAZIONE\n  6. Regime Detector (HMM) — IN VALIDAZIONE`,
     best: `MODELLO MIGLIORE: High Frequency (Cointegration)\n\n  Sharpe:    0.12 (l'unico positivo)\n  Win Rate:  52%\n  Max DD:    1.1%\n  Sortino:   0.18\n  Trades:    24 (maggiore liquidità)\n  Timeframe: 1m (SPY/QQQ cointegration spread)\n\nNote: tutti gli altri modelli hanno Sharpe negativo.\nRaccomandazione: aumentare l'allocazione su High Frequency\ne ridurre su Momentum Sharpness (Sharpe -1.29, DD 4.7%).`,
@@ -132,6 +133,72 @@ const KB = {
     risk: `RISCHIO PORTAFOGLIO CORRENTE:\n\n  VaR (95%, 1-day):   $210 (2.1% dell'equity)\n  CVaR (95%, 1-day):  $285 (2.85% dell'equity)\n  Max Drawdown:       2.3% (limite: 5%)\n  Beta vs SPY:        0.42 (bassa correlazione)\n  Volatilità ann.:    18.4%\n  Correlazione AAPL-MSFT: 0.68\n\nPosizioni aperte:\n  AAPL  LONG  3.8 shares  unreal: +$8.06\n  MSFT  SHORT 2.1 shares  unreal: +$2.98\n  GOOG  LONG  5.2 shares  unreal: +$6.34\n\nSoglie di allerta: DD > 5% | Sharpe < -0.5 (7gg rolling)`,
     positions: `POSIZIONI APERTE (3):\n\n  AAPL  LONG   3.8sh  entry $263.11  mark $265.23  unreal +$8.06  hold: 2d\n  MSFT  SHORT  2.1sh  entry $418.54  mark $417.12  unreal +$2.98  hold: 1d\n  GOOG  LONG   5.2sh  entry $175.23  mark $176.45  unreal +$6.34  hold: 3h\n\nTotale unrealized: +$17.38\nModelli: AAPL→IM, MSFT→HF, GOOG→DT`,
 };
+
+
+
+async function hydrateKnowledgeBase() {
+    try {
+        const [summary, strategiesResp, activityResp] = await Promise.all([
+            fetch('/dashboard/summary').then(r => r.ok ? r.json() : null),
+            fetch('/strategies').then(r => r.ok ? r.json() : ({strategies: []})),
+            fetch('/dashboard/agent-activity?limit=30').then(r => r.ok ? r.json() : ({activities: []})),
+        ]);
+
+        if (!summary) return;
+
+        const equity = Number(summary.current_equity || 0);
+        const totalReturn = Number(summary.total_return || 0);
+        const sharpe = Number(summary.sharpe_ratio || 0);
+        const trades = Number(summary.total_trades || 0);
+        const validated = Number(summary.models_validated || 0);
+        const strategies = Array.isArray(strategiesResp?.strategies) ? strategiesResp.strategies : [];
+        const approved = strategies.filter((s) => String(s.status || '').toUpperCase() === 'APPROVED');
+
+        KB.performance = `PERFORMANCE SUMMARY (aggiornamento dinamico API):
+
+  Equity:       $${equity.toLocaleString()}
+  Total Return: ${(totalReturn * 100).toFixed(2)}%
+  Sharpe:       ${sharpe.toFixed(2)}
+  Trades:       ${trades}
+  Models Valid: ${validated}
+
+Fonte: /dashboard/summary`;
+
+        KB.models = `MODELLI ATTIVI (${approved.length}/${strategies.length} approvati):
+
+` +
+            (strategies.length
+                ? strategies.map((s, idx) => `  ${idx + 1}. ${s.name || 'Unknown'}
+     Sharpe: ${Number(s.sharpe_ratio || 0).toFixed(2)} | Risk: ${s.risk_level || 'N/A'} | Status: ${s.status || 'N/A'}`).join('\n\n')
+                : '  Nessuna strategia disponibile.');
+
+        const best = strategies.slice().sort((a, b) => Number(b.sharpe_ratio || -99) - Number(a.sharpe_ratio || -99))[0];
+        KB.best = best
+            ? `MODELLO MIGLIORE (API): ${best.name}
+
+  Sharpe: ${Number(best.sharpe_ratio || 0).toFixed(2)}
+  Risk Level: ${best.risk_level || 'N/A'}
+  Status: ${best.status || 'N/A'}`
+            : KB.best;
+
+        const activities = Array.isArray(activityResp?.activities) ? activityResp.activities : [];
+        const byAgent = new Map();
+        activities.forEach((a) => {
+            if (!a.agent_name || byAgent.has(a.agent_name)) return;
+            byAgent.set(a.agent_name, a);
+        });
+
+        if (byAgent.size) {
+            KB.agents = `STATO AGENTI (ultime attività API):
+
+` + Array.from(byAgent.values()).slice(0, 6)
+                .map((a) => `  ● ${a.agent_name}  ${a.status || 'N/A'}  — ${a.timestamp || 'N/A'}`)
+                .join('\n');
+        }
+    } catch (err) {
+        // Fallback to static KB content if API is unavailable.
+    }
+}
 
 function matchQuery(text) {
     const t = text.toLowerCase();
@@ -198,6 +265,8 @@ function sendShortcut(text) {
 function handleKey(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
+
+hydrateKnowledgeBase();
 
 // Welcome message
 addMessage('bot', 'Ciao! Sono il Chat Assistant del Trading Agent.\n\nPosso risponderti su:\n  • Performance e metriche del portafoglio\n  • Modelli ML attivi e loro statistiche\n  • Stato degli agenti\n  • Paper arXiv ricercati\n  • Rischio e posizioni aperte\n\nUsa i pulsanti rapidi in basso o scrivi la tua domanda.');

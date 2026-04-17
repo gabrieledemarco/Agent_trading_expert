@@ -81,7 +81,15 @@
         .bottombar { grid-column:1/-1; background:var(--bg-secondary); border-top:1px solid var(--border); display:flex; align-items:center; padding:0 12px; font-size:10px; color:var(--text-muted); justify-content:space-between; }
         .mini-spark { width:60px; height:20px; display:inline-block; vertical-align:middle; margin-left:4px; }
         .alert-bar { grid-column:1/-1; background:rgba(255,204,0,0.05); border:1px solid rgba(255,204,0,0.3); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
+        .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
+        .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
+        .resizable-section{transition:all 0.3s ease;position:relative;}
+        .resizable-section.minimized{height:40px;overflow:hidden;}
+        .resizable-section.minimized .ticker-group,.resizable-section.minimized .chart-container,.resizable-section.minimized table{display:none;}
+        .resizable-section.expanded{grid-column:1/-1 !important;}
+        .resizable-section.expanded .chart-container{height:300px;}
     </style>
+    <script src="dashboard_data.js"></script>
 </head>
 <body>
 <div class="terminal">
@@ -131,18 +139,19 @@
                 <strong>Attenzione:</strong> Sharpe ratio negativo (-0.39) su Intraday Momentum. Modello in revisione. Max Drawdown: 2.3% — soglia: 5%.
             </div>
 
-            <div class="ticker">
+            <div class="ticker resizable-section" data-section="ticker">
+                <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
                 <div class="ticker-group">
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value">$40,760</span></div>
-                    <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value">$41,000</span></div>
-                    <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value negative">-0.59%</span></div>
+                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value" id="portfolioValue">$40,760</span></div>
+                    <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value" id="totalCapital">$41,000</span></div>
+                    <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value negative" id="totalReturn">-0.59%</span></div>
                     <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value negative">-0.12%</span></div>
                 </div>
                 <div class="ticker-group">
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value neutral">0.18</span></div>
+                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value neutral" id="portfolioSharpe">0.18</span></div>
                     <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value neutral">0.24</span></div>
                     <div class="ticker-item"><span class="ticker-label">MAX DD</span><span class="ticker-value negative">1.8%</span></div>
-                    <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value">4/6</span></div>
+                    <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value" id="activeStrategies">4/6</span></div>
                 </div>
             </div>
 
@@ -183,27 +192,30 @@
                 <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">1.38</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
             </div>
 
-            <div class="chart-section half-row">
+            <div class="chart-section half-row resizable-section" data-section="equity-chart">
                 <div class="chart-section-title">
                     <span>PORTFOLIO RETURN %</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
                     <div class="chart-tabs">
                         <button class="chart-tab active" onclick="setChartPeriod('1D',this)">1D</button>
                         <button class="chart-tab" onclick="setChartPeriod('1W',this)">1W</button>
                         <button class="chart-tab" onclick="setChartPeriod('1M',this)">1M</button>
                     </div>
+                    <button class="resize-btn" onclick="toggleResize('equity-chart')" title="Minimize/Expand">⊟</button>
+                    </div>
                 </div>
                 <div class="chart-container"><canvas id="equityChart"></canvas></div>
             </div>
 
-            <div class="chart-section half-row">
-                <div class="chart-section-title"><span>PORTFOLIO DRAWDOWN %</span></div>
+            <div class="chart-section half-row resizable-section" data-section="dd-chart">
+                <div class="chart-section-title"><span>PORTFOLIO DRAWDOWN %</span><button class="resize-btn" onclick="toggleResize('dd-chart')" title="Minimize/Expand">⊟</button></div>
                 <div class="chart-container"><canvas id="drawdownChart"></canvas></div>
             </div>
 
-            <div class="table-section full-row">
+            <div class="table-section full-row resizable-section" data-section="strategy-table">
                 <div class="table-title">
                     <span>STRATEGY ALLOCATION & PERFORMANCE</span>
-                    <span style="color:var(--text-muted);font-size:10px;">4 active strategies | Total capital: $41,000</span>
+                    <span style="color:var(--text-muted);font-size:10px;">4 active strategies | Total capital: $41,000</span><button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
                 </div>
                 <table>
                     <thead><tr><th>Strategy</th><th>Type</th><th>Capital Allocated</th><th>% Portfolio</th><th>Return</th><th>Win Rate</th><th>Sharpe</th><th>Max DD</th><th>Trades</th><th>Status</th></tr></thead>
@@ -315,6 +327,54 @@ function setChartPeriod(period, btn) {
 
 function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
 
+function toggleResize(sectionId) {
+    const section = document.querySelector(`[data-section="${sectionId}"]`);
+    const btn = section?.querySelector('.resize-btn');
+    if (!section) return;
+
+    const states = ['normal', 'minimized', 'expanded'];
+    const currentState = section.dataset.resizeState || 'normal';
+    const nextState = states[(states.indexOf(currentState) + 1) % states.length];
+
+    section.classList.remove('minimized', 'expanded');
+    if (nextState === 'minimized') {
+        section.classList.add('minimized');
+        if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+    } else if (nextState === 'expanded') {
+        section.classList.add('expanded');
+        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
+        if (sectionId === 'dd-chart') buildDDChart();
+    } else if (btn) {
+        btn.textContent = '⊟';
+        btn.title = 'Minimize';
+        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
+        if (sectionId === 'dd-chart') buildDDChart();
+    }
+
+    section.dataset.resizeState = nextState;
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
+    resizeStates[sectionId] = nextState;
+    localStorage.setItem('resizeStates', JSON.stringify(resizeStates));
+}
+
+function loadResizeStates() {
+    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
+    Object.entries(resizeStates).forEach(([sectionId, state]) => {
+        const section = document.querySelector(`[data-section="${sectionId}"]`);
+        const btn = section?.querySelector('.resize-btn');
+        if (!section) return;
+        section.dataset.resizeState = state;
+        if (state === 'minimized') {
+            section.classList.add('minimized');
+            if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+        } else if (state === 'expanded') {
+            section.classList.add('expanded');
+            if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+        }
+    });
+}
+
 function toggleSidebar() {
     const terminal = document.querySelector('.terminal');
     const isCollapsed = terminal.classList.toggle('sidebar-collapsed');
@@ -330,6 +390,7 @@ buildEquityChart('1D');
 buildDDChart();
 setInterval(updateTime, 1000);
 updateTime();
+loadResizeStates();
 </script>
 </body>
 </html>
