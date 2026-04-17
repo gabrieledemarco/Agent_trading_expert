@@ -66,7 +66,7 @@ async def run_research(request: ResearchRequest):
             "papers": relevant[:5]
         }
     except Exception as e:
-        logger.error(f"Error in research: {e}")
+        logger.error(f"Error in research: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -122,7 +122,7 @@ async def execute_trade(request: TradeRequest):
             }
         }
     except Exception as e:
-        logger.error(f"Error executing trade: {e}")
+        logger.error(f"Error executing trade: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -137,7 +137,7 @@ async def get_performance():
         
         return summary
     except Exception as e:
-        logger.error(f"Error getting performance: {e}")
+        logger.error(f"Error getting performance: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -153,7 +153,7 @@ async def get_dashboard_summary():
         
         return summary
     except Exception as e:
-        logger.error(f"Error getting dashboard summary: {e}")
+        logger.error(f"Error getting dashboard summary: {e}", exc_info=True)
         # Return mock data if DB not initialized
         return {
             "research_papers": 0,
@@ -178,7 +178,7 @@ async def get_agent_activity(limit: int = 20):
         
         return {"activities": logs}
     except Exception as e:
-        logger.error(f"Error getting agent activity: {e}")
+        logger.error(f"Error getting agent activity: {e}", exc_info=True)
         return {"activities": []}
 
 
@@ -214,7 +214,7 @@ async def get_strategy_performance(strategy_name: str):
             "win_rate": latest.get("win_rate", 0),
         }
     except Exception as e:
-        logger.error(f"Error getting strategy performance: {e}")
+        logger.error(f"Error getting strategy performance: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -231,7 +231,7 @@ async def list_strategies():
         strategies = []
         for f in validated_dir.glob("*_validation.json"):
             import json
-            with open(f) as fp:
+            with open(f, encoding="utf-8") as fp:
                 data = json.load(fp)
                 strategies.append({
                     "name": data.get("model_name"),
@@ -243,7 +243,7 @@ async def list_strategies():
         
         return {"strategies": strategies}
     except Exception as e:
-        logger.error(f"Error listing strategies: {e}")
+        logger.error(f"Error listing strategies: {e}", exc_info=True)
         return {"strategies": []}
 
 

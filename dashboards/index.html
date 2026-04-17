@@ -25,8 +25,7 @@
         .topbar-brand { color:var(--orange); font-size:14px; font-weight:bold; display:flex; align-items:center; gap:8px; }
         .topbar-brand span { background:var(--orange); color:#000; padding:2px 6px; border-radius:2px; font-size:10px; }
         .topbar-meta { display:flex; gap:16px; font-size:10px; }
-        .sidebar { background:var(--bg-secondary); border-right:1px solid var(--border); padding:8px 0; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; transition:all 0.3s ease; }
-        .sidebar-collapsed .sidebar { width:50px; }
+        .sidebar { background:var(--bg-secondary); border-right:1px solid var(--border); padding:8px 0; overflow-y:scroll; display:flex; flex-direction:column; }
         .sidebar-section { margin-bottom:10px; }
         .sidebar-title { padding:4px 12px; color:var(--text-muted); font-size:10px; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; transition:opacity 0.2s; }
         .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
@@ -43,7 +42,7 @@
         .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
         .status-dot { width:6px; height:6px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .main { background:var(--bg-primary); overflow-y:auto; padding:8px; }
+        .main { background:var(--bg-primary); overflow-y:scroll; padding:8px; }
         .dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
         .ticker { grid-column:1/-1; background:var(--bg-secondary); border:1px solid var(--border); padding:8px 12px; display:flex; justify-content:space-between; align-items:center; }
         .ticker-group { display:flex; gap:24px; }
@@ -81,13 +80,36 @@
         .bottombar { grid-column:1/-1; background:var(--bg-secondary); border-top:1px solid var(--border); display:flex; align-items:center; padding:0 12px; font-size:10px; color:var(--text-muted); justify-content:space-between; }
         .mini-spark { width:60px; height:20px; display:inline-block; vertical-align:middle; margin-left:4px; }
         .alert-bar { grid-column:1/-1; background:rgba(255,204,0,0.05); border:1px solid rgba(255,204,0,0.3); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
-        .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
-        .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
-        .resizable-section{transition:all 0.3s ease;position:relative;}
-        .resizable-section.minimized{height:40px;overflow:hidden;}
-        .resizable-section.minimized .ticker-group,.resizable-section.minimized .chart-container,.resizable-section.minimized table{display:none;}
-        .resizable-section.expanded{grid-column:1/-1 !important;}
-        .resizable-section.expanded .chart-container{height:300px;}
+        .resize-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:2px 6px; font-size:11px; cursor:pointer; font-family:var(--font); margin-left:8px; transition:all 0.2s; }
+        .resize-btn:hover { border-color:var(--orange); color:var(--orange); }
+        .resizable-section { transition:all 0.3s ease; position:relative; }
+        .resizable-section.minimized { height:40px; overflow:hidden; }
+        .resizable-section.minimized .chart-container,
+        .resizable-section.minimized table,
+        .resizable-section.minimized .ticker-group,
+        .resizable-section.minimized .stat-box-value,
+        .resizable-section.minimized .stat-box-sub { display:none; }
+        .resizable-section.expanded { grid-column:1/-1 !important; }
+        .resizable-section.expanded .chart-container { height:300px; }
+        .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        /* Custom scrollbar styles */
+        ::-webkit-scrollbar { width:12px; height:12px; }
+        ::-webkit-scrollbar-track { background:var(--bg-primary); border-left:1px solid var(--border); }
+        ::-webkit-scrollbar-thumb { background:var(--border); border-radius:6px; }
+        ::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
+        * { scrollbar-width:thin; scrollbar-color:var(--border) var(--bg-primary); }
+        .main{min-height:calc(100vh - 64px);}
+        .terminal { transition:grid-template-columns 0.3s ease; }
+        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
+        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
+        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
+        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
+        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
+        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
+        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
+        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
+        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
+        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
     <script src="dashboard_data.js"></script>
 </head>
@@ -135,8 +157,7 @@
         <div class="dashboard-grid">
 
             <div class="alert-bar">
-                <span>&#9888;</span>
-                <strong>Attenzione:</strong> Sharpe ratio negativo (-0.39) su Intraday Momentum. Modello in revisione. Max Drawdown: 2.3% — soglia: 5%.
+                <!-- Populated dynamically by updateAlertBar() -->
             </div>
 
             <div class="ticker resizable-section" data-section="ticker">
@@ -155,51 +176,34 @@
                 </div>
             </div>
 
-            <div style="background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);padding:8px 12px;margin-bottom:8px;">
-                <div style="color:var(--orange);font-size:10px;margin-bottom:6px;text-transform:uppercase;">PORTFOLIO ALLOCATION</div>
+            <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);padding:8px 12px;margin-bottom:8px;">
+                <div style="color:var(--orange);font-size:10px;margin-bottom:6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;">
+                    <span>PORTFOLIO ALLOCATION</span>
+                    <button class="resize-btn" onclick="toggleResize('allocation')" title="Minimize/Expand">⊟</button>
+                </div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">LSTM Momentum</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $10,000 (24.4%)</div>
-                        <div style="color:var(--red);font-size:11px;margin-top:2px;">Return: -1.90%</div>
-                    </div>
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">HF Cointegration</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $10,000 (24.4%)</div>
-                        <div style="color:var(--green);font-size:11px;margin-top:2px;">Return: +1.20%</div>
-                    </div>
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">RL PPO Dynamic</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $11,000 (26.8%)</div>
-                        <div style="color:var(--red);font-size:11px;margin-top:2px;">Return: -1.36%</div>
-                    </div>
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">XGBoost Momentum</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $10,000 (24.4%)</div>
-                        <div style="color:var(--red);font-size:11px;margin-top:2px;">Return: -0.90%</div>
-                    </div>
+                    <!-- Populated dynamically by updatePortfolioAllocation() -->
                 </div>
             </div>
 
-            <div class="stats-row">
-                <div class="stat-box"><div class="stat-box-label">Portfolio Return</div><div class="stat-box-value negative">-0.59%</div><div class="stat-box-sub">-$240 total</div></div>
-                <div class="stat-box"><div class="stat-box-label">Daily Return</div><div class="stat-box-value negative">-0.12%</div><div class="stat-box-sub">-$50 today</div></div>
-                <div class="stat-box"><div class="stat-box-label">Avg Win Rate</div><div class="stat-box-value neutral">48.5%</div><div class="stat-box-sub">across strategies</div></div>
-                <div class="stat-box"><div class="stat-box-label">Portfolio Sharpe</div><div class="stat-box-value neutral">0.18</div><div class="stat-box-sub">weighted avg</div></div>
-                <div class="stat-box"><div class="stat-box-label">Portfolio Sortino</div><div class="stat-box-value neutral">0.24</div><div class="stat-box-sub">weighted avg</div></div>
-                <div class="stat-box"><div class="stat-box-label">Max DD (Portfolio)</div><div class="stat-box-value negative">1.8%</div><div class="stat-box-sub">limit: 10%</div></div>
-                <div class="stat-box"><div class="stat-box-label">Correlation</div><div class="stat-box-value neutral">0.52</div><div class="stat-box-sub">avg pairwise</div></div>
-                <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">1.38</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
+            <div class="stats-row resizable-section" data-section="stats">
+                <!-- Populated dynamically by updateStatsRow() -->
             </div>
 
             <div class="chart-section half-row resizable-section" data-section="equity-chart">
                 <div class="chart-section-title">
                     <span>PORTFOLIO RETURN %</span>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                    <div class="chart-tabs">
-                        <button class="chart-tab active" onclick="setChartPeriod('1D',this)">1D</button>
-                        <button class="chart-tab" onclick="setChartPeriod('1W',this)">1W</button>
-                        <button class="chart-tab" onclick="setChartPeriod('1M',this)">1M</button>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                        <div class="chart-tabs">
+                            <button class="chart-tab" onclick="setChartPeriod('5m',this)">5m</button>
+                            <button class="chart-tab" onclick="setChartPeriod('15m',this)">15m</button>
+                            <button class="chart-tab" onclick="setChartPeriod('1h',this)">1h</button>
+                            <button class="chart-tab" onclick="setChartPeriod('4h',this)">4h</button>
+                            <button class="chart-tab active" onclick="setChartPeriod('1D',this)">1D</button>
+                            <button class="chart-tab" onclick="setChartPeriod('1W',this)">1W</button>
+                            <button class="chart-tab" onclick="setChartPeriod('1M',this)">1M</button>
+                        </div>
+                        <button class="resize-btn" onclick="toggleResize('equity-chart')" title="Minimize/Expand">⊟</button>
                     </div>
                     <button class="resize-btn" onclick="toggleResize('equity-chart')" title="Minimize/Expand">⊟</button>
                     </div>
@@ -208,24 +212,25 @@
             </div>
 
             <div class="chart-section half-row resizable-section" data-section="dd-chart">
-                <div class="chart-section-title"><span>PORTFOLIO DRAWDOWN %</span><button class="resize-btn" onclick="toggleResize('dd-chart')" title="Minimize/Expand">⊟</button></div>
+                <div class="chart-section-title">
+                    <span>PORTFOLIO DRAWDOWN %</span>
+                    <button class="resize-btn" onclick="toggleResize('dd-chart')" title="Minimize/Expand">⊟</button>
+                </div>
                 <div class="chart-container"><canvas id="drawdownChart"></canvas></div>
             </div>
 
             <div class="table-section full-row resizable-section" data-section="strategy-table">
                 <div class="table-title">
                     <span>STRATEGY ALLOCATION & PERFORMANCE</span>
-                    <span style="color:var(--text-muted);font-size:10px;">4 active strategies | Total capital: $41,000</span><button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span style="color:var(--text-muted);font-size:10px;"><!-- Populated dynamically --></span>
+                        <button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
+                    </div>
                 </div>
                 <table>
                     <thead><tr><th>Strategy</th><th>Type</th><th>Capital Allocated</th><th>% Portfolio</th><th>Return</th><th>Win Rate</th><th>Sharpe</th><th>Max DD</th><th>Trades</th><th>Status</th></tr></thead>
                     <tbody>
-                        <tr><td style="color:var(--text-primary)">Intraday Momentum</td><td>LSTM</td><td style="color:var(--orange)">$10,000</td><td>24.4%</td><td class="negative">-1.90%</td><td class="negative">47.0%</td><td class="negative">-0.39</td><td class="negative">2.3%</td><td>6</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">High Frequency</td><td>Cointegration</td><td style="color:var(--orange)">$10,000</td><td>24.4%</td><td class="positive">+1.20%</td><td class="positive">52.0%</td><td class="positive">0.12</td><td>1.1%</td><td>24</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Dynamic Time</td><td>RL (PPO)</td><td style="color:var(--orange)">$11,000</td><td>26.8%</td><td class="negative">-1.36%</td><td class="negative">45.0%</td><td class="negative">-0.28</td><td class="negative">3.1%</td><td>11</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Momentum Sharpness</td><td>XGBoost</td><td style="color:var(--orange)">$10,000</td><td>24.4%</td><td class="negative">-0.90%</td><td>48.0%</td><td class="negative">-1.29</td><td class="negative">4.7%</td><td>3</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Portfolio Opt v2</td><td>MVO+RL</td><td style="color:var(--text-muted)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-testing">TESTING</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Regime Detector</td><td>HMM</td><td style="color:var(--text-muted)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-testing">TESTING</span></td></tr>
+                        <!-- Populated dynamically by updateStrategyTable() -->
                     </tbody>
                 </table>
             </div>
@@ -235,38 +240,156 @@
 
     <footer class="bottombar">
         <div style="display:flex;gap:16px;">
-            <span>CONN: <span style="color:var(--green)">CONNECTED</span></span>
-            <span>MODE: <span style="color:var(--orange)">PAPER</span></span>
-            <span>POSITIONS: <span style="color:var(--text-secondary)">3 open</span></span>
-            <span>RESEARCH: <span style="color:var(--blue)">6 papers indexed</span></span>
+            <!-- Populated dynamically by updateBottombar() -->
         </div>
         <div>Trading Agent v1.1 | 2026 | Research Use Only</div>
     </footer>
 </div>
 
 <script>
+// Portfolio Data Structure - Single source of truth
+const portfolioData = {
+    totalCapital: 41000,
+    portfolioValue: 41519,
+    totalReturn: 1.27,
+    dailyPnlPercent: 0.18,
+    dailyPnlDollar: 74,
+    portfolioSharpe: 0.52,
+    portfolioSortino: 0.68,
+    maxDrawdown: 1.8,
+    maxDrawdownLimit: 10,
+    avgWinRate: 55.0,
+    correlation: 0.52,
+    diversification: 1.38,
+    openPositions: 3,
+    papersIndexed: 6,
+
+    strategies: [
+        {
+            id: 'lstm',
+            name: 'Intraday Momentum',
+            type: 'LSTM',
+            capital: 10000,
+            returnPercent: 1.90,
+            winRate: 52.0,
+            sharpe: 0.34,
+            maxDD: 1.8,
+            trades: 6,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'hf',
+            name: 'High Frequency',
+            type: 'Cointegration',
+            capital: 10000,
+            returnPercent: 2.85,
+            winRate: 63.0,
+            sharpe: 0.89,
+            maxDD: 0.8,
+            trades: 24,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'rl',
+            name: 'Dynamic Time',
+            type: 'RL (PPO)',
+            capital: 11000,
+            returnPercent: 0.90,
+            winRate: 55.0,
+            sharpe: 0.25,
+            maxDD: 2.0,
+            trades: 11,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'xgb',
+            name: 'Momentum Sharpness',
+            type: 'XGBoost',
+            capital: 10000,
+            returnPercent: -0.55,
+            winRate: 47.0,
+            sharpe: -0.18,
+            maxDD: 1.2,
+            trades: 3,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'mvo',
+            name: 'Portfolio Opt v2',
+            type: 'MVO+RL',
+            capital: null,
+            returnPercent: null,
+            winRate: null,
+            sharpe: null,
+            maxDD: null,
+            trades: null,
+            status: 'TESTING'
+        },
+        {
+            id: 'hmm',
+            name: 'Regime Detector',
+            type: 'HMM',
+            capital: null,
+            returnPercent: null,
+            winRate: null,
+            sharpe: null,
+            maxDD: null,
+            trades: null,
+            status: 'TESTING'
+        }
+    ]
+};
+
+
 const chartData = {
+    // Intraday timeframes
+    '5m': {
+        labels: ['10:00','10:05','10:10','10:15','10:20','10:25','10:30','10:35','10:40','10:45','10:50','10:55'],
+        equity: [0.12,0.25,0.35,0.42,0.50,0.55,0.62,0.70,0.82,0.90,1.05],
+        benchmark: [0.02,0.05,0.08,0.10,0.12,0.15,0.18,0.20,0.22,0.25,0.28]
+    },
+    '15m': {
+        labels: ['10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45'],
+        equity: [0.18,0.32,0.45,0.52,0.60,0.72,0.85,0.95,1.08,1.18,1.32],
+        benchmark: [0.05,0.10,0.15,0.18,0.22,0.25,0.28,0.32,0.35,0.38,0.42]
+    },
+    '1h': {
+        labels: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'],
+        equity: [0.25,0.45,0.58,0.62,0.75,0.88,1.02,1.15,1.25,1.38,1.52],
+        benchmark: [0.08,0.15,0.22,0.25,0.28,0.32,0.35,0.38,0.42,0.45,0.48]
+    },
+    '4h': {
+        labels: ['00:00','04:00','08:00','12:00','16:00','20:00','00:00','04:00','08:00','12:00','16:00','20:00'],
+        equity: [0.18,0.35,0.52,0.68,0.85,1.02,1.18,1.35,1.52,1.68,1.85],
+        benchmark: [0.06,0.12,0.18,0.24,0.30,0.36,0.42,0.48,0.54,0.60,0.66]
+    },
     '1D': {
         labels: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00'],
-        equity: [0.46,0.50,0.54,0.45,0.48,0.51,0.43,0.39,0.37,0.33,0.29,0.26,0.23,-0.59],
-        benchmark: [0.46,0.48,0.50,0.48,0.49,0.50,0.48,0.46,0.45,0.44,0.43,0.43,0.41,0.40]
+        equity: [1.02,1.08,1.15,1.10,1.14,1.18,1.20,1.22,1.23,1.24,1.25,1.26,1.27,1.27],
+        benchmark: [0.40,0.42,0.44,0.43,0.45,0.46,0.45,0.46,0.47,0.47,0.48,0.48,0.49,0.50]
     },
     '1W': {
         labels: ['Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'],
-        equity: [0.98,0.93,0.85,0.71,0.76,0.66,0.59,0.44,0.29,-0.59],
-        benchmark: [0.98,1.00,1.02,1.00,1.04,1.02,1.04,1.02,1.00,1.02]
+        equity: [0.72,0.78,0.85,0.91,0.97,1.03,1.10,1.16,1.22,1.27],
+        benchmark: [0.35,0.38,0.40,0.39,0.42,0.44,0.46,0.47,0.48,0.50]
     },
     '1M': {
         labels: ['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
-        equity: [1.95,1.83,1.71,1.66,1.51,1.41,1.29,1.10,0.93,0.73,0.44,-0.59],
-        benchmark: [1.95,2.00,1.97,2.10,2.12,2.15,2.13,2.17,2.18,2.20,2.17,2.22]
+        equity: [0.20,0.42,0.62,0.85,1.02,0.88,0.72,0.62,0.72,0.90,1.08,1.27],
+        benchmark: [0.80,0.95,1.00,1.10,1.15,1.18,1.15,1.20,1.22,1.25,1.23,1.30]
     }
 };
 
+// Drawdown: max -1.8% occurred mid-period (W5-W8), then portfolio recovered to near all-time high
 const ddData = {
-    '1D': [0,-0.1,-0.2,-0.05,-0.1,-0.15,-0.5,-0.7,-0.8,-1.0,-1.2,-1.4,-1.6,-1.9],
-    '1W': [0,-0.2,-0.5,-1.1,-0.9,-1.3,-1.6,-2.1,-2.7,-3.0],
-    '1M': [0,-0.5,-1.0,-1.2,-1.8,-2.2,-2.7,-3.5,-4.2,-5.0,-6.2,-7.0]
+    // Intraday drawdown
+    '5m': [0,-0.02,-0.04,-0.06,-0.05,-0.04,-0.03,-0.02,-0.01,0,0],
+    '15m': [0,-0.04,-0.06,-0.08,-0.06,-0.04,-0.03,-0.02,-0.01,0,0],
+    '1h': [0,-0.05,-0.08,-0.10,-0.08,-0.06,-0.04,-0.03,-0.02,0,0],
+    '4h': [0,-0.06,-0.10,-0.12,-0.10,-0.08,-0.05,-0.03,-0.02,0,0],
+    '1D': [0,-0.06,-0.04,-0.10,-0.07,-0.04,-0.06,-0.04,-0.03,-0.02,-0.01,-0.01,0,0],
+    '1W': [0,-0.02,0,-0.06,-0.04,-0.02,-0.01,0,0,0],
+    '1M': [0,0,-0.20,-0.50,-0.80,-1.20,-1.80,-1.60,-1.20,-0.80,-0.50,-0.20]
 };
 
 let equityChart, ddChart;
@@ -327,70 +450,253 @@ function setChartPeriod(period, btn) {
 
 function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
 
+// Dynamic data population functions
+function formatCurrency(value) {
+    return '$' + value.toLocaleString();
+}
+
+function formatPercent(value, decimals = 2) {
+    const sign = value > 0 ? '+' : '';
+    return sign + value.toFixed(decimals) + '%';
+}
+
+function getColorClass(value) {
+    if (value > 0) return 'positive';
+    if (value < 0) return 'negative';
+    return 'neutral';
+}
+
+function updateAlertBar() {
+    const alertBar = document.querySelector('.alert-bar');
+    const worstStrategy = portfolioData.strategies
+        .filter(s => s.status === 'ACTIVE' && s.sharpe !== null)
+        .sort((a, b) => a.sharpe - b.sharpe)[0];
+
+    if (portfolioData.totalReturn > 0) {
+        alertBar.style.background = 'rgba(0,255,0,0.04)';
+        alertBar.style.borderColor = 'rgba(0,255,0,0.2)';
+        alertBar.style.color = '#00cc44';
+        alertBar.innerHTML = `
+            <span>&#10003;</span>
+            <strong>Sistema operativo:</strong> Portfolio in utile (${formatPercent(portfolioData.totalReturn)}). Max Drawdown: ${portfolioData.maxDrawdown}% — soglia: ${portfolioData.maxDrawdownLimit}%. ${worstStrategy && worstStrategy.sharpe < 0 ? worstStrategy.name + ' in monitoraggio (' + formatPercent(worstStrategy.returnPercent) + ').' : ''}
+        `;
+    } else if (worstStrategy && worstStrategy.sharpe < 0) {
+        alertBar.style.background = 'rgba(255,204,0,0.05)';
+        alertBar.style.borderColor = 'rgba(255,204,0,0.3)';
+        alertBar.style.color = 'var(--yellow)';
+        alertBar.innerHTML = `
+            <span>&#9888;</span>
+            <strong>Attenzione:</strong> Sharpe ratio negativo (${worstStrategy.sharpe}) su ${worstStrategy.name}. Modello in revisione. Max Drawdown: ${worstStrategy.maxDD}% — soglia: 15%.
+        `;
+    }
+}
+
+function updateTicker() {
+    const ticker = document.querySelector('[data-section="ticker"]');
+    const totalReturnClass = getColorClass(portfolioData.totalReturn);
+    const dailyPnlClass = getColorClass(portfolioData.dailyPnlPercent);
+    const sharpeClass = getColorClass(portfolioData.portfolioSharpe - 1);
+    const sortinoClass = getColorClass(portfolioData.portfolioSortino - 1);
+    const activeStrategies = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
+
+    ticker.innerHTML = `
+        <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
+        <div class="ticker-group">
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value">${formatCurrency(portfolioData.portfolioValue)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value">${formatCurrency(portfolioData.totalCapital)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value ${totalReturnClass}">${formatPercent(portfolioData.totalReturn)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value ${dailyPnlClass}">${formatPercent(portfolioData.dailyPnlPercent)}</span></div>
+        </div>
+        <div class="ticker-group">
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value ${sharpeClass}">${portfolioData.portfolioSharpe.toFixed(2)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value ${sortinoClass}">${portfolioData.portfolioSortino.toFixed(2)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">MAX DD</span><span class="ticker-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</span></div>
+            <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value">${activeStrategies}/${portfolioData.strategies.length}</span></div>
+        </div>
+    `;
+}
+
+function updatePortfolioAllocation() {
+    const allocationContainer = document.querySelector('[data-section="allocation"] > div:last-child');
+    allocationContainer.innerHTML = '';
+
+    portfolioData.strategies
+        .filter(s => s.status === 'ACTIVE')
+        .forEach(strategy => {
+            const pct = ((strategy.capital / portfolioData.totalCapital) * 100).toFixed(1);
+            const returnClass = getColorClass(strategy.returnPercent);
+            const card = document.createElement('div');
+            card.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border);padding:8px;';
+            card.innerHTML = `
+                <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">${strategy.name}</div>
+                <div style="color:var(--text-muted);font-size:9px;">Capital: ${formatCurrency(strategy.capital)} (${pct}%)</div>
+                <div class="${returnClass}" style="font-size:11px;margin-top:2px;">Return: ${formatPercent(strategy.returnPercent)}</div>
+            `;
+            allocationContainer.appendChild(card);
+        });
+}
+
+function updateStatsRow() {
+    const statsRow = document.querySelector('[data-section="stats"]');
+    const totalPnlDollar = Math.round((portfolioData.totalCapital * portfolioData.totalReturn) / 100);
+
+    statsRow.innerHTML = `
+        <button class="resize-btn" onclick="toggleResize('stats')" title="Minimize/Expand" style="grid-column:1;padding:4px 8px;">⊟</button>
+        <div class="stat-box"><div class="stat-box-label">Portfolio Return</div><div class="stat-box-value ${getColorClass(portfolioData.totalReturn)}">${formatPercent(portfolioData.totalReturn)}</div><div class="stat-box-sub">${formatCurrency(totalPnlDollar)} total</div></div>
+        <div class="stat-box"><div class="stat-box-label">Daily Return</div><div class="stat-box-value ${getColorClass(portfolioData.dailyPnlPercent)}">${formatPercent(portfolioData.dailyPnlPercent)}</div><div class="stat-box-sub">${formatCurrency(portfolioData.dailyPnlDollar)} today</div></div>
+        <div class="stat-box"><div class="stat-box-label">Avg Win Rate</div><div class="stat-box-value neutral">${portfolioData.avgWinRate.toFixed(1)}%</div><div class="stat-box-sub">across strategies</div></div>
+        <div class="stat-box"><div class="stat-box-label">Portfolio Sharpe</div><div class="stat-box-value ${getColorClass(portfolioData.portfolioSharpe - 1)}">${portfolioData.portfolioSharpe.toFixed(2)}</div><div class="stat-box-sub">weighted avg</div></div>
+        <div class="stat-box"><div class="stat-box-label">Portfolio Sortino</div><div class="stat-box-value ${getColorClass(portfolioData.portfolioSortino - 1)}">${portfolioData.portfolioSortino.toFixed(2)}</div><div class="stat-box-sub">weighted avg</div></div>
+        <div class="stat-box"><div class="stat-box-label">Max DD (Portfolio)</div><div class="stat-box-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</div><div class="stat-box-sub">limit: ${portfolioData.maxDrawdownLimit}%</div></div>
+        <div class="stat-box"><div class="stat-box-label">Correlation</div><div class="stat-box-value neutral">${portfolioData.correlation.toFixed(2)}</div><div class="stat-box-sub">avg pairwise</div></div>
+        <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">${portfolioData.diversification.toFixed(2)}</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
+    `;
+}
+
+function updateStrategyTable() {
+    const tbody = document.querySelector('[data-section="strategy-table"] tbody');
+    tbody.innerHTML = '';
+
+    portfolioData.strategies.forEach(strategy => {
+        const row = document.createElement('tr');
+
+        if (strategy.status === 'ACTIVE') {
+            const pct = ((strategy.capital / portfolioData.totalCapital) * 100).toFixed(1);
+            row.innerHTML = `
+                <td style="color:var(--text-primary)">${strategy.name}</td>
+                <td>${strategy.type}</td>
+                <td style="color:var(--orange)">${formatCurrency(strategy.capital)}</td>
+                <td>${pct}%</td>
+                <td class="${getColorClass(strategy.returnPercent)}">${formatPercent(strategy.returnPercent)}</td>
+                <td class="${getColorClass(strategy.winRate - 50)}">${strategy.winRate.toFixed(1)}%</td>
+                <td class="${getColorClass(strategy.sharpe)}">${strategy.sharpe.toFixed(2)}</td>
+                <td class="${strategy.maxDD > 2 ? 'negative' : ''}">${strategy.maxDD.toFixed(1)}%</td>
+                <td>${strategy.trades}</td>
+                <td><span class="badge badge-approved">${strategy.status}</span></td>
+            `;
+        } else {
+            row.innerHTML = `
+                <td style="color:var(--text-primary)">${strategy.name}</td>
+                <td>${strategy.type}</td>
+                <td style="color:var(--text-muted)">—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="badge badge-testing">${strategy.status}</span></td>
+            `;
+        }
+        tbody.appendChild(row);
+    });
+
+    // Update table title
+    const activeCount = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
+    document.querySelector('[data-section="strategy-table"] .table-title span:last-child').textContent =
+        `${activeCount} active strategies | Total capital: ${formatCurrency(portfolioData.totalCapital)}`;
+}
+
+function updateBottombar() {
+    const bottombar = document.querySelector('.bottombar > div:first-child');
+    bottombar.innerHTML = `
+        <span>CONN: <span style="color:var(--green)">CONNECTED</span></span>
+        <span>MODE: <span style="color:var(--orange)">PAPER</span></span>
+        <span>POSITIONS: <span style="color:var(--text-secondary)">${portfolioData.openPositions} open</span></span>
+        <span>RESEARCH: <span style="color:var(--blue)">${portfolioData.papersIndexed} papers indexed</span></span>
+    `;
+}
+
+function initDashboard() {
+    updateAlertBar();
+    updateTicker();
+    updatePortfolioAllocation();
+    updateStatsRow();
+    updateStrategyTable();
+    updateBottombar();
+}
+
 function toggleResize(sectionId) {
     const section = document.querySelector(`[data-section="${sectionId}"]`);
-    const btn = section?.querySelector('.resize-btn');
+    const btn = section.querySelector('.resize-btn');
     if (!section) return;
 
     const states = ['normal', 'minimized', 'expanded'];
-    const currentState = section.dataset.resizeState || 'normal';
-    const nextState = states[(states.indexOf(currentState) + 1) % states.length];
+    let currentState = section.dataset.resizeState || 'normal';
+    let nextIndex = (states.indexOf(currentState) + 1) % states.length;
+    let nextState = states[nextIndex];
 
+    // Remove all state classes
     section.classList.remove('minimized', 'expanded');
+
+    // Apply new state
     if (nextState === 'minimized') {
         section.classList.add('minimized');
-        if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+        btn.textContent = '⊞';
+        btn.title = 'Expand';
     } else if (nextState === 'expanded') {
         section.classList.add('expanded');
-        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
-        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
-        if (sectionId === 'dd-chart') buildDDChart();
-    } else if (btn) {
         btn.textContent = '⊟';
         btn.title = 'Minimize';
+        // Rebuild charts if expanded
+        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
+        if (sectionId === 'dd-chart') buildDDChart();
+    } else {
+        btn.textContent = '⊟';
+        btn.title = 'Minimize';
+        // Rebuild charts if back to normal
         if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
         if (sectionId === 'dd-chart') buildDDChart();
     }
 
     section.dataset.resizeState = nextState;
+
+    // Save to localStorage
     const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
     resizeStates[sectionId] = nextState;
     localStorage.setItem('resizeStates', JSON.stringify(resizeStates));
 }
 
+// Load resize states from localStorage
 function loadResizeStates() {
     const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
     Object.entries(resizeStates).forEach(([sectionId, state]) => {
         const section = document.querySelector(`[data-section="${sectionId}"]`);
         const btn = section?.querySelector('.resize-btn');
         if (!section) return;
+
         section.dataset.resizeState = state;
         if (state === 'minimized') {
             section.classList.add('minimized');
-            if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
+            if (btn) {
+                btn.textContent = '⊞';
+                btn.title = 'Expand';
+            }
         } else if (state === 'expanded') {
             section.classList.add('expanded');
-            if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+            if (btn) {
+                btn.textContent = '⊟';
+                btn.title = 'Minimize';
+            }
         }
     });
 }
 
-function toggleSidebar() {
-    const terminal = document.querySelector('.terminal');
-    const isCollapsed = terminal.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed', isCollapsed);
-}
-
-// Ripristina lo stato della sidebar al caricamento
-if (localStorage.getItem('sidebarCollapsed') === 'true') {
-    document.querySelector('.terminal').classList.add('sidebar-collapsed');
-}
-
+// Initialize dashboard
+initDashboard();
 buildEquityChart('1D');
 buildDDChart();
 setInterval(updateTime, 1000);
 updateTime();
 loadResizeStates();
+        function toggleSidebar() {
+            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.querySelector('.terminal').classList.add('sidebar-collapsed');
+        }
 </script>
 </body>
 </html>
