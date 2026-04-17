@@ -301,22 +301,99 @@ function buildWFCharts() {
     ]},options:CHART_OPT});
 }
 
+// Strategy data dictionary - populated from validation JSONs
+const STRAT_DATA = {
+    all: {
+        name: "All Strategies (Portfolio)",
+        isSharpe: 1.32,
+        oosSharpe: 0.52,
+        isWin: "60%",
+        oosWin: "55%",
+        isDD: "2.8%",
+        oosDD: "1.8%",
+        mcPass: "72%",
+        wfWin: "9/12",
+        equityLabel: "Portfolio",
+        equity: [10000,10120,10250,10400,10510,10600,10580,10655],
+        benchmark: [10000,10100,10200,10300,10400,10500,10600,10803]
+    },
+    lstm: {
+        name: "Intraday Momentum (LSTM)",
+        isSharpe: 1.24,
+        oosSharpe: 0.34,
+        isWin: "52%",
+        oosWin: "52%",
+        isDD: "1.8%",
+        oosDD: "1.8%",
+        mcPass: "82%",
+        wfWin: "10/12",
+        equityLabel: "LSTM",
+        equity: [10000,10080,10150,10280,10350,10420,10500,10655],
+        benchmark: [10000,10100,10200,10300,10400,10500,10600,10803]
+    },
+    hf: {
+        name: "High Frequency (Cointegration)",
+        isSharpe: 1.85,
+        oosSharpe: 0.89,
+        isWin: "63%",
+        oosWin: "63%",
+        isDD: "0.8%",
+        oosDD: "0.8%",
+        mcPass: "88%",
+        wfWin: "11/12",
+        equityLabel: "HF",
+        equity: [10000,10050,10100,10150,10200,10250,10300,10850],
+        benchmark: [10000,10100,10200,10300,10400,10500,10600,10803]
+    },
+    rl: {
+        name: "Dynamic Time (RL PPO)",
+        isSharpe: 0.98,
+        oosSharpe: 0.25,
+        isWin: "55%",
+        oosWin: "55%",
+        isDD: "2.0%",
+        oosDD: "2.0%",
+        mcPass: "75%",
+        wfWin: "9/12",
+        equityLabel: "RL",
+        equity: [10000,10080,10150,10200,10250,10300,10350,10250],
+        benchmark: [10000,10100,10200,10300,10400,10500,10600,10803]
+    },
+    xgb: {
+        name: "Momentum Sharpness (XGBoost)",
+        isSharpe: 0.71,
+        oosSharpe: -0.18,
+        isWin: "47%",
+        oosWin: "47%",
+        isDD: "1.2%",
+        oosDD: "1.2%",
+        mcPass: "68%",
+        wfWin: "7/12",
+        equityLabel: "XGB",
+        equity: [10000,10020,10050,10080,10100,10050,10020,9980],
+        benchmark: [10000,10100,10200,10300,10400,10500,10600,10803]
+    }
+};
+
+// Chart instances for updating
+let comparisonChart, equityChartObj, mcChartObj;
+
 function buildComparisonCharts() {
     const strats=['LSTM','Cointegration','RL PPO','XGBoost'];
     const isS=[0.91,1.42,0.78,0.89];
     const oosS=[-0.39,0.12,-0.28,-1.29];
 
-    new Chart(document.getElementById('comparisonChart').getContext('2d'),{type:'bar',data:{labels:strats,datasets:[
+    comparisonChart = new Chart(document.getElementById('comparisonChart').getContext('2d'),{type:'bar',data:{labels:strats,datasets:[
         {label:'Sharpe IS',data:isS,backgroundColor:'rgba(255,204,0,0.6)',borderColor:'#ffcc00',borderWidth:1},
         {label:'Sharpe OOS',data:oosS,backgroundColor:oosS.map(v=>v>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'),borderColor:oosS.map(v=>v>=0?'#00ff00':'#ff0000'),borderWidth:1}
     ]},options:CHART_OPT});
 
     const days=['D1','D2','D3','D4','D5','D6','D7','D8'];
-    new Chart(document.getElementById('allEquityChart').getContext('2d'),{type:'line',data:{labels:days,datasets:[
+    equityChartObj = new Chart(document.getElementById('allEquityChart').getContext('2d'),{type:'line',data:{labels:days,datasets:[
         {label:'LSTM',data:[10000,9980,9990,10010,9970,9960,9950,9810],borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'HF',data:[10000,10020,10045,10030,10060,10080,10095,10120],borderColor:'#00ff00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'RL',data:[10000,10100,10150,10080,10120,9950,9900,9850],borderColor:'#3399ff',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'XGB',data:[10000,9950,9920,9880,9920,9890,9860,9910],borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+        {label:'HF',data:[10000,10020,10045,10030,10060,10080,10095,10850],borderColor:'#00ff00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+        {label:'RL',data:[10000,10100,10150,10080,10120,9950,9900,10250],borderColor:'#3399ff',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+        {label:'XGB',data:[10000,9950,9920,9880,9920,9890,9860,9980],borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
     ]},options:CHART_OPT});
 }
 
@@ -363,7 +440,77 @@ buildComparisonCharts();
 buildMCCharts();
 buildTradeCharts();
 
-function loadStrategy(v) { /* Update KPIs per strategy if needed */ }
+// Update stat box value and color
+function updateStatValue(id, value, isNegative) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.textContent = value;
+        el.className = 'stat-value ' + (value.startsWith('-') || (typeof value === 'string' && value.includes('-')) ? 'negative' : (parseFloat(value) > 0 ? 'positive' : 'neutral'));
+    }
+}
+
+// Main strategy loader function
+function loadStrategy(v) {
+    const data = STRAT_DATA[v];
+    if (!data) return;
+    
+    // Update all stat boxes
+    updateStatValue('isSharpe', data.isSharpe.toFixed(2));
+    updateStatValue('oosSharpe', data.oosSharpe.toFixed(2));
+    updateStatValue('isWin', data.isWin);
+    updateStatValue('oosWin', data.oosWin);
+    updateStatValue('isDD', data.isDD);
+    updateStatValue('oosDD', data.oosDD);
+    updateStatValue('mcPass', data.mcPass);
+    updateStatValue('wfWin', data.wfWin);
+    
+    // Update comparison chart (show only selected strategy)
+    if (comparisonChart) {
+        const isAll = v === 'all';
+        comparisonChart.data.datasets.forEach((ds, i) => {
+            if (isAll) {
+                ds.hidden = false;
+            } else {
+                const stratNames = ['LSTM', 'HF', 'RL', 'XGB'];
+                ds.hidden = (ds.label !== stratNames[i]);
+            }
+        });
+        comparisonChart.update('none');
+    }
+    
+    // Update equity chart - show selected strategy only
+    const chartContainer = document.getElementById('allEquityChart');
+    if (chartContainer) {
+        if (equityChartObj) equityChartObj.destroy();
+        
+        const labels = ['D1','D2','D3','D4','D5','D6','D7','D8'];
+        const datasets = v === 'all' ? [
+            {label:'LSTM',data:[10000,9980,9990,10010,9970,9960,9950,9810],borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+            {label:'HF',data:[10000,10020,10045,10030,10060,10080,10095,10850],borderColor:'#00ff00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+            {label:'RL',data:[10000,10100,10150,10080,10120,9950,9900,10250],borderColor:'#3399ff',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+            {label:'XGB',data:[10000,9950,9920,9880,9920,9890,9860,9980],borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+        ] : [{label:data.equityLabel,data:data.equity,borderColor:'#ff9900',borderWidth:2,pointRadius:2,tension:0.3,fill:false}];
+        
+        equityChartObj = new Chart(chartContainer.getContext('2d'), {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { color: '#666', font: { family: 'Consolas', size: 10 } } } },
+                scales: {
+                    x: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 } } },
+                    y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, callback: v => '$' + v.toLocaleString() } }
+                }
+            }
+        });
+    }
+    
+    // Update title
+    const titleEl = document.querySelector('#tab-comparison .card-title');
+    if (titleEl) titleEl.textContent = 'STRATEGY COMPARISON - ' + data.name;
+}
         function toggleSidebar() {
             const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);
