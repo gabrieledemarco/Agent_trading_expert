@@ -131,25 +131,12 @@
     <main class="main">
         <div class="dashboard-grid">
 
-            <div class="alert-bar" style="background:rgba(0,255,0,0.04);border-color:rgba(0,255,0,0.2);color:#00cc44;">
-                <span>&#10003;</span>
-                <strong>Sistema operativo:</strong> Portfolio in utile (+1.27%). Max Drawdown: 1.8% — soglia: 5%. Momentum Sharpness in monitoraggio (-0.55%).
+            <div class="alert-bar">
+                <!-- Populated dynamically by updateAlertBar() -->
             </div>
 
             <div class="ticker resizable-section" data-section="ticker">
-                <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
-                <div class="ticker-group">
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value">$41,519</span></div>
-                    <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value">$41,000</span></div>
-                    <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value positive">+1.27%</span></div>
-                    <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value positive">+0.18%</span></div>
-                </div>
-                <div class="ticker-group">
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value positive">0.52</span></div>
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value positive">0.68</span></div>
-                    <div class="ticker-item"><span class="ticker-label">MAX DD</span><span class="ticker-value neutral">1.8%</span></div>
-                    <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value">4/6</span></div>
-                </div>
+                <!-- Populated dynamically by updateTicker() -->
             </div>
 
             <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);padding:8px 12px;margin-bottom:8px;">
@@ -158,39 +145,12 @@
                     <button class="resize-btn" onclick="toggleResize('allocation')" title="Minimize/Expand">⊟</button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">LSTM Momentum</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $10,000 (24.4%) | P&amp;L: +$190</div>
-                        <div style="color:var(--green);font-size:11px;margin-top:2px;">Return: +1.90%</div>
-                    </div>
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">HF Cointegration</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $10,000 (24.4%) | P&amp;L: +$285</div>
-                        <div style="color:var(--green);font-size:11px;margin-top:2px;">Return: +2.85%</div>
-                    </div>
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">RL PPO Dynamic</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $11,000 (26.8%) | P&amp;L: +$99</div>
-                        <div style="color:var(--green);font-size:11px;margin-top:2px;">Return: +0.90%</div>
-                    </div>
-                    <div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                        <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">XGBoost Momentum</div>
-                        <div style="color:var(--text-muted);font-size:9px;">Capital: $10,000 (24.4%) | P&amp;L: -$55</div>
-                        <div style="color:var(--red);font-size:11px;margin-top:2px;">Return: -0.55%</div>
-                    </div>
+                    <!-- Populated dynamically by updatePortfolioAllocation() -->
                 </div>
             </div>
 
             <div class="stats-row resizable-section" data-section="stats">
-                <button class="resize-btn" onclick="toggleResize('stats')" title="Minimize/Expand" style="grid-column:1;padding:4px 8px;">⊟</button>
-                <div class="stat-box"><div class="stat-box-label">Portfolio Return</div><div class="stat-box-value positive">+1.27%</div><div class="stat-box-sub">+$519 total</div></div>
-                <div class="stat-box"><div class="stat-box-label">Daily Return</div><div class="stat-box-value positive">+0.18%</div><div class="stat-box-sub">+$74 today</div></div>
-                <div class="stat-box"><div class="stat-box-label">Avg Win Rate</div><div class="stat-box-value positive">55.0%</div><div class="stat-box-sub">across strategies</div></div>
-                <div class="stat-box"><div class="stat-box-label">Portfolio Sharpe</div><div class="stat-box-value positive">0.52</div><div class="stat-box-sub">weighted avg</div></div>
-                <div class="stat-box"><div class="stat-box-label">Portfolio Sortino</div><div class="stat-box-value positive">0.68</div><div class="stat-box-sub">weighted avg</div></div>
-                <div class="stat-box"><div class="stat-box-label">Max DD (Portfolio)</div><div class="stat-box-value neutral">1.8%</div><div class="stat-box-sub">limit: 10%</div></div>
-                <div class="stat-box"><div class="stat-box-label">Correlation</div><div class="stat-box-value neutral">0.52</div><div class="stat-box-sub">avg pairwise</div></div>
-                <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">1.38</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
+                <!-- Populated dynamically by updateStatsRow() -->
             </div>
 
             <div class="chart-section half-row resizable-section" data-section="equity-chart">
@@ -220,19 +180,14 @@
                 <div class="table-title">
                     <span>STRATEGY ALLOCATION & PERFORMANCE</span>
                     <div style="display:flex;gap:8px;align-items:center;">
-                        <span style="color:var(--text-muted);font-size:10px;">4 active strategies | Total capital: $41,000</span>
+                        <span style="color:var(--text-muted);font-size:10px;"><!-- Populated dynamically --></span>
                         <button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
                     </div>
                 </div>
                 <table>
                     <thead><tr><th>Strategy</th><th>Type</th><th>Capital Allocated</th><th>% Portfolio</th><th>Return</th><th>Win Rate</th><th>Sharpe</th><th>Max DD</th><th>Trades</th><th>Status</th></tr></thead>
                     <tbody>
-                        <tr><td style="color:var(--text-primary)">Intraday Momentum</td><td>LSTM</td><td style="color:var(--orange)">$10,000</td><td>24.4%</td><td class="positive">+1.90%</td><td class="positive">52.0%</td><td class="positive">0.34</td><td>1.8%</td><td>6</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">High Frequency</td><td>Cointegration</td><td style="color:var(--orange)">$10,000</td><td>24.4%</td><td class="positive">+2.85%</td><td class="positive">63.0%</td><td class="positive">0.89</td><td>0.8%</td><td>24</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Dynamic Time</td><td>RL (PPO)</td><td style="color:var(--orange)">$11,000</td><td>26.8%</td><td class="positive">+0.90%</td><td class="positive">55.0%</td><td class="positive">0.25</td><td>2.0%</td><td>11</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Momentum Sharpness</td><td>XGBoost</td><td style="color:var(--orange)">$10,000</td><td>24.4%</td><td class="negative">-0.55%</td><td>47.0%</td><td class="negative">-0.18</td><td>1.2%</td><td>3</td><td><span class="badge badge-approved">ACTIVE</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Portfolio Opt v2</td><td>MVO+RL</td><td style="color:var(--text-muted)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-testing">TESTING</span></td></tr>
-                        <tr><td style="color:var(--text-primary)">Regime Detector</td><td>HMM</td><td style="color:var(--text-muted)">—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-testing">TESTING</span></td></tr>
+                        <!-- Populated dynamically by updateStrategyTable() -->
                     </tbody>
                 </table>
             </div>
@@ -242,17 +197,107 @@
 
     <footer class="bottombar">
         <div style="display:flex;gap:16px;">
-            <span>CONN: <span style="color:var(--green)">CONNECTED</span></span>
-            <span>MODE: <span style="color:var(--orange)">PAPER</span></span>
-            <span>POSITIONS: <span style="color:var(--text-secondary)">3 open</span></span>
-            <span>RESEARCH: <span style="color:var(--blue)">6 papers indexed</span></span>
+            <!-- Populated dynamically by updateBottombar() -->
         </div>
         <div>Trading Agent v1.1 | 2026 | Research Use Only</div>
     </footer>
 </div>
 
 <script>
-// Consistent with: initial capital $41,000, portfolio value $41,519 (+1.27%), max DD -1.8%
+// Portfolio Data Structure - Single source of truth
+const portfolioData = {
+    totalCapital: 41000,
+    portfolioValue: 41519,
+    totalReturn: 1.27,
+    dailyPnlPercent: 0.18,
+    dailyPnlDollar: 74,
+    portfolioSharpe: 0.52,
+    portfolioSortino: 0.68,
+    maxDrawdown: 1.8,
+    maxDrawdownLimit: 10,
+    avgWinRate: 55.0,
+    correlation: 0.52,
+    diversification: 1.38,
+    openPositions: 3,
+    papersIndexed: 6,
+
+    strategies: [
+        {
+            id: 'lstm',
+            name: 'Intraday Momentum',
+            type: 'LSTM',
+            capital: 10000,
+            returnPercent: 1.90,
+            winRate: 52.0,
+            sharpe: 0.34,
+            maxDD: 1.8,
+            trades: 6,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'hf',
+            name: 'High Frequency',
+            type: 'Cointegration',
+            capital: 10000,
+            returnPercent: 2.85,
+            winRate: 63.0,
+            sharpe: 0.89,
+            maxDD: 0.8,
+            trades: 24,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'rl',
+            name: 'Dynamic Time',
+            type: 'RL (PPO)',
+            capital: 11000,
+            returnPercent: 0.90,
+            winRate: 55.0,
+            sharpe: 0.25,
+            maxDD: 2.0,
+            trades: 11,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'xgb',
+            name: 'Momentum Sharpness',
+            type: 'XGBoost',
+            capital: 10000,
+            returnPercent: -0.55,
+            winRate: 47.0,
+            sharpe: -0.18,
+            maxDD: 1.2,
+            trades: 3,
+            status: 'ACTIVE'
+        },
+        {
+            id: 'mvo',
+            name: 'Portfolio Opt v2',
+            type: 'MVO+RL',
+            capital: null,
+            returnPercent: null,
+            winRate: null,
+            sharpe: null,
+            maxDD: null,
+            trades: null,
+            status: 'TESTING'
+        },
+        {
+            id: 'hmm',
+            name: 'Regime Detector',
+            type: 'HMM',
+            capital: null,
+            returnPercent: null,
+            winRate: null,
+            sharpe: null,
+            maxDD: null,
+            trades: null,
+            status: 'TESTING'
+        }
+    ]
+};
+
+
 const chartData = {
     '1D': {
         labels: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00'],
@@ -336,6 +381,172 @@ function setChartPeriod(period, btn) {
 
 function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
 
+// Dynamic data population functions
+function formatCurrency(value) {
+    return '$' + value.toLocaleString();
+}
+
+function formatPercent(value, decimals = 2) {
+    const sign = value > 0 ? '+' : '';
+    return sign + value.toFixed(decimals) + '%';
+}
+
+function getColorClass(value) {
+    if (value > 0) return 'positive';
+    if (value < 0) return 'negative';
+    return 'neutral';
+}
+
+function updateAlertBar() {
+    const alertBar = document.querySelector('.alert-bar');
+    const worstStrategy = portfolioData.strategies
+        .filter(s => s.status === 'ACTIVE' && s.sharpe !== null)
+        .sort((a, b) => a.sharpe - b.sharpe)[0];
+
+    if (portfolioData.totalReturn > 0) {
+        alertBar.style.background = 'rgba(0,255,0,0.04)';
+        alertBar.style.borderColor = 'rgba(0,255,0,0.2)';
+        alertBar.style.color = '#00cc44';
+        alertBar.innerHTML = `
+            <span>&#10003;</span>
+            <strong>Sistema operativo:</strong> Portfolio in utile (${formatPercent(portfolioData.totalReturn)}). Max Drawdown: ${portfolioData.maxDrawdown}% — soglia: ${portfolioData.maxDrawdownLimit}%. ${worstStrategy && worstStrategy.sharpe < 0 ? worstStrategy.name + ' in monitoraggio (' + formatPercent(worstStrategy.returnPercent) + ').' : ''}
+        `;
+    } else if (worstStrategy && worstStrategy.sharpe < 0) {
+        alertBar.style.background = 'rgba(255,204,0,0.05)';
+        alertBar.style.borderColor = 'rgba(255,204,0,0.3)';
+        alertBar.style.color = 'var(--yellow)';
+        alertBar.innerHTML = `
+            <span>&#9888;</span>
+            <strong>Attenzione:</strong> Sharpe ratio negativo (${worstStrategy.sharpe}) su ${worstStrategy.name}. Modello in revisione. Max Drawdown: ${worstStrategy.maxDD}% — soglia: 15%.
+        `;
+    }
+}
+
+function updateTicker() {
+    const ticker = document.querySelector('[data-section="ticker"]');
+    const totalReturnClass = getColorClass(portfolioData.totalReturn);
+    const dailyPnlClass = getColorClass(portfolioData.dailyPnlPercent);
+    const sharpeClass = getColorClass(portfolioData.portfolioSharpe - 1);
+    const sortinoClass = getColorClass(portfolioData.portfolioSortino - 1);
+    const activeStrategies = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
+
+    ticker.innerHTML = `
+        <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
+        <div class="ticker-group">
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value">${formatCurrency(portfolioData.portfolioValue)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value">${formatCurrency(portfolioData.totalCapital)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value ${totalReturnClass}">${formatPercent(portfolioData.totalReturn)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value ${dailyPnlClass}">${formatPercent(portfolioData.dailyPnlPercent)}</span></div>
+        </div>
+        <div class="ticker-group">
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value ${sharpeClass}">${portfolioData.portfolioSharpe.toFixed(2)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value ${sortinoClass}">${portfolioData.portfolioSortino.toFixed(2)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">MAX DD</span><span class="ticker-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</span></div>
+            <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value">${activeStrategies}/${portfolioData.strategies.length}</span></div>
+        </div>
+    `;
+}
+
+function updatePortfolioAllocation() {
+    const allocationContainer = document.querySelector('[data-section="allocation"] > div:last-child');
+    allocationContainer.innerHTML = '';
+
+    portfolioData.strategies
+        .filter(s => s.status === 'ACTIVE')
+        .forEach(strategy => {
+            const pct = ((strategy.capital / portfolioData.totalCapital) * 100).toFixed(1);
+            const returnClass = getColorClass(strategy.returnPercent);
+            const card = document.createElement('div');
+            card.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border);padding:8px;';
+            card.innerHTML = `
+                <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">${strategy.name}</div>
+                <div style="color:var(--text-muted);font-size:9px;">Capital: ${formatCurrency(strategy.capital)} (${pct}%)</div>
+                <div class="${returnClass}" style="font-size:11px;margin-top:2px;">Return: ${formatPercent(strategy.returnPercent)}</div>
+            `;
+            allocationContainer.appendChild(card);
+        });
+}
+
+function updateStatsRow() {
+    const statsRow = document.querySelector('[data-section="stats"]');
+    const totalPnlDollar = Math.round((portfolioData.totalCapital * portfolioData.totalReturn) / 100);
+
+    statsRow.innerHTML = `
+        <button class="resize-btn" onclick="toggleResize('stats')" title="Minimize/Expand" style="grid-column:1;padding:4px 8px;">⊟</button>
+        <div class="stat-box"><div class="stat-box-label">Portfolio Return</div><div class="stat-box-value ${getColorClass(portfolioData.totalReturn)}">${formatPercent(portfolioData.totalReturn)}</div><div class="stat-box-sub">${formatCurrency(totalPnlDollar)} total</div></div>
+        <div class="stat-box"><div class="stat-box-label">Daily Return</div><div class="stat-box-value ${getColorClass(portfolioData.dailyPnlPercent)}">${formatPercent(portfolioData.dailyPnlPercent)}</div><div class="stat-box-sub">${formatCurrency(portfolioData.dailyPnlDollar)} today</div></div>
+        <div class="stat-box"><div class="stat-box-label">Avg Win Rate</div><div class="stat-box-value neutral">${portfolioData.avgWinRate.toFixed(1)}%</div><div class="stat-box-sub">across strategies</div></div>
+        <div class="stat-box"><div class="stat-box-label">Portfolio Sharpe</div><div class="stat-box-value ${getColorClass(portfolioData.portfolioSharpe - 1)}">${portfolioData.portfolioSharpe.toFixed(2)}</div><div class="stat-box-sub">weighted avg</div></div>
+        <div class="stat-box"><div class="stat-box-label">Portfolio Sortino</div><div class="stat-box-value ${getColorClass(portfolioData.portfolioSortino - 1)}">${portfolioData.portfolioSortino.toFixed(2)}</div><div class="stat-box-sub">weighted avg</div></div>
+        <div class="stat-box"><div class="stat-box-label">Max DD (Portfolio)</div><div class="stat-box-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</div><div class="stat-box-sub">limit: ${portfolioData.maxDrawdownLimit}%</div></div>
+        <div class="stat-box"><div class="stat-box-label">Correlation</div><div class="stat-box-value neutral">${portfolioData.correlation.toFixed(2)}</div><div class="stat-box-sub">avg pairwise</div></div>
+        <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">${portfolioData.diversification.toFixed(2)}</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
+    `;
+}
+
+function updateStrategyTable() {
+    const tbody = document.querySelector('[data-section="strategy-table"] tbody');
+    tbody.innerHTML = '';
+
+    portfolioData.strategies.forEach(strategy => {
+        const row = document.createElement('tr');
+
+        if (strategy.status === 'ACTIVE') {
+            const pct = ((strategy.capital / portfolioData.totalCapital) * 100).toFixed(1);
+            row.innerHTML = `
+                <td style="color:var(--text-primary)">${strategy.name}</td>
+                <td>${strategy.type}</td>
+                <td style="color:var(--orange)">${formatCurrency(strategy.capital)}</td>
+                <td>${pct}%</td>
+                <td class="${getColorClass(strategy.returnPercent)}">${formatPercent(strategy.returnPercent)}</td>
+                <td class="${getColorClass(strategy.winRate - 50)}">${strategy.winRate.toFixed(1)}%</td>
+                <td class="${getColorClass(strategy.sharpe)}">${strategy.sharpe.toFixed(2)}</td>
+                <td class="${strategy.maxDD > 2 ? 'negative' : ''}">${strategy.maxDD.toFixed(1)}%</td>
+                <td>${strategy.trades}</td>
+                <td><span class="badge badge-approved">${strategy.status}</span></td>
+            `;
+        } else {
+            row.innerHTML = `
+                <td style="color:var(--text-primary)">${strategy.name}</td>
+                <td>${strategy.type}</td>
+                <td style="color:var(--text-muted)">—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td><span class="badge badge-testing">${strategy.status}</span></td>
+            `;
+        }
+        tbody.appendChild(row);
+    });
+
+    // Update table title
+    const activeCount = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
+    document.querySelector('[data-section="strategy-table"] .table-title span:last-child').textContent =
+        `${activeCount} active strategies | Total capital: ${formatCurrency(portfolioData.totalCapital)}`;
+}
+
+function updateBottombar() {
+    const bottombar = document.querySelector('.bottombar > div:first-child');
+    bottombar.innerHTML = `
+        <span>CONN: <span style="color:var(--green)">CONNECTED</span></span>
+        <span>MODE: <span style="color:var(--orange)">PAPER</span></span>
+        <span>POSITIONS: <span style="color:var(--text-secondary)">${portfolioData.openPositions} open</span></span>
+        <span>RESEARCH: <span style="color:var(--blue)">${portfolioData.papersIndexed} papers indexed</span></span>
+    `;
+}
+
+function initDashboard() {
+    updateAlertBar();
+    updateTicker();
+    updatePortfolioAllocation();
+    updateStatsRow();
+    updateStrategyTable();
+    updateBottombar();
+}
+
 function toggleResize(sectionId) {
     const section = document.querySelector(`[data-section="${sectionId}"]`);
     const btn = section.querySelector('.resize-btn');
@@ -402,6 +613,8 @@ function loadResizeStates() {
     });
 }
 
+// Initialize dashboard
+initDashboard();
 buildEquityChart('1D');
 buildDDChart();
 setInterval(updateTime, 1000);
