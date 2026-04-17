@@ -4,6 +4,7 @@ import os
 import logging
 import time
 import json
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -78,6 +79,7 @@ class TradingExecutorAgent:
         self.equity_curve = [initial_capital]
         self.active_strategy = None
         self.strategy_profiles = {}
+        self._lock = threading.Lock()
 
     def load_validated_strategies(self) -> list[StrategyProfile]:
         """Load all validated strategies."""
@@ -223,19 +225,19 @@ class TradingExecutorAgent:
             model_name=model_name or (self.active_strategy.model_name if self.active_strategy else "default"),
         )
 
-        self.trade_history.append(trade)
-
         if not self.paper_trading:
             logger.warning("Real trading not implemented - using paper trading")
             # In production, connect to broker API here
 
-        # Update positions and capital
-        if action == "buy":
-            self.current_capital -= value
-            self.positions[symbol] = self.positions.get(symbol, 0) + quantity
-        elif action == "sell":
-            self.current_capital += value
-            self.positions[symbol] = max(0, self.positions.get(symbol, 0) - quantity)
+        # Update positions and capital under lock to prevent race conditions
+        with self._lock:
+            self.trade_history.append(trade)
+            if action == "buy":
+                self.current_capital -= value
+                self.positions[symbol] = self.positions.get(symbol, 0) + quantity
+            elif action == "sell":
+                self.current_capital += value
+                self.positions[symbol] = max(0, self.positions.get(symbol, 0) - quantity)
 
         # Log trade
         self._log_trade(trade)
@@ -302,6 +304,8 @@ class TradingExecutorAgent:
         logger.info(f"Paper trading mode: {self.paper_trading}")
 
         iteration = 0
+        latest_prices: dict[str, float] = {}
+
         while iteration < max_iterations:
             for symbol in symbols:
                 # Fetch data
@@ -310,26 +314,29 @@ class TradingExecutorAgent:
                 if not data:
                     continue
 
+                price = data["latest_price"]
+                latest_prices[symbol] = price
+
                 # Generate signal
                 model = None  # Load actual model in production
                 signal = self.generate_signal(model, data)
 
                 # Execute trade if signal is buy or sell
                 if signal in ["buy", "sell"]:
-                    price = data["latest_price"]
                     quantity = self.current_capital * 0.1 / price  # 10% of capital
 
-                    if signal == "buy" and self.current_capital > price * quantity:
+                    if signal == "buy" and self.current_capital >= price * quantity:
                         self.execute_trade(symbol, signal, quantity, price)
                     elif signal == "sell":
                         current_position = self.positions.get(symbol, 0)
                         if current_position > 0:
                             self.execute_trade(symbol, signal, current_position, price)
 
-                # Update equity curve
+            # Update equity curve once per iteration using all known prices
+            with self._lock:
                 current_value = self.current_capital + sum(
-                    self.positions.get(s, 0) * price
-                    for s, price in [(symbol, data.get("latest_price", 0))]
+                    self.positions.get(s, 0) * latest_prices.get(s, 0)
+                    for s in symbols
                 )
                 self.equity_curve.append(current_value)
 
