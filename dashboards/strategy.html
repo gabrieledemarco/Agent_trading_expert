@@ -45,7 +45,7 @@
         .risk-low{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
         .risk-medium{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.2);}
         .risk-high{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
-        .stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:8px;}
+        .stats-row{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px;}
         .stat-box{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
         .stat-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
         .stat-value{font-size:16px;font-weight:bold;}
@@ -139,6 +139,7 @@
         </div>
 
         <div class="stats-row">
+            <div class="stat-box"><div class="stat-label">Allocated Capital</div><div class="stat-value neutral" id="allocCap">$10,000</div><div class="stat-sub">stand-alone</div></div>
             <div class="stat-box"><div class="stat-label">Expected Return</div><div class="stat-value" id="expReturn">8.5%</div><div class="stat-sub" id="expReturnSub">+2.3% vs baseline</div></div>
             <div class="stat-box"><div class="stat-label">Actual Return</div><div class="stat-value" id="actReturn">-1.9%</div><div class="stat-sub">since live</div></div>
             <div class="stat-box"><div class="stat-label">Sharpe</div><div class="stat-value" id="sharpe">-0.39</div><div class="stat-sub">target &gt;1.0</div></div>
@@ -156,7 +157,7 @@
 
         <div class="tab-content active" id="tab-perf">
             <div class="charts-2">
-                <div class="card"><div class="card-title">Equity vs Benchmark</div><div class="chart-container"><canvas id="eqChart"></canvas></div></div>
+                <div class="card"><div class="card-title">Return % vs Benchmark</div><div class="chart-container"><canvas id="eqChart"></canvas></div></div>
                 <div class="card"><div class="card-title">Drawdown</div><div class="chart-container"><canvas id="ddChart"></canvas></div></div>
             </div>
             <div class="charts-2">
@@ -390,110 +391,7 @@
                             <th>Exit Reason</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>2026-04-16</td>
-                            <td style="color:var(--text-primary)">AAPL</td>
-                            <td style="color:var(--green)">LONG</td>
-                            <td>$261.50</td>
-                            <td>$258.20</td>
-                            <td>3.8</td>
-                            <td style="color:var(--orange)">2.1% NAV</td>
-                            <td>$257.10</td>
-                            <td>$274.70</td>
-                            <td style="color:var(--red)">$95</td>
-                            <td>1:3.0</td>
-                            <td style="color:var(--red)">-$12.54</td>
-                            <td style="color:var(--red)">-1.26%</td>
-                            <td style="color:var(--red)">-0.13R</td>
-                            <td style="color:var(--text-muted)">Stop Loss</td>
-                        </tr>
-                        <tr>
-                            <td>2026-04-15</td>
-                            <td style="color:var(--text-primary)">MSFT</td>
-                            <td style="color:var(--green)">LONG</td>
-                            <td>$416.30</td>
-                            <td>$429.80</td>
-                            <td>2.1</td>
-                            <td style="color:var(--orange)">1.9% NAV</td>
-                            <td>$411.50</td>
-                            <td>$430.70</td>
-                            <td style="color:var(--red)">$100</td>
-                            <td>1:3.0</td>
-                            <td style="color:var(--green)">+$28.35</td>
-                            <td style="color:var(--green)">+3.24%</td>
-                            <td style="color:var(--green)">+2.81R</td>
-                            <td style="color:var(--text-muted)">Target Hit</td>
-                        </tr>
-                        <tr>
-                            <td>2026-04-14</td>
-                            <td style="color:var(--text-primary)">TSLA</td>
-                            <td style="color:var(--red)">SHORT</td>
-                            <td>$178.90</td>
-                            <td>$172.40</td>
-                            <td>5.6</td>
-                            <td style="color:var(--orange)">2.2% NAV</td>
-                            <td>$183.50</td>
-                            <td>$165.10</td>
-                            <td style="color:var(--red)">$98</td>
-                            <td>1:3.0</td>
-                            <td style="color:var(--green)">+$36.40</td>
-                            <td style="color:var(--green)">+3.63%</td>
-                            <td style="color:var(--green)">+3.71R</td>
-                            <td style="color:var(--text-muted)">Target Hit</td>
-                        </tr>
-                        <tr>
-                            <td>2026-04-13</td>
-                            <td style="color:var(--text-primary)">NVDA</td>
-                            <td style="color:var(--green)">LONG</td>
-                            <td>$870.20</td>
-                            <td>$865.80</td>
-                            <td>1.1</td>
-                            <td style="color:var(--orange)">2.0% NAV</td>
-                            <td>$861.00</td>
-                            <td>$897.80</td>
-                            <td style="color:var(--red)">$101</td>
-                            <td>1:3.0</td>
-                            <td style="color:var(--red)">-$4.84</td>
-                            <td style="color:var(--red)">-0.51%</td>
-                            <td style="color:var(--red)">-0.05R</td>
-                            <td style="color:var(--text-muted)">Manual Exit</td>
-                        </tr>
-                        <tr>
-                            <td>2026-04-12</td>
-                            <td style="color:var(--text-primary)">GOOGL</td>
-                            <td style="color:var(--green)">LONG</td>
-                            <td>$141.20</td>
-                            <td>$143.90</td>
-                            <td>7.0</td>
-                            <td style="color:var(--orange)">2.1% NAV</td>
-                            <td>$139.10</td>
-                            <td>$147.50</td>
-                            <td style="color:var(--red)">$97</td>
-                            <td>1:3.0</td>
-                            <td style="color:var(--green)">+$18.90</td>
-                            <td style="color:var(--green)">+1.91%</td>
-                            <td style="color:var(--green)">+1.29R</td>
-                            <td style="color:var(--text-muted)">Trailing Stop</td>
-                        </tr>
-                        <tr>
-                            <td>2026-04-11</td>
-                            <td style="color:var(--text-primary)">META</td>
-                            <td style="color:var(--green)">LONG</td>
-                            <td>$485.60</td>
-                            <td>$481.20</td>
-                            <td>2.0</td>
-                            <td style="color:var(--orange)">2.0% NAV</td>
-                            <td>$480.70</td>
-                            <td>$500.30</td>
-                            <td style="color:var(--red)">$98</td>
-                            <td>1:3.0</td>
-                            <td style="color:var(--red)">-$8.80</td>
-                            <td style="color:var(--red)">-0.91%</td>
-                            <td style="color:var(--red)">-0.09R</td>
-                            <td style="color:var(--text-muted)">Stop Loss</td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tradeHistoryBody"></tbody>
                 </table>
             </div>
         </div>
@@ -524,8 +422,9 @@ const STRATS = {
         name:'Intraday Momentum (LSTM)', created:'2026-01-15', source:'arXiv:2401.12345', type:'Time Series Forecasting',
         risk:'medium', expReturn:'8.5%', expReturnSub:'+2.3% vs baseline', actReturn:'-1.9%',
         sharpe:'-0.39', sortino:'-0.51', maxdd:'2.3%', winrate:'47%', trades:'6 trades',
-        equity:[10000,9980,9990,10010,9970,9960,9950,9810],
-        benchmark:[10000,10020,10035,10025,10040,10055,10050,10065],
+        allocatedCapital:'$10,000',
+        equity:[0,-0.20,-0.10,0.10,-0.30,-0.40,-0.50,-1.90],
+        benchmark:[0,0.20,0.35,0.25,0.40,0.55,0.50,0.65],
         drawdown:[0,-0.20,-0.10,0.10,-0.30,-0.40,-0.50,-1.90],
         monthly:[-0.8,1.2,-0.3,-1.5,0.9,-1.9],
         monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
@@ -533,6 +432,14 @@ const STRATS = {
         var95:[0.012,0.013,0.014,0.015,0.013,0.013,0.014,0.015],
         positions:[
             {sym:'AAPL',side:'LONG',entry:'$263.11',mark:'$265.23',qty:'3.8',posSize:'2.1% NAV',stopLoss:'$259.15',takeProfit:'$275.23',riskDollar:'$95',rrRatio:'1:3.0',pnl:'+$8.06',ret:'+0.8%',pos:true},
+        ],
+        tradeHistory:[
+            {date:'2026-04-16',sym:'AAPL',side:'LONG',entry:'$261.50',exit:'$258.20',qty:'3.8',posSize:'2.1% NAV',stopLoss:'$257.10',takeProfit:'$274.70',riskDollar:'$95',rrTarget:'1:3.0',pnl:'-$12.54',ret:'-1.26%',rMultiple:'-0.13R',exitReason:'Stop Loss'},
+            {date:'2026-04-15',sym:'MSFT',side:'LONG',entry:'$416.30',exit:'$429.80',qty:'2.1',posSize:'1.9% NAV',stopLoss:'$411.50',takeProfit:'$430.70',riskDollar:'$100',rrTarget:'1:3.0',pnl:'+$28.35',ret:'+3.24%',rMultiple:'+2.81R',exitReason:'Target Hit'},
+            {date:'2026-04-14',sym:'TSLA',side:'SHORT',entry:'$178.90',exit:'$172.40',qty:'5.6',posSize:'2.2% NAV',stopLoss:'$183.50',takeProfit:'$165.10',riskDollar:'$98',rrTarget:'1:3.0',pnl:'+$36.40',ret:'+3.63%',rMultiple:'+3.71R',exitReason:'Target Hit'},
+            {date:'2026-04-13',sym:'NVDA',side:'LONG',entry:'$870.20',exit:'$865.80',qty:'1.1',posSize:'2.0% NAV',stopLoss:'$861.00',takeProfit:'$897.80',riskDollar:'$101',rrTarget:'1:3.0',pnl:'-$4.84',ret:'-0.51%',rMultiple:'-0.05R',exitReason:'Manual Exit'},
+            {date:'2026-04-12',sym:'GOOGL',side:'LONG',entry:'$141.20',exit:'$143.90',qty:'7.0',posSize:'2.1% NAV',stopLoss:'$139.10',takeProfit:'$147.50',riskDollar:'$97',rrTarget:'1:3.0',pnl:'+$18.90',ret:'+1.91%',rMultiple:'+1.29R',exitReason:'Trailing Stop'},
+            {date:'2026-04-11',sym:'META',side:'LONG',entry:'$485.60',exit:'$481.20',qty:'2.0',posSize:'2.0% NAV',stopLoss:'$480.70',takeProfit:'$500.30',riskDollar:'$98',rrTarget:'1:3.0',pnl:'-$8.80',ret:'-0.91%',rMultiple:'-0.09R',exitReason:'Stop Loss'},
         ],
         docBasis:'Stacked LSTM (128→64 units, dropout=0.2) trained on 5-min OHLCV bars. Sharpness-adjusted loss function reduces overconfident predictions near threshold.',
         docLogic:'60-bar lookback with RSI(14), MACD(12,26,9), BB(20,2). Signal: directional {-1,0,+1}. Position sizing: quarter-Kelly. Stop: 1.5×ATR.',
@@ -545,8 +452,9 @@ const STRATS = {
         name:'High Frequency (Cointegration)', created:'2026-02-01', source:'arXiv:2402.09876', type:'Statistical Arbitrage',
         risk:'low', expReturn:'5.2%', expReturnSub:'+1.8% vs baseline', actReturn:'+1.2%',
         sharpe:'0.12', sortino:'0.18', maxdd:'1.1%', winrate:'52%', trades:'24 trades',
-        equity:[10000,10020,10045,10030,10060,10080,10095,10120],
-        benchmark:[10000,10015,10025,10018,10030,10040,10038,10048],
+        allocatedCapital:'$10,000',
+        equity:[0,0.20,0.45,0.30,0.60,0.80,0.95,1.20],
+        benchmark:[0,0.15,0.25,0.18,0.30,0.40,0.38,0.48],
         drawdown:[0,-0.10,-0.05,0,-0.15,-0.08,-0.05,0],
         monthly:[0.5,0.8,-0.2,0.9,-0.1,0.3],
         monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
@@ -554,6 +462,10 @@ const STRATS = {
         var95:[0.005,0.006,0.005,0.007,0.006,0.005,0.006,0.005],
         positions:[
             {sym:'MSFT',side:'LONG',entry:'$418.54',mark:'$417.12',qty:'2.1',posSize:'1.9% NAV',stopLoss:'$414.80',takeProfit:'$429.42',riskDollar:'$78',rrRatio:'1:2.9',pnl:'+$2.98',ret:'+0.3%',pos:true},
+        ],
+        tradeHistory:[
+            {date:'2026-04-16',sym:'SPY',side:'LONG',entry:'$515.20',exit:'$516.80',qty:'1.9',posSize:'1.8% NAV',stopLoss:'$513.50',takeProfit:'$520.30',riskDollar:'$65',rrTarget:'1:3.0',pnl:'+$3.04',ret:'+0.31%',rMultiple:'+0.05R',exitReason:'Manual Exit'},
+            {date:'2026-04-16',sym:'QQQ',side:'LONG',entry:'$447.10',exit:'$448.25',qty:'2.2',posSize:'1.9% NAV',stopLoss:'$445.80',takeProfit:'$451.00',riskDollar:'$66',rrTarget:'1:3.0',pnl:'+$2.53',ret:'+0.26%',rMultiple:'+0.04R',exitReason:'Manual Exit'},
         ],
         docBasis:'Engle-Granger cointegration between SPY and QQQ. OLS rolling hedge ratio over 120-bar window. Z-score computed from spread residuals.',
         docLogic:'Entry: |z|>1.5, Exit: |z|<0.5, Stop: |z|>3.0. 1-min bars. Max position 2% NAV per leg. Transaction cost model: 3bps.',
@@ -564,10 +476,11 @@ const STRATS = {
     },
     rl: {
         name:'Dynamic Time (RL PPO)', created:'2026-02-15', source:'arXiv:2403.11111', type:'Reinforcement Learning',
-        risk:'high', expReturn:'12.0%', expReturnSub:'+5.1% vs baseline', actReturn:'-1.5%',
+        risk:'high', expReturn:'12.0%', expReturnSub:'+5.1% vs baseline', actReturn:'-1.36%',
         sharpe:'-0.28', sortino:'-0.37', maxdd:'3.1%', winrate:'45%', trades:'11 trades',
-        equity:[10000,10100,10150,10080,10120,9950,9900,9850],
-        benchmark:[10000,10020,10035,10025,10040,10055,10050,10065],
+        allocatedCapital:'$11,000',
+        equity:[0,0.91,1.36,0.73,1.09,-0.45,-0.91,-1.36],
+        benchmark:[0,0.18,0.32,0.23,0.36,0.50,0.45,0.59],
         drawdown:[0,0,0,-0.70,-0.30,-1.80,-2.30,-3.10],
         monthly:[-0.3,2.1,-0.8,-2.4,0.5,-0.5],
         monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
@@ -575,6 +488,11 @@ const STRATS = {
         var95:[0.018,0.019,0.017,0.020,0.022,0.019,0.021,0.023],
         positions:[
             {sym:'GOOG',side:'LONG',entry:'$175.23',mark:'$176.45',qty:'5.2',posSize:'2.0% NAV',stopLoss:'$172.60',takeProfit:'$183.12',riskDollar:'$102',rrRatio:'1:3.0',pnl:'+$6.34',ret:'+0.7%',pos:true},
+        ],
+        tradeHistory:[
+            {date:'2026-04-15',sym:'AMD',side:'LONG',entry:'$155.30',exit:'$152.10',qty:'7.1',posSize:'2.4% NAV',stopLoss:'$152.80',takeProfit:'$162.80',riskDollar:'$110',rrTarget:'1:3.0',pnl:'-$22.72',ret:'-2.07%',rMultiple:'-0.21R',exitReason:'Stop Loss'},
+            {date:'2026-04-14',sym:'NFLX',side:'SHORT',entry:'$625.40',exit:'$618.90',qty:'1.8',posSize:'2.5% NAV',stopLoss:'$631.20',takeProfit:'$608.10',riskDollar:'$104',rrTarget:'1:3.0',pnl:'+$11.70',ret:'+1.06%',rMultiple:'+0.11R',exitReason:'Manual Exit'},
+            {date:'2026-04-13',sym:'BABA',side:'LONG',entry:'$88.50',exit:'$92.10',qty:'12.4',posSize:'2.4% NAV',stopLoss:'$86.20',takeProfit:'$95.40',riskDollar:'$105',rrTarget:'1:3.0',pnl:'+$44.64',ret:'+4.06%',rMultiple:'+0.43R',exitReason:'Target Hit'},
         ],
         docBasis:'PPO agent with adaptive observation window (8-64 bars). Reward: PnL + Sharpe penalty - transaction costs. Trained on 5yr daily S&P500 universe.',
         docLogic:'Adaptive window self-selects context per regime. Shorter window in volatile markets, longer in trending. Position sizing via continuous action space.',
@@ -587,14 +505,20 @@ const STRATS = {
         name:'Momentum Sharpness (XGBoost)', created:'2026-03-01', source:'arXiv:2404.05555', type:'Gradient Boosting',
         risk:'high', expReturn:'9.2%', expReturnSub:'+3.4% vs baseline', actReturn:'-0.9%',
         sharpe:'-1.29', sortino:'-1.61', maxdd:'4.7%', winrate:'48%', trades:'3 trades',
-        equity:[10000,9950,9920,9880,9920,9890,9860,9910],
-        benchmark:[10000,10020,10035,10025,10040,10055,10050,10065],
+        allocatedCapital:'$10,000',
+        equity:[0,-0.50,-0.80,-1.20,-0.80,-1.10,-1.40,-0.90],
+        benchmark:[0,0.20,0.35,0.25,0.40,0.55,0.50,0.65],
         drawdown:[0,-0.50,-0.80,-1.20,-0.80,-1.10,-1.40,-0.90],
         monthly:[-1.2,0.8,-1.5,-0.3,0.5,-0.3],
         monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
         vol:[0.22,0.23,0.24,0.25,0.22,0.24,0.25,0.23],
         var95:[0.016,0.017,0.018,0.019,0.016,0.018,0.019,0.017],
         positions:[],
+        tradeHistory:[
+            {date:'2026-04-14',sym:'IWM',side:'LONG',entry:'$195.20',exit:'$193.80',qty:'5.1',posSize:'2.2% NAV',stopLoss:'$192.50',takeProfit:'$203.30',riskDollar:'$98',rrTarget:'1:3.0',pnl:'-$7.14',ret:'-0.71%',rMultiple:'-0.07R',exitReason:'Stop Loss'},
+            {date:'2026-04-12',sym:'TLT',side:'SHORT',entry:'$92.10',exit:'$90.85',qty:'10.8',posSize:'2.2% NAV',stopLoss:'$93.80',takeProfit:'$87.00',riskDollar:'$102',rrTarget:'1:3.0',pnl:'+$13.50',ret:'+1.35%',rMultiple:'+0.13R',exitReason:'Manual Exit'},
+            {date:'2026-04-10',sym:'GLD',side:'LONG',entry:'$238.40',exit:'$236.90',qty:'4.2',posSize:'2.2% NAV',stopLoss:'$235.70',takeProfit:'$246.50',riskDollar:'$97',rrTarget:'1:3.0',pnl:'-$6.30',ret:'-0.63%',rMultiple:'-0.06R',exitReason:'Stop Loss'},
+        ],
         docBasis:'XGBoost with sharpness penalty in objective function. Features: MA(20/50/200), RSI(14), volume ratio, sector momentum. Trained on Russell 2000.',
         docLogic:'Daily long/short signals with 1-day hold. Threshold: prediction confidence > 0.6. Position size: equal weight, max 2% NAV.',
         docRisk:'Expected 9.2% ann. Current Max DD 4.7% (limit 5% — near alert threshold!). High risk. Sharpe -1.29 is critically underperforming.',
@@ -619,6 +543,7 @@ function loadStrategy(id) {
     badge.className = 'risk-badge risk-' + s.risk;
 
     const colorVal = (v) => parseFloat(v) >= 0 ? 'positive' : 'negative';
+    document.getElementById('allocCap').textContent = s.allocatedCapital;
     document.getElementById('expReturn').textContent = s.expReturn;
     document.getElementById('expReturn').className = 'stat-value ' + colorVal(s.expReturn);
     document.getElementById('expReturnSub').textContent = s.expReturnSub;
@@ -676,6 +601,55 @@ function loadStrategy(id) {
         });
     }
 
+    // Trade History
+    const historyBody = document.getElementById('tradeHistoryBody');
+    historyBody.innerHTML = '';
+    if (s.tradeHistory.length === 0) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 15;
+        cell.style.color = 'var(--text-muted)';
+        cell.textContent = 'No trade history';
+        row.appendChild(cell);
+        historyBody.appendChild(row);
+    } else {
+        s.tradeHistory.forEach(t => {
+            const row = document.createElement('tr');
+            const isProfitable = parseFloat(t.pnl) > 0;
+            // Date
+            const td0 = document.createElement('td'); td0.textContent = t.date; row.appendChild(td0);
+            // Symbol
+            const td1 = document.createElement('td'); td1.textContent = t.sym; td1.style.color = 'var(--text-primary)'; row.appendChild(td1);
+            // Side
+            const td2 = document.createElement('td'); td2.textContent = t.side; td2.style.color = t.side === 'LONG' ? 'var(--green)' : 'var(--red)'; row.appendChild(td2);
+            // Entry
+            const td3 = document.createElement('td'); td3.textContent = t.entry; row.appendChild(td3);
+            // Exit
+            const td4 = document.createElement('td'); td4.textContent = t.exit; row.appendChild(td4);
+            // Qty
+            const td5 = document.createElement('td'); td5.textContent = t.qty; row.appendChild(td5);
+            // Position Size
+            const td6 = document.createElement('td'); td6.textContent = t.posSize; td6.style.color = 'var(--orange)'; row.appendChild(td6);
+            // Stop Loss
+            const td7 = document.createElement('td'); td7.textContent = t.stopLoss; row.appendChild(td7);
+            // Take Profit
+            const td8 = document.createElement('td'); td8.textContent = t.takeProfit; row.appendChild(td8);
+            // Risk $
+            const td9 = document.createElement('td'); td9.textContent = t.riskDollar; td9.style.color = 'var(--red)'; row.appendChild(td9);
+            // R:R Target
+            const td10 = document.createElement('td'); td10.textContent = t.rrTarget; row.appendChild(td10);
+            // P&L
+            const td11 = document.createElement('td'); td11.textContent = t.pnl; td11.style.color = isProfitable ? 'var(--green)' : 'var(--red)'; row.appendChild(td11);
+            // Return
+            const td12 = document.createElement('td'); td12.textContent = t.ret; td12.style.color = isProfitable ? 'var(--green)' : 'var(--red)'; row.appendChild(td12);
+            // R Multiple
+            const td13 = document.createElement('td'); td13.textContent = t.rMultiple; td13.style.color = isProfitable ? 'var(--green)' : 'var(--red)'; row.appendChild(td13);
+            // Exit Reason
+            const td14 = document.createElement('td'); td14.textContent = t.exitReason; td14.style.color = 'var(--text-muted)'; row.appendChild(td14);
+            historyBody.appendChild(row);
+        });
+    }
+
     // Docs
     document.getElementById('docBasis').textContent = s.docBasis;
     document.getElementById('docLogic').textContent = s.docLogic;
@@ -694,9 +668,9 @@ function buildCharts(s) {
     // Equity vs Benchmark
     if(eqChart) eqChart.destroy();
     eqChart = new Chart(document.getElementById('eqChart').getContext('2d'), {type:'line', data:{labels, datasets:[
-        {label:'Strategy', data:s.equity, borderColor:'#ff9900', borderWidth:1.5, pointRadius:0, tension:0.3, fill:false},
+        {label:'Strategy Return %', data:s.equity, borderColor:'#ff9900', borderWidth:1.5, pointRadius:0, tension:0.3, fill:false},
         {label:'Benchmark', data:s.benchmark, borderColor:'#3399ff', borderWidth:1, borderDash:[4,4], pointRadius:0, tension:0.3, fill:false}
-    ]}, options: chartOpts({})});
+    ]}, options: chartOpts({scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}}, y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v.toFixed(2)+'%'}}}})});
 
     // Drawdown
     if(ddChart) ddChart.destroy();
