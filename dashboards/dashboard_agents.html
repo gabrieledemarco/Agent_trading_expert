@@ -100,6 +100,7 @@
         .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
         .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
+    <script src="dashboard_data.js"></script>
 </head>
 <body>
 <div class="terminal">
@@ -187,6 +188,7 @@
             </div>
         </div>
         <div class="log-panel resizable-section" data-section="log-panel">
+            <div class="log-title"><span>AGENT ACTIVITY LOG</span><span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span><button class="resize-btn" onclick="toggleResize('log-panel')" title="Minimize/Expand">⊟</button></div>
             <div class="log-title">
                 <span>AGENT ACTIVITY LOG</span>
                 <div style="display:flex;gap:8px;align-items:center;">
@@ -517,6 +519,10 @@ function toggleResize(sectionId) {
     if (!section) return;
 
     const states = ['normal', 'minimized', 'expanded'];
+    const currentState = section.dataset.resizeState || 'normal';
+    const nextState = states[(states.indexOf(currentState) + 1) % states.length];
+
+    section.classList.remove('minimized', 'expanded');
     let currentState = section.dataset.resizeState || 'normal';
     let nextIndex = (states.indexOf(currentState) + 1) % states.length;
     let nextState = states[nextIndex];
@@ -529,6 +535,12 @@ function toggleResize(sectionId) {
     } else if (nextState === 'expanded') {
         section.classList.add('expanded');
         if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
+    } else if (btn) {
+        btn.textContent = '⊟';
+        btn.title = 'Minimize';
+    }
+
+    section.dataset.resizeState = nextState;
     } else {
         if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
     }
@@ -558,13 +570,41 @@ function loadResizeStates() {
     });
 }
 
+
+
+async function hydrateAgentActivityFromApi() {
+    try {
+        const response = await fetch('/dashboard/agent-activity?limit=20');
+        if (!response.ok) return;
+        const payload = await response.json();
+        const activities = Array.isArray(payload.activities) ? payload.activities : [];
+        if (!activities.length) return;
+
+        const console_ = document.getElementById('logConsole');
+        const shouldSeedFromApi = console_.children.length <= 3;
+        if (!shouldSeedFromApi) return;
+
+        activities.forEach((a) => {
+            const msg = a.message || 'No message';
+            const status = String(a.status || 'INFO').toLowerCase();
+            const type = status.includes('error') ? 'error' : status.includes('warn') ? 'warn' : status.includes('complete') ? 'success' : 'info';
+            addLog(type, a.agent_name || 'Agent', msg);
+        });
+    } catch (err) {
+        // Keep local simulated logs as fallback.
+    }
+}
+
 // Init
 renderAgents();
 addLog('success', 'System', 'Agent monitor initialized');
 addLog('info', 'TradingExecutor', 'Active — paper trading mode');
 addLog('info', 'MonitoringAgent', 'All systems nominal');
+hydrateAgentActivityFromApi();
 updateFooter();
 loadResizeStates();
+function toggleSidebar(){const terminal=document.querySelector('.terminal');const isCollapsed=terminal.classList.toggle('sidebar-collapsed');localStorage.setItem('sidebarCollapsed',isCollapsed);}
+if(localStorage.getItem('sidebarCollapsed')==='true'){document.querySelector('.terminal').classList.add('sidebar-collapsed');}
         function toggleSidebar() {
             const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);

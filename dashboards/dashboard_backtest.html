@@ -88,6 +88,7 @@
         .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
         .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
+    <script src="dashboard_data.js"></script>
 </head>
 <body>
 <div class="terminal">
@@ -183,7 +184,7 @@
                 <div class="card-title">STRATEGY COMPARISON — KEY METRICS</div>
                 <table>
                     <thead><tr><th>Strategy</th><th>Type</th><th>Sharpe IS</th><th>Sharpe OOS</th><th>Win Rate OOS</th><th>Max DD OOS</th><th>Sortino OOS</th><th>Calmar OOS</th><th>Trades</th><th>Verdict</th></tr></thead>
-                    <tbody>
+                    <tbody id="comparisonTbody">
                         <tr><td class="neutral">Intraday Momentum</td><td>LSTM</td><td class="positive">0.91</td><td class="negative">-0.39</td><td class="negative">47%</td><td>2.3%</td><td class="negative">-0.51</td><td class="negative">-0.83</td><td>6</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
                         <tr><td class="neutral">High Frequency</td><td>Cointegration</td><td class="positive">1.42</td><td class="positive">0.12</td><td class="positive">52%</td><td>1.1%</td><td class="positive">0.18</td><td class="positive">0.11</td><td>24</td><td><span class="badge badge-pass">PASS</span></td></tr>
                         <tr><td class="neutral">Dynamic Time</td><td>RL PPO</td><td class="positive">0.78</td><td class="negative">-0.28</td><td class="negative">45%</td><td>3.1%</td><td class="negative">-0.37</td><td class="negative">-0.45</td><td>11</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
@@ -219,7 +220,7 @@
                 <div class="card-title">MONTE CARLO SUMMARY STATISTICS</div>
                 <table>
                     <thead><tr><th>Metric</th><th>Mean</th><th>Median</th><th>5th Pct</th><th>25th Pct</th><th>75th Pct</th><th>95th Pct</th></tr></thead>
-                    <tbody>
+                    <tbody id="mcSummaryTbody">
                         <tr><td>Final Return (%)</td><td>-1.2%</td><td>-0.8%</td><td class="negative">-8.3%</td><td>-4.1%</td><td class="positive">2.2%</td><td class="positive">5.8%</td></tr>
                         <tr><td>Sharpe Ratio</td><td>-0.31</td><td>-0.25</td><td class="negative">-1.42</td><td>-0.72</td><td class="positive">0.15</td><td class="positive">0.78</td></tr>
                         <tr><td>Max Drawdown (%)</td><td class="negative">3.8%</td><td>3.2%</td><td class="negative">9.1%</td><td>5.5%</td><td>2.4%</td><td>1.1%</td></tr>
@@ -381,6 +382,7 @@ let currentWF = portfolioWF;
 function buildWFGrid() {
     const grid = document.getElementById('wfGrid');
     grid.innerHTML = '';
+    wfData.forEach(w => {
     currentWF.forEach(w => {
         const cell = document.createElement('div');
         cell.className = 'wf-cell';
@@ -532,7 +534,33 @@ function buildTradeCharts() {
     ]},options:CHART_OPT});
 }
 
+const backtestFallbackRows = {
+    comparison: `
+        <tr><td class="neutral">Intraday Momentum</td><td>LSTM</td><td class="positive">0.91</td><td class="negative">-0.39</td><td class="negative">47%</td><td>2.3%</td><td class="negative">-0.51</td><td class="negative">-0.83</td><td>6</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
+        <tr><td class="neutral">High Frequency</td><td>Cointegration</td><td class="positive">1.42</td><td class="positive">0.12</td><td class="positive">52%</td><td>1.1%</td><td class="positive">0.18</td><td class="positive">0.11</td><td>24</td><td><span class="badge badge-pass">PASS</span></td></tr>
+        <tr><td class="neutral">Dynamic Time</td><td>RL PPO</td><td class="positive">0.78</td><td class="negative">-0.28</td><td class="negative">45%</td><td>3.1%</td><td class="negative">-0.37</td><td class="negative">-0.45</td><td>11</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
+        <tr><td class="neutral">Momentum Sharpness</td><td>XGBoost</td><td class="positive">0.89</td><td class="negative">-1.29</td><td>48%</td><td class="negative">4.7%</td><td class="negative">-1.61</td><td class="negative">-1.36</td><td>3</td><td><span class="badge badge-fail">CRITICAL</span></td></tr>`,
+    mcSummary: `
+        <tr><td>Final Return (%)</td><td>-1.2%</td><td>-0.8%</td><td class="negative">-8.3%</td><td>-4.1%</td><td class="positive">2.2%</td><td class="positive">5.8%</td></tr>
+        <tr><td>Sharpe Ratio</td><td>-0.31</td><td>-0.25</td><td class="negative">-1.42</td><td>-0.72</td><td class="positive">0.15</td><td class="positive">0.78</td></tr>
+        <tr><td>Max Drawdown (%)</td><td class="negative">3.8%</td><td>3.2%</td><td class="negative">9.1%</td><td>5.5%</td><td>2.4%</td><td>1.1%</td></tr>
+        <tr><td>Win Rate (%)</td><td>47.3%</td><td>47.0%</td><td class="negative">38.0%</td><td>43.0%</td><td>51.0%</td><td class="positive">57.0%</td></tr>`
+};
+
+function ensureBacktestContainersPopulated() {
+    const comparisonTbody = document.getElementById('comparisonTbody');
+    if (comparisonTbody && comparisonTbody.children.length === 0) {
+        comparisonTbody.innerHTML = backtestFallbackRows.comparison;
+    }
+
+    const mcSummaryTbody = document.getElementById('mcSummaryTbody');
+    if (mcSummaryTbody && mcSummaryTbody.children.length === 0) {
+        mcSummaryTbody.innerHTML = backtestFallbackRows.mcSummary;
+    }
+}
+
 // Init all charts
+ensureBacktestContainersPopulated();
 buildWFGrid();
 buildWFCharts();
 buildComparisonCharts();
