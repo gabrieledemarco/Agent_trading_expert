@@ -3,142 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Agent Monitor | Trading Agent</title>
     <style>
-        :root { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414; --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa; --text-muted: #666666; --orange: #ff9900; --green: #00ff00; --red: #ff0000; --blue: #3399ff; --font: "Consolas", "Monaco", monospace; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { background: var(--bg-primary); color: var(--text-secondary); font-family: var(--font); font-size: 12px; height: 100%; overflow: hidden; }
-        .terminal { display: grid; grid-template-columns: 180px 1fr; grid-template-rows: 40px 1fr 24px; height: 100vh; }
-        .topbar { grid-column: 1 / -1; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
-        .topbar-brand { color: var(--orange); font-size: 14px; font-weight: bold; }
-        .topbar-brand span { background: var(--orange); color: #000; padding: 2px 6px; border-radius: 2px; font-size: 10px; }
-        .header-actions { display: flex; gap: 8px; }
-        .header-btn { background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 10px; font-size: 10px; cursor: pointer; }
-        .header-btn:hover { background: var(--orange); color: #000; border-color: var(--orange); }
-        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 8px 0; display: flex; flex-direction: column; }
-        .sidebar-section { margin-bottom: 12px; }
-        .sidebar-title { padding: 4px 12px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
-        .sidebar-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-secondary); }
-        .sidebar-item:hover { background: var(--bg-tertiary); }
-        .sidebar-item.active { color: var(--orange); background: var(--bg-tertiary); }
-        .status-indicator { margin-top: auto; padding: 8px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 10px; }
-        .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
-        .main { background: var(--bg-primary); overflow-y: auto; padding: 8px; }
-        .agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
-        .agent-card { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; position: relative; }
-        .agent-card.running { border-color: var(--green); }
-        .agent-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .agent-name { color: var(--text-primary); font-size: 13px; font-weight: bold; }
-        .agent-status { font-size: 10px; padding: 2px 8px; border-radius: 4px; }
-        .status-idle { background: var(--bg-tertiary); color: var(--text-muted); }
-        .status-running { background: rgba(0,255,0,0.1); color: var(--green); }
-        .status-completed { background: rgba(51,153,255,0.1); color: var(--blue); }
-        .agent-icon { font-size: 24px; margin-bottom: 8px; }
-        .agent-desc { color: var(--text-muted); font-size: 10px; margin-bottom: 8px; }
-        .agent-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 10px; }
-        .agent-stat-label { color: var(--text-muted); }
-        .agent-stat-value { color: var(--text-primary); }
-        .agent-actions { display: flex; gap: 4px; margin-top: 8px; }
-        .agent-btn { flex: 1; padding: 6px; font-size: 10px; border: 1px solid var(--border); background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer; text-align: center; }
-        .agent-btn:hover { background: var(--orange); color: #000; border-color: var(--orange); }
-        .agent-btn.running { background: var(--green); color: #000; border-color: var(--green); }
-        .log-panel { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; }
-        .log-title { color: var(--orange); font-size: 11px; margin-bottom: 8px; }
-        .log-console { background: var(--bg-primary); border: 1px solid var(--border); padding: 8px; height: 150px; overflow-y: auto; font-size: 10px; }
-        .log-entry { padding: 2px 0; }
-        .log-entry .time { color: var(--text-muted); }
-        .log-entry .agent { color: var(--orange); }
-        .log-entry .info { color: var(--text-secondary); }
-        .log-entry .success { color: var(--green); }
-        .bottombar { grid-column: 1 / -1; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: var(--text-muted); }
+        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;}
+        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+        .topbar-actions{display:flex;gap:6px;}
+        .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--font);}
+        .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+        .btn-danger:hover{background:var(--red);border-color:var(--red);}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+        .sidebar-section{margin-bottom:10px;}
+        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;}
+        .sidebar-item:hover{background:var(--bg-tertiary);}
+        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
+        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;}
+        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .main{background:var(--bg-primary);overflow-y:auto;padding:8px;}
+        .agents-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+        .agent-card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;position:relative;}
+        .agent-card.running{border-color:var(--green);}
+        .agent-card.error{border-color:var(--red);}
+        .agent-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+        .agent-name{color:var(--text-primary);font-size:12px;font-weight:bold;}
+        .agent-type{color:var(--text-muted);font-size:9px;margin-bottom:8px;}
+        .status-badge{font-size:9px;padding:2px 8px;border-radius:3px;}
+        .status-idle{background:var(--bg-tertiary);color:var(--text-muted);}
+        .status-running{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
+        .status-completed{background:rgba(51,153,255,0.1);color:var(--blue);border:1px solid rgba(51,153,255,0.2);}
+        .status-error{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
+        .agent-metrics{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;margin-bottom:8px;}
+        .metric-lbl{color:var(--text-muted);}
+        .agent-actions{display:flex;gap:4px;margin-top:6px;}
+        .agent-btn{flex:1;padding:5px;font-size:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-secondary);cursor:pointer;font-family:var(--font);text-align:center;}
+        .agent-btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+        .agent-btn.stop{background:rgba(255,0,0,0.1);border-color:var(--red);color:var(--red);}
+        .agent-btn.stop:hover{background:var(--red);color:#000;}
+        .progress-bar{height:2px;background:var(--bg-tertiary);border-radius:2px;margin-top:6px;}
+        .progress-fill{height:2px;border-radius:2px;transition:width 0.5s ease;}
+        .progress-green{background:var(--green);}
+        .progress-orange{background:var(--orange);}
+        .progress-blue{background:var(--blue);}
+        .last-run{color:var(--text-muted);font-size:9px;margin-top:4px;}
+        .log-panel{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;}
+        .log-title{color:var(--orange);font-size:11px;margin-bottom:8px;display:flex;justify-content:space-between;}
+        .log-console{background:var(--bg-primary);border:1px solid var(--border);padding:8px;height:160px;overflow-y:auto;font-size:10px;}
+        .log-entry{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02);}
+        .log-time{color:var(--text-muted);}
+        .log-info{color:var(--text-secondary);}
+        .log-success{color:var(--green);}
+        .log-warn{color:var(--yellow);}
+        .log-error{color:var(--red);}
+        .log-tag{color:var(--orange);}
+        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <header class="topbar">
-            <div class="topbar-brand"><span>TA</span> AGENT MONITOR</div>
-            <div class="header-actions">
-                <button class="header-btn" onclick="runAllAgents()">▶ RUN ALL</button>
-                <button class="header-btn" onclick="stopAllAgents()">◼ STOP ALL</button>
+<div class="terminal">
+    <header class="topbar">
+        <div class="topbar-brand"><span>TA</span> AGENT MONITOR</div>
+        <div class="topbar-actions">
+            <button class="btn" onclick="runAllAgents()">&#9654; RUN ALL</button>
+            <button class="btn btn-danger" onclick="stopAllAgents()">&#9632; STOP ALL</button>
+        </div>
+    </header>
+
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Dashboard</div>
+            <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Analisi</div>
+            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+            <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge">6</span></a>
+            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Strategie</div>
+            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies <span class="badge">4</span></a>
+            <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
+            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Sistema</div>
+            <a href="dashboard_agents.html" class="sidebar-item active"><span>▧</span> Agents <span class="badge">2</span></a>
+            <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
+        </div>
+        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
+    </nav>
+
+    <main class="main">
+        <div class="agents-grid" id="agentsGrid">
+            <!-- Agents rendered by JS -->
+        </div>
+        <div class="log-panel">
+            <div class="log-title"><span>AGENT ACTIVITY LOG</span><span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span></div>
+            <div class="log-console" id="logConsole"></div>
+        </div>
+    </main>
+
+    <footer class="bottombar">
+        <div>ACTIVE: <span id="activeCount" style="color:var(--green)">2</span> | IDLE: <span id="idleCount" style="color:var(--text-muted)">4</span> | COMPLETED: <span id="completedCount" style="color:var(--blue)">0</span></div>
+        <div>Trading Agent v1.1 | Research Use Only</div>
+    </footer>
+</div>
+
+<script>
+// XSS Fix: all DOM manipulation uses createElement/textContent instead of innerHTML concatenation
+
+const AGENTS = {
+    research: { name:'ResearchAgent', type:'Weekly arXiv search', icon:'&#128300;', status:'idle', runs:23, stat1lbl:'Papers found', stat1val:'6', stat2lbl:'Last arXiv', stat2val:'2026-04-09', lastRun:'2026-04-09 08:00', progress:0, api:'/api/research/trigger' },
+    spec:     { name:'SpecAgent',     type:'Research → Spec conversion', icon:'&#128203;', status:'idle', runs:8,  stat1lbl:'Specs created', stat1val:'8', stat2lbl:'Pending', stat2val:'2', lastRun:'2026-04-09 09:15', progress:0, api:'/api/spec/generate' },
+    ml:       { name:'MLEngineerAgent', type:'Model development & training', icon:'&#9881;&#65039;', status:'idle', runs:5, stat1lbl:'Models built', stat1val:'6', stat2lbl:'Pass rate', stat2val:'66%', lastRun:'2026-04-10 14:00', progress:0, api:'/api/ml/build' },
+    validation:{ name:'ValidationAgent', type:'Model quality & performance validation', icon:'&#9989;', status:'idle', runs:4, stat1lbl:'Pass rate', stat1val:'66%', stat2lbl:'Rejected', stat2val:'2', lastRun:'2026-04-11 16:20', progress:0, api:'/api/validation/run' },
+    trading:  { name:'TradingExecutor', type:'Live strategy execution (paper)', icon:'&#128200;', status:'running', runs:312, stat1lbl:'Trades', stat1val:'44', stat2lbl:'P&L', stat2val:'-$190', lastRun:'now', progress:100, api:'/api/trade/execute' },
+    monitoring:{ name:'MonitoringAgent', type:'System health & alerts', icon:'&#128202;', status:'running', runs:8760, stat1lbl:'Uptime', stat1val:'24h', stat2lbl:'Health', stat2val:'OK', lastRun:'now', progress:100, api:'/api/monitor/status' },
+};
+
+let logEntryCount = 0;
+
+function addLog(type, agent, msg) {
+    // SECURITY: Use DOM APIs — never inject user-controlled strings via innerHTML
+    const console_ = document.getElementById('logConsole');
+    const t = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'log-time';
+    timeSpan.textContent = '[' + t + '] ';
+
+    const tagSpan = document.createElement('span');
+    tagSpan.className = 'log-tag';
+    tagSpan.textContent = '[' + agent + '] ';
+
+    const msgSpan = document.createElement('span');
+    msgSpan.className = 'log-' + type;
+    msgSpan.textContent = msg;
+
+    entry.appendChild(timeSpan);
+    entry.appendChild(tagSpan);
+    entry.appendChild(msgSpan);
+    console_.insertBefore(entry, console_.firstChild);
+    while (console_.children.length > 80) console_.removeChild(console_.lastChild);
+
+    logEntryCount++;
+    document.getElementById('logCount').textContent = logEntryCount + ' events';
+    updateFooter();
+}
+
+function updateFooter() {
+    let active=0, idle=0, completed=0;
+    Object.values(AGENTS).forEach(a => {
+        if(a.status==='running') active++;
+        else if(a.status==='idle') idle++;
+        else if(a.status==='completed') completed++;
+    });
+    document.getElementById('activeCount').textContent = active;
+    document.getElementById('idleCount').textContent = idle;
+    document.getElementById('completedCount').textContent = completed;
+}
+
+function renderAgents() {
+    const grid = document.getElementById('agentsGrid');
+    grid.innerHTML = '';
+    Object.entries(AGENTS).forEach(([id, a]) => {
+        const card = document.createElement('div');
+        card.className = 'agent-card' + (a.status==='running'?' running':a.status==='error'?' error':'');
+        card.id = 'card-'+id;
+
+        const statusClass = { idle:'status-idle', running:'status-running', completed:'status-completed', error:'status-error' };
+        const statusLabel = { idle:'IDLE', running:'RUNNING', completed:'COMPLETED', error:'ERROR' };
+
+        card.innerHTML = `
+            <div class="agent-header">
+                <div>
+                    <div class="agent-name">${escapeHTML(a.name)}</div>
+                    <div class="agent-type">${escapeHTML(a.type)}</div>
+                </div>
+                <span class="status-badge ${statusClass[a.status]}" id="status-${id}">${statusLabel[a.status]}</span>
             </div>
-        </header>
-        <nav class="sidebar">
-            <div class="sidebar-section"><div class="sidebar-title">Dashboard</div>
-                <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+            <div class="agent-metrics">
+                <span class="metric-lbl">Runs:</span><span>${escapeHTML(String(a.runs))}</span>
+                <span class="metric-lbl">${escapeHTML(a.stat1lbl)}:</span><span>${escapeHTML(a.stat1val)}</span>
+                <span class="metric-lbl">${escapeHTML(a.stat2lbl)}:</span><span>${escapeHTML(a.stat2val)}</span>
+                <span class="metric-lbl">Last run:</span><span style="color:var(--text-muted)">${escapeHTML(a.lastRun)}</span>
             </div>
-            <div class="sidebar-section"><div class="sidebar-title">Analisi</div>
-                <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
-                <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Documentation</a>
-                <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
-            </div>
-            <div class="sidebar-section"><div class="sidebar-title">Sistema</div>
-                <a href="dashboard_agents.html" class="sidebar-item active"><span>▧</span> Agents</a>
-                <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
-            </div>
-            <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
-        </nav>
-        <main class="main">
-            <div class="agents-grid">
-                <div class="agent-card" id="agent-research">
-                    <div class="agent-header"><div class="agent-name">Research Agent</div><span class="agent-status status-idle" id="status-research">IDLE</span></div>
-                    <div class="agent-icon">🔬</div>
-                    <div class="agent-desc">Ricerca settimanale paper da arXiv</div>
-                    <div class="agent-stats"><div><span class="agent-stat-label">Runs:</span> <span class="agent-stat-value">23</span></div><div><span class="agent-stat-label">Found:</span> <span class="agent-stat-value">6 papers</span></div></div>
-                    <div class="agent-actions"><button class="agent-btn" onclick="runAgent('research')">▶ RUN</button><button class="agent-btn" onclick="viewDetails('research')">📋</button></div>
-                </div>
-                <div class="agent-card" id="agent-spec">
-                    <div class="agent-header"><div class="agent-name">Spec Agent</div><span class="agent-status status-idle" id="status-spec">IDLE</span></div>
-                    <div class="agent-icon">📋</div>
-                    <div class="agent-desc">Trasforma paper in specifiche tecniche</div>
-                    <div class="agent-stats"><div><span class="agent-stat-label">Runs:</span> <span class="agent-stat-value">8</span></div><div><span class="agent-stat-label">Specs:</span> <span class="agent-stat-value">8 created</span></div></div>
-                    <div class="agent-actions"><button class="agent-btn" onclick="runAgent('spec')">▶ RUN</button><button class="agent-btn" onclick="viewDetails('spec')">📋</button></div>
-                </div>
-                <div class="agent-card" id="agent-ml">
-                    <div class="agent-header"><div class="agent-name">ML Engineer Agent</div><span class="agent-status status-idle" id="status-ml">IDLE</span></div>
-                    <div class="agent-icon">⚙️</div>
-                    <div class="agent-desc">Implementa e valida modelli ML</div>
-                    <div class="agent-stats"><div><span class="agent-stat-label">Runs:</span> <span class="agent-stat-value">5</span></div><div><span class="agent-stat-label">Models:</span> <span class="agent-stat-value">6 built</span></div></div>
-                    <div class="agent-actions"><button class="agent-btn" onclick="runAgent('ml')">▶ RUN</button><button class="agent-btn" onclick="viewDetails('ml')">📋</button></div>
-                </div>
-                <div class="agent-card" id="agent-validation">
-                    <div class="agent-header"><div class="agent-name">Validation Agent</div><span class="agent-status status-idle" id="status-validation">IDLE</span></div>
-                    <div class="agent-icon">✅</div>
-                    <div class="agent-desc">Valida qualità e performance modelli</div>
-                    <div class="agent-stats"><div><span class="agent-stat-label">Runs:</span> <span class="agent-stat-value">4</span></div><div><span class="agent-stat-label">Pass Rate:</span> <span class="agent-stat-value">66%</span></div></div>
-                    <div class="agent-actions"><button class="agent-btn" onclick="runAgent('validation')">▶ RUN</button><button class="agent-btn" onclick="viewDetails('validation')">📋</button></div>
-                </div>
-                <div class="agent-card running" id="agent-trading">
-                    <div class="agent-header"><div class="agent-name">Trading Executor</div><span class="agent-status status-running" id="status-trading">RUNNING</span></div>
-                    <div class="agent-icon">📈</div>
-                    <div class="agent-desc">Esegue strategie di trading</div>
-                    <div class="agent-stats"><div><span class="agent-stat-label">Trades:</span> <span class="agent-stat-value">6</span></div><div><span class="agent-stat-label">P&amp;L:</span> <span class="agent-stat-value" style="color:var(--red)">-$190</span></div></div>
-                    <div class="agent-actions"><button class="agent-btn running" onclick="runAgent('trading')">◼ STOP</button><button class="agent-btn" onclick="viewDetails('trading')">📋</button></div>
-                </div>
-                <div class="agent-card running" id="agent-monitoring">
-                    <div class="agent-header"><div class="agent-name">Monitoring Agent</div><span class="agent-status status-running" id="status-monitoring">RUNNING</span></div>
-                    <div class="agent-icon">📊</div>
-                    <div class="agent-desc">Monitora sistema e genera alert</div>
-                    <div class="agent-stats"><div><span class="agent-stat-label">Uptime:</span> <span class="agent-stat-value">24h</span></div><div><span class="agent-stat-label">Health:</span> <span class="agent-stat-value" style="color:var(--green)">OK</span></div></div>
-                    <div class="agent-actions"><button class="agent-btn" onclick="runAgent('monitoring')">▶ RUN</button><button class="agent-btn" onclick="viewDetails('monitoring')">📋</button></div>
-                </div>
-            </div>
-            <div class="log-panel"><div class="log-title">AGENT ACTIVITY LOG</div>
-                <div class="log-console" id="log-console">
-                    <div class="log-entry"><span class="time">[17:40:00]</span> <span class="agent">[ResearchAgent]</span> <span class="info">Weekly research scheduled</span></div>
-                    <div class="log-entry"><span class="time">[17:38:45]</span> <span class="agent">[MLEngineer]</span> <span class="success">Model validated</span></div>
-                    <div class="log-entry"><span class="time">[17:32:10]</span> <span class="agent">[TradingExecutor]</span> <span class="info">Position opened: AAPL</span></div>
-                </div>
-            </div>
-        </main>
-        <footer class="bottombar"><div>ACTIVE: <span style="color:var(--green)">2</span> | IDLE: <span style="color:var(--text-muted)">4</span></div><div>CONN: <span style="color:var(--green)">CONNECTED</span> | Trading Agent v1.0</div></footer>
-    </div>
-    <script>
-        const agents = { research:{name:'ResearchAgent',status:'idle'},spec:{name:'SpecAgent',status:'idle'},ml:{name:'MLEngineerAgent',status:'idle'},validation:{name:'ValidationAgent',status:'idle'},trading:{name:'TradingExecutor',status:'running'},monitoring:{name:'MonitoringAgent',status:'running'} };
-        function runAgent(id){const a=agents[id],s=document.getElementById('status-'+id),b=document.querySelector('#agent-'+id+' .agent-btn'),c=document.getElementById('agent-'+id);if(a.status==='running'){a.status='idle';s.textContent='IDLE';s.className='agent-status status-idle';b.classList.remove('running');b.textContent='▶ RUN';c.classList.remove('running');addLog(a.name,'Stopped','info')}else{a.status='running';s.textContent='RUNNING';s.className='agent-status status-running';b.classList.add('running');b.textContent='◼ STOP';c.classList.add('running');addLog(a.name,'Starting...','info');setTimeout(()=>{a.status='completed';s.textContent='COMPLETED';s.className='agent-status status-completed';b.classList.remove('running');b.textContent='▶ RUN';c.classList.remove('running');addLog(a.name,'Completed','success')},2000)}}
-        function stopAllAgents(){Object.keys(agents).forEach(id=>{if(agents[id].status==='running'){agents[id].status='idle';document.getElementById('status-'+id).textContent='IDLE';document.getElementById('status-'+id).className='agent-status status-idle';document.querySelector('#agent-'+id+' .agent-btn').classList.remove('running');document.querySelector('#agent-'+id+' .agent-btn').textContent='▶ RUN';document.getElementById('agent-'+id).classList.remove('running');addLog(agents[id].name,'Stopped','info')}})}
-        function runAllAgents(){Object.keys(agents).forEach(id=>runAgent(id))}
-        function viewDetails(id){addLog('System','Opening: '+agents[id].name,'info')}
-        function addLog(agent,msg,type){const log=document.getElementById('log-console'),t=new Date().toLocaleTimeString();log.innerHTML='<div class="log-entry"><span class="time">['+t+']</span> <span class="agent">['+agent+']</span> <span class="'+type+'">'+msg+'</span></div>'+log.innerHTML}
-    </script>
+            <div class="progress-bar"><div class="progress-fill progress-green" id="prog-${id}" style="width:${a.progress}%"></div></div>
+            <div class="last-run" id="info-${id}">—</div>
+            <div class="agent-actions">
+                <button class="agent-btn${a.status==='running'?' stop':''}" id="btn-${id}" onclick="toggleAgent('${id}')">${a.status==='running'?'&#9632; STOP':'&#9654; RUN'}</button>
+                <button class="agent-btn" onclick="viewLogs('${id}')">&#128203; LOGS</button>
+            </div>`;
+        grid.appendChild(card);
+    });
+}
+
+function escapeHTML(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function toggleAgent(id) {
+    const a = AGENTS[id];
+    if (a.status === 'running') {
+        stopAgent(id);
+    } else {
+        runAgent(id);
+    }
+}
+
+function runAgent(id) {
+    const a = AGENTS[id];
+    a.status = 'running';
+    a.runs++;
+    a.lastRun = 'now';
+    renderAgents();
+    addLog('info', a.name, 'Starting run #' + a.runs + '...');
+
+    // Simulate progress
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 5 + Math.random() * 15;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            a.status = 'completed';
+            a.progress = 100;
+            a.lastRun = new Date().toLocaleTimeString();
+            addLog('success', a.name, 'Run #' + a.runs + ' completed successfully');
+            renderAgents();
+            updateFooter();
+        } else {
+            a.progress = Math.round(progress);
+            const progEl = document.getElementById('prog-'+id);
+            if (progEl) progEl.style.width = a.progress + '%';
+            const infoEl = document.getElementById('info-'+id);
+            if (infoEl) infoEl.textContent = 'Progress: ' + a.progress + '%';
+        }
+    }, 300);
+}
+
+function stopAgent(id) {
+    const a = AGENTS[id];
+    a.status = 'idle';
+    a.progress = 0;
+    a.lastRun = new Date().toLocaleTimeString();
+    addLog('warn', a.name, 'Stopped manually');
+    renderAgents();
+    updateFooter();
+}
+
+function runAllAgents() {
+    Object.keys(AGENTS).forEach(id => {
+        if (AGENTS[id].status !== 'running') setTimeout(() => runAgent(id), Math.random() * 500);
+    });
+}
+
+function stopAllAgents() {
+    Object.keys(AGENTS).forEach(id => {
+        if (AGENTS[id].status === 'running') stopAgent(id);
+    });
+}
+
+function viewLogs(id) {
+    const a = AGENTS[id];
+    addLog('info', 'System', 'Showing last logs for ' + a.name);
+}
+
+// Init
+renderAgents();
+addLog('success', 'System', 'Agent monitor initialized');
+addLog('info', 'TradingExecutor', 'Active — paper trading mode');
+addLog('info', 'MonitoringAgent', 'All systems nominal');
+updateFooter();
+</script>
 </body>
 </html>

@@ -1,698 +1,365 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strategy Performance Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+    <title>Strategies | Trading Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-card: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --accent-blue: #3b82f6;
-            --accent-green: #22c55e;
-            --accent-red: #ef4444;
-            --accent-yellow: #eab308;
-            --accent-purple: #a855f7;
-            --border-color: #475569;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-        }
-        
-        .header {
-            background: var(--bg-secondary);
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header h1 {
-            font-size: 1.5rem;
-        }
-        
-        .header h1 span {
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .strategy-selector {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        
-        .strategy-selector select {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            font-size: 1rem;
-        }
-        
-        .container {
-            padding: 2rem;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        
-        .strategy-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: var(--bg-secondary);
-            border-radius: 1rem;
-            border: 1px solid var(--border-color);
-        }
-        
-        .strategy-info h2 {
-            font-size: 1.75rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .strategy-meta {
-            display: flex;
-            gap: 1rem;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-        
-        .strategy-meta span {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .risk-badge {
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-        
-        .risk-low { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
-        .risk-medium { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
-        .risk-high { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        
-        .metric-card {
-            background: var(--bg-secondary);
-            border-radius: 0.75rem;
-            padding: 1.25rem;
-            border: 1px solid var(--border-color);
-        }
-        
-        .metric-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-        }
-        
-        .metric-value {
-            font-size: 1.75rem;
-            font-weight: 700;
-        }
-        
-        .metric-value.positive { color: var(--accent-green); }
-        .metric-value.negative { color: var(--accent-red); }
-        .metric-value.neutral { color: var(--text-primary); }
-        
-        .metric-change {
-            font-size: 0.75rem;
-            margin-top: 0.25rem;
-        }
-        
-        .metric-change.up { color: var(--accent-green); }
-        .metric-change.down { color: var(--accent-red); }
-        
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        
-        .chart-card {
-            background: var(--bg-secondary);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            border: 1px solid var(--border-color);
-        }
-        
-        .chart-title {
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            color: var(--text-secondary);
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 250px;
-        }
-        
-        .section-title {
-            font-size: 1.125rem;
-            margin-bottom: 1rem;
-            color: var(--text-secondary);
-        }
-        
-        .positions-table {
-            width: 100%;
-            background: var(--bg-secondary);
-            border-radius: 1rem;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-        }
-        
-        .positions-table th,
-        .positions-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .positions-table th {
-            background: var(--bg-card);
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-secondary);
-        }
-        
-        .positions-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .positions-table tr:hover {
-            background: var(--bg-card);
-        }
-        
-        .position-pnl {
-            font-weight: 600;
-        }
-        
-        .position-pnl.positive { color: var(--accent-green); }
-        .position-pnl.negative { color: var(--accent-red); }
-        
-        .doc-section {
-            background: var(--bg-secondary);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            border: 1px solid var(--border-color);
-            margin-top: 2rem;
-        }
-        
-        .doc-section h3 {
-            font-size: 1rem;
-            margin-bottom: 1rem;
-            color: var(--text-secondary);
-        }
-        
-        .doc-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .doc-item h4 {
-            font-size: 0.875rem;
-            margin-bottom: 0.5rem;
-            color: var(--accent-blue);
-        }
-        
-        .doc-item p {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-        
-        .tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-        
-        .tab {
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-        
-        .tab:hover {
-            color: var(--text-primary);
-            background: var(--bg-card);
-        }
-        
-        .tab.active {
-            color: var(--accent-blue);
-            background: rgba(59, 130, 246, 0.1);
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
+        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;}
+        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+        .topbar-select{display:flex;align-items:center;gap:8px;font-size:11px;}
+        .topbar-select select{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 8px;font-family:var(--font);font-size:11px;outline:none;}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+        .sidebar-section{margin-bottom:10px;}
+        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;}
+        .sidebar-item:hover{background:var(--bg-tertiary);}
+        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
+        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;}
+        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .main{background:var(--bg-primary);overflow-y:auto;padding:8px;}
+        .strat-header{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;}
+        .strat-info h2{color:var(--text-primary);font-size:14px;margin-bottom:4px;}
+        .strat-meta{display:flex;gap:12px;font-size:10px;color:var(--text-muted);}
+        .risk-badge{padding:4px 12px;font-size:10px;font-weight:bold;}
+        .risk-low{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
+        .risk-medium{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.2);}
+        .risk-high{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
+        .stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:8px;}
+        .stat-box{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
+        .stat-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
+        .stat-value{font-size:16px;font-weight:bold;}
+        .stat-sub{color:var(--text-muted);font-size:9px;margin-top:2px;}
+        .positive{color:var(--green);}
+        .negative{color:var(--red);}
+        .neutral{color:var(--text-primary);}
+        .tabs{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+        .tab{background:transparent;border:none;color:var(--text-muted);padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font);}
+        .tab:hover{color:var(--text-secondary);}
+        .tab.active{color:var(--orange);border-bottom:2px solid var(--orange);margin-bottom:-5px;}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
+        .charts-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+        .charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+        .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:0;}
+        .card-title{color:var(--text-muted);font-size:10px;text-transform:uppercase;margin-bottom:8px;}
+        .chart-container{height:150px;position:relative;}
+        table{width:100%;border-collapse:collapse;font-size:11px;}
+        th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:normal;font-size:10px;text-transform:uppercase;}
+        td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
+        tr:hover{background:var(--bg-tertiary);}
+        .doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+        .doc-item h4{color:var(--blue);font-size:11px;margin-bottom:4px;}
+        .doc-item p{color:var(--text-muted);font-size:11px;line-height:1.5;}
+        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📈 <span>Strategy Performance</span></h1>
-        <div class="strategy-selector">
-            <select id="strategySelect" onchange="loadStrategy(this.value)">
-                <option value="model_lstm_v1">Model LSTM v1</option>
-                <option value="model_rl_v1">Model RL v1</option>
-                <option value="model_portfolio_v1">Model Portfolio v1</option>
+<div class="terminal">
+    <header class="topbar">
+        <div class="topbar-brand"><span>TA</span> STRATEGY DETAIL</div>
+        <div class="topbar-select">
+            <span style="color:var(--text-muted)">Strategy:</span>
+            <select id="stratSelect" onchange="loadStrategy(this.value)">
+                <option value="lstm">Intraday Momentum (LSTM)</option>
+                <option value="hf">High Frequency (Cointegration)</option>
+                <option value="rl">Dynamic Time (RL PPO)</option>
+                <option value="xgb">Momentum Sharpness (XGBoost)</option>
             </select>
         </div>
-    </div>
-    
-    <div class="container">
-        <!-- Strategy Header -->
-        <div class="strategy-header">
-            <div class="strategy-info">
-                <h2 id="strategyName">Model LSTM v1</h2>
-                <div class="strategy-meta">
-                    <span>📅 Created: <span id="createdDate">2024-01-15</span></span>
-                    <span>📄 Source: arXiv:2401.12345</span>
-                    <span>🔬 Type: Time Series Forecasting</span>
+    </header>
+
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Dashboard</div>
+            <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Analisi</div>
+            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+            <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge">6</span></a>
+            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Strategie</div>
+            <a href="strategy.html" class="sidebar-item active"><span>◆</span> Strategies <span class="badge">4</span></a>
+            <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
+            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Sistema</div>
+            <a href="dashboard_agents.html" class="sidebar-item"><span>▧</span> Agents <span class="badge">2</span></a>
+            <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
+        </div>
+        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
+    </nav>
+
+    <main class="main">
+        <div class="strat-header">
+            <div class="strat-info">
+                <h2 id="stratName">Intraday Momentum (LSTM)</h2>
+                <div class="strat-meta">
+                    <span id="stratDate">Created: 2026-01-15</span>
+                    <span id="stratSource">Source: arXiv:2401.12345</span>
+                    <span id="stratType">Type: Time Series Forecasting</span>
                 </div>
             </div>
-            <div class="risk-badge risk-medium" id="riskBadge">MEDIUM RISK</div>
+            <div class="risk-badge" id="riskBadge">MEDIUM RISK</div>
         </div>
-        
-        <!-- Performance Metrics -->
-        <div class="grid">
-            <div class="metric-card">
-                <div class="metric-label">Expected Return</div>
-                <div class="metric-value positive" id="expectedReturn">8.5%</div>
-                <div class="metric-change up" id="returnVsBaseline">+2.3% vs baseline</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Actual Return</div>
-                <div class="metric-value positive" id="actualReturn">5.4%</div>
-                <div class="metric-change" id="actualReturnChange">Since inception</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Sharpe Ratio</div>
-                <div class="metric-value neutral" id="sharpeRatio">1.23</div>
-                <div class="metric-change" id="sharpeVsBaseline">Target: >1.0</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Max Drawdown</div>
-                <div class="metric-value negative" id="maxDrawdown">8.2%</div>
-                <div class="metric-change" id="ddVsBaseline">Target: <15%</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Win Rate</div>
-                <div class="metric-value positive" id="winRate">62%</div>
-                <div class="metric-change" id="winRateChange">47 trades</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Robustness Score</div>
-                <div class="metric-value neutral" id="robustnessScore">HIGH</div>
-                <div class="metric-change" id="robustnessDetails">100 MC simulations</div>
-            </div>
+
+        <div class="stats-row">
+            <div class="stat-box"><div class="stat-label">Expected Return</div><div class="stat-value" id="expReturn">8.5%</div><div class="stat-sub" id="expReturnSub">+2.3% vs baseline</div></div>
+            <div class="stat-box"><div class="stat-label">Actual Return</div><div class="stat-value" id="actReturn">-1.9%</div><div class="stat-sub">since live</div></div>
+            <div class="stat-box"><div class="stat-label">Sharpe</div><div class="stat-value" id="sharpe">-0.39</div><div class="stat-sub">target &gt;1.0</div></div>
+            <div class="stat-box"><div class="stat-label">Sortino</div><div class="stat-value" id="sortino">-0.51</div><div class="stat-sub">target &gt;1.5</div></div>
+            <div class="stat-box"><div class="stat-label">Max DD</div><div class="stat-value" id="maxdd">2.3%</div><div class="stat-sub">limit: 15%</div></div>
+            <div class="stat-box"><div class="stat-label">Win Rate</div><div class="stat-value" id="winrate">47%</div><div class="stat-sub" id="tradeCount">6 trades</div></div>
         </div>
-        
-        <!-- Tabs -->
+
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('performance')">Performance</button>
-            <button class="tab" onclick="switchTab('positions')">Positions</button>
-            <button class="tab" onclick="switchTab('documents')">Documentation</button>
+            <button class="tab active" onclick="switchTab('perf')">Performance</button>
+            <button class="tab" onclick="switchTab('pos')">Positions</button>
+            <button class="tab" onclick="switchTab('doc')">Documentation</button>
         </div>
-        
-        <!-- Performance Tab -->
-        <div class="tab-content active" id="tab-performance">
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <div class="chart-title">Equity Curve vs Benchmark</div>
-                    <div class="chart-container">
-                        <canvas id="equityVsBenchmark"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">Drawdown Over Time</div>
-                    <div class="chart-container">
-                        <canvas id="drawdownChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">Monthly Returns Distribution</div>
-                    <div class="chart-container">
-                        <canvas id="monthlyReturns"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">Risk Metrics Evolution</div>
-                    <div class="chart-container">
-                        <canvas id="riskMetrics"></canvas>
-                    </div>
-                </div>
+
+        <div class="tab-content active" id="tab-perf">
+            <div class="charts-2">
+                <div class="card"><div class="card-title">Equity vs Benchmark</div><div class="chart-container"><canvas id="eqChart"></canvas></div></div>
+                <div class="card"><div class="card-title">Drawdown</div><div class="chart-container"><canvas id="ddChart"></canvas></div></div>
+            </div>
+            <div class="charts-2">
+                <div class="card"><div class="card-title">Monthly Returns (Deterministic)</div><div class="chart-container"><canvas id="monthlyChart"></canvas></div></div>
+                <div class="card"><div class="card-title">Risk Metrics Evolution</div><div class="chart-container"><canvas id="riskChart"></canvas></div></div>
             </div>
         </div>
-        
-        <!-- Positions Tab -->
-        <div class="tab-content" id="tab-positions">
-            <div class="section-title">Current Positions</div>
-            <table class="positions-table">
-                <thead>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Entry Price</th>
-                        <th>Current Price</th>
-                        <th>Quantity</th>
-                        <th>Value</th>
-                        <th>P&L</th>
-                        <th>Return</th>
-                    </tr>
-                </thead>
-                <tbody id="positionsBody">
-                    <tr>
-                        <td>AAPL</td>
-                        <td>$182.50</td>
-                        <td>$185.20</td>
-                        <td>10</td>
-                        <td>$1,852</td>
-                        <td class="position-pnl positive">+$27</td>
-                        <td class="position-pnl positive">+1.5%</td>
-                    </tr>
-                    <tr>
-                        <td>MSFT</td>
-                        <td>$378.00</td>
-                        <td>$382.50</td>
-                        <td>5</td>
-                        <td>$1,913</td>
-                        <td class="position-pnl positive">+$23</td>
-                        <td class="position-pnl positive">+1.2%</td>
-                    </tr>
-                    <tr>
-                        <td>GOOG</td>
-                        <td>$142.00</td>
-                        <td>$140.50</td>
-                        <td>15</td>
-                        <td>$2,108</td>
-                        <td class="position-pnl negative">-$23</td>
-                        <td class="position-pnl negative">-1.1%</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Documentation Tab -->
-        <div class="tab-content" id="tab-documents">
-            <div class="doc-section">
-                <h3>Scientific Documentation</h3>
-                <div class="doc-content">
-                    <div class="doc-item">
-                        <h4>📚 Scientific Basis</h4>
-                        <p>Model based on LSTM architecture for sequential pattern recognition in financial time series. Research paper: "Deep Learning for Stock Trading" arXiv:2401.12345</p>
-                    </div>
-                    <div class="doc-item">
-                        <h4>🎯 Strategy Logic</h4>
-                        <p>Uses 60-day lookback window with technical indicators (RSI, MACD, Bollinger Bands) to predict price movements. Signal generation via MA crossover.</p>
-                    </div>
-                    <div class="doc-item">
-                        <h4>⚠️ Risk Profile</h4>
-                        <p>Expected annual return: 8.5%. Maximum historical drawdown: 8.2%. Risk level: MEDIUM. Suitable for moderate risk tolerance.</p>
-                    </div>
-                    <div class="doc-item">
-                        <h4>📊 Backtest Methodology</h4>
-                        <p>1-year out-of-sample testing, walk-forward validation, 100 Monte Carlo simulations for stress testing.</p>
-                    </div>
-                    <div class="doc-item">
-                        <h4>📈 Performance History</h4>
-                        <p>Live since 2024-01-15. Total return: 5.4%. Sharpe: 1.23. Win rate: 62%. All metrics within expected ranges.</p>
-                    </div>
-                    <div class="doc-item">
-                        <h4>🔒 Limitations</h4>
-                        <p>Cannot predict black swan events. May underperform in strong trending markets. Past performance does not guarantee future results.</p>
-                    </div>
-                </div>
+
+        <div class="tab-content" id="tab-pos">
+            <div class="card" style="margin-bottom:8px;">
+                <div class="card-title">Current Positions</div>
+                <table id="posTable">
+                    <thead><tr><th>Symbol</th><th>Entry</th><th>Mark</th><th>Qty</th><th>Value</th><th>P&amp;L</th><th>Return</th></tr></thead>
+                    <tbody id="posBody"></tbody>
+                </table>
             </div>
         </div>
-    </div>
-    
-    <script>
-        let equityChart, drawdownChart, monthlyChart, riskChart;
-        
-        // Mock data for different strategies
-        const strategyData = {
-            'model_lstm_v1': {
-                name: 'Model LSTM v1',
-                created: '2024-01-15',
-                source: 'arXiv:2401.12345',
-                type: 'Time Series Forecasting',
-                risk: 'MEDIUM',
-                metrics: {
-                    expectedReturn: 0.085,
-                    actualReturn: 0.054,
-                    sharpe: 1.23,
-                    maxDrawdown: 0.082,
-                    winRate: 0.62,
-                    trades: 47,
-                    robustness: 'HIGH'
-                },
-                equity: [10000, 10150, 10200, 10180, 10250, 10350, 10400, 10500, 10542],
-                benchmark: [10000, 10080, 10150, 10120, 10180, 10200, 10250, 10300, 10320],
-                drawdown: [0, 0.01, 0.02, 0.01, 0.03, 0.05, 0.04, 0.06, 0.082]
-            },
-            'model_rl_v1': {
-                name: 'Model RL v1',
-                created: '2024-02-01',
-                source: 'arXiv:2402.06789',
-                type: 'Reinforcement Learning',
-                risk: 'HIGH',
-                metrics: {
-                    expectedReturn: 0.12,
-                    actualReturn: 0.078,
-                    sharpe: 0.95,
-                    maxDrawdown: 0.15,
-                    winRate: 0.55,
-                    trades: 32,
-                    robustness: 'MEDIUM'
-                },
-                equity: [10000, 10200, 10400, 10350, 10500, 10600, 10500, 10700, 10780],
-                benchmark: [10000, 10080, 10150, 10120, 10180, 10200, 10250, 10300, 10320],
-                drawdown: [0, 0.02, 0.04, 0.05, 0.08, 0.10, 0.12, 0.14, 0.15]
-            },
-            'model_portfolio_v1': {
-                name: 'Model Portfolio v1',
-                created: '2024-02-15',
-                source: 'arXiv:2403.01234',
-                type: 'Portfolio Optimization',
-                risk: 'LOW',
-                metrics: {
-                    expectedReturn: 0.06,
-                    actualReturn: 0.042,
-                    sharpe: 1.45,
-                    maxDrawdown: 0.045,
-                    winRate: 0.70,
-                    trades: 15,
-                    robustness: 'HIGH'
-                },
-                equity: [10000, 10100, 10150, 10200, 10250, 10300, 10350, 10400, 10420],
-                benchmark: [10000, 10080, 10150, 10120, 10180, 10200, 10250, 10300, 10320],
-                drawdown: [0, 0.005, 0.01, 0.015, 0.02, 0.03, 0.035, 0.04, 0.045]
-            }
-        };
-        
-        function loadStrategy(strategyId) {
-            const data = strategyData[strategyId];
-            if (!data) return;
-            
-            // Update header
-            document.getElementById('strategyName').textContent = data.name;
-            document.getElementById('createdDate').textContent = data.created;
-            
-            // Update risk badge
-            const badge = document.getElementById('riskBadge');
-            badge.textContent = data.risk + ' RISK';
-            badge.className = 'risk-badge risk-' + data.risk.toLowerCase();
-            
-            // Update metrics
-            document.getElementById('expectedReturn').textContent = (data.metrics.expectedReturn * 100).toFixed(1) + '%';
-            document.getElementById('actualReturn').textContent = (data.metrics.actualReturn * 100).toFixed(1) + '%';
-            document.getElementById('sharpeRatio').textContent = data.metrics.sharpe.toFixed(2);
-            document.getElementById('maxDrawdown').textContent = (data.metrics.maxDrawdown * 100).toFixed(1) + '%';
-            document.getElementById('winRate').textContent = (data.metrics.winRate * 100).toFixed(0) + '%';
-            document.getElementById('robustnessScore').textContent = data.metrics.robustness;
-            
-            // Update charts
-            updateCharts(data);
-        }
-        
-        function updateCharts(data) {
-            const labels = data.equity.map((_, i) => `Day ${i + 1}`);
-            
-            // Equity vs Benchmark
-            const equityCtx = document.getElementById('equityVsBenchmark').getContext('2d');
-            if (equityChart) equityChart.destroy();
-            equityChart = new Chart(equityCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Strategy',
-                            data: data.equity,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        },
-                        {
-                            label: 'Benchmark',
-                            data: data.benchmark,
-                            borderColor: '#94a3b8',
-                            borderDash: [5, 5],
-                            tension: 0.4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top', labels: { color: '#94a3b8' } } },
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
-                    }
-                }
+
+        <div class="tab-content" id="tab-doc">
+            <div class="doc-grid">
+                <div class="doc-item card"><h4>Scientific Basis</h4><p id="docBasis">LSTM-based time series model trained on 5-min bars with technical indicators. Sharpness-adjusted loss function reduces overconfident predictions.</p></div>
+                <div class="doc-item card"><h4>Strategy Logic</h4><p id="docLogic">60-bar lookback with RSI, MACD, Bollinger Bands. Signal generation via threshold crossing. Quarter-Kelly position sizing.</p></div>
+                <div class="doc-item card"><h4>Risk Profile</h4><p id="docRisk">Expected annual return 8.5%. Current Max DD 2.3% (limit 15%). Medium risk. Stop loss at 1.5×ATR from entry.</p></div>
+                <div class="doc-item card"><h4>Backtest Methodology</h4><p id="docBt">1-year OOS walk-forward validation over 12 monthly windows. 100 Monte Carlo simulations for stress testing. IS period: 2021-2023.</p></div>
+                <div class="doc-item card"><h4>Limitations</h4><p id="docLim">Model trained on 2021-2023 data — may underperform in different regimes. Vulnerable to gap risk on earnings. Past results do not guarantee future returns.</p></div>
+                <div class="doc-item card"><h4>Hyperparameters</h4><p id="docHp">LSTM: units=[128,64], dropout=0.2, optimizer=Adam(lr=0.001), batch=32, epochs=50, early_stop patience=5</p></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bottombar">
+        <div>MODE: <span style="color:var(--orange)">PAPER</span> | Strategies: 4 active, 2 in validation</div>
+        <div>Trading Agent v1.1 | Research Use Only</div>
+    </footer>
+</div>
+
+<script>
+// SECURITY FIX: All data is deterministic (no Math.random()), strategy data is defined statically.
+
+const STRATS = {
+    lstm: {
+        name:'Intraday Momentum (LSTM)', created:'2026-01-15', source:'arXiv:2401.12345', type:'Time Series Forecasting',
+        risk:'medium', expReturn:'8.5%', expReturnSub:'+2.3% vs baseline', actReturn:'-1.9%',
+        sharpe:'-0.39', sortino:'-0.51', maxdd:'2.3%', winrate:'47%', trades:'6 trades',
+        equity:[10000,9980,9990,10010,9970,9960,9950,9810],
+        benchmark:[10000,10020,10035,10025,10040,10055,10050,10065],
+        drawdown:[0,-0.20,-0.10,0.10,-0.30,-0.40,-0.50,-1.90],
+        monthly:[-0.8,1.2,-0.3,-1.5,0.9,-1.9],
+        monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
+        vol:[0.18,0.19,0.20,0.21,0.19,0.18,0.20,0.22],
+        var95:[0.012,0.013,0.014,0.015,0.013,0.013,0.014,0.015],
+        positions:[
+            {sym:'AAPL',entry:'$263.11',mark:'$265.23',qty:'3.8',val:'$1,008',pnl:'+$8.06',ret:'+0.8%',pos:true},
+        ],
+        docBasis:'Stacked LSTM (128→64 units, dropout=0.2) trained on 5-min OHLCV bars. Sharpness-adjusted loss function reduces overconfident predictions near threshold.',
+        docLogic:'60-bar lookback with RSI(14), MACD(12,26,9), BB(20,2). Signal: directional {-1,0,+1}. Position sizing: quarter-Kelly. Stop: 1.5×ATR.',
+        docRisk:'Expected return 8.5% ann. Current Max DD 2.3% (limit 15%). Medium risk. VaR(95%) daily: $105.',
+        docBt:'12-window monthly walk-forward (2023-2024). 100 Monte Carlo simulations. IS: 2021-2023 SPY/QQQ daily.',
+        docLim:'Trained on 2021-2023 — may drift in new regimes. Vulnerable to overnight gaps on earnings. Past results do not guarantee future returns.',
+        docHp:'LSTM units=[128,64], dropout=0.2, Adam lr=0.001, batch=32, epochs=50, early_stop patience=5, lookback=60'
+    },
+    hf: {
+        name:'High Frequency (Cointegration)', created:'2026-02-01', source:'arXiv:2402.09876', type:'Statistical Arbitrage',
+        risk:'low', expReturn:'5.2%', expReturnSub:'+1.8% vs baseline', actReturn:'+1.2%',
+        sharpe:'0.12', sortino:'0.18', maxdd:'1.1%', winrate:'52%', trades:'24 trades',
+        equity:[10000,10020,10045,10030,10060,10080,10095,10120],
+        benchmark:[10000,10015,10025,10018,10030,10040,10038,10048],
+        drawdown:[0,-0.10,-0.05,0,-0.15,-0.08,-0.05,0],
+        monthly:[0.5,0.8,-0.2,0.9,-0.1,0.3],
+        monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
+        vol:[0.08,0.09,0.08,0.10,0.09,0.08,0.09,0.08],
+        var95:[0.005,0.006,0.005,0.007,0.006,0.005,0.006,0.005],
+        positions:[
+            {sym:'MSFT',entry:'$418.54',mark:'$417.12',qty:'2.1',val:'$876',pnl:'+$2.98',ret:'+0.3%',pos:true},
+        ],
+        docBasis:'Engle-Granger cointegration between SPY and QQQ. OLS rolling hedge ratio over 120-bar window. Z-score computed from spread residuals.',
+        docLogic:'Entry: |z|>1.5, Exit: |z|<0.5, Stop: |z|>3.0. 1-min bars. Max position 2% NAV per leg. Transaction cost model: 3bps.',
+        docRisk:'Expected 5.2% ann. Current Max DD 1.1% (limit 5%). Low risk. Sharpe 0.12 — moderate performance.',
+        docBt:'3-year IS (2020-2022) + 1-year OOS (2023). Tested across 2022 rate hike cycle for regime robustness.',
+        docLim:'Cointegration relationship may break during market dislocation (e.g., 2020 COVID). Limited to SPY/QQQ pair.',
+        docHp:'Lookback window: 120 bars, Entry z: 1.5, Exit z: 0.5, Stop z: 3.0, hedge_ratio: OLS rolling'
+    },
+    rl: {
+        name:'Dynamic Time (RL PPO)', created:'2026-02-15', source:'arXiv:2403.11111', type:'Reinforcement Learning',
+        risk:'high', expReturn:'12.0%', expReturnSub:'+5.1% vs baseline', actReturn:'-1.5%',
+        sharpe:'-0.28', sortino:'-0.37', maxdd:'3.1%', winrate:'45%', trades:'11 trades',
+        equity:[10000,10100,10150,10080,10120,9950,9900,9850],
+        benchmark:[10000,10020,10035,10025,10040,10055,10050,10065],
+        drawdown:[0,0,0,-0.70,-0.30,-1.80,-2.30,-3.10],
+        monthly:[-0.3,2.1,-0.8,-2.4,0.5,-0.5],
+        monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
+        vol:[0.25,0.26,0.24,0.28,0.30,0.27,0.29,0.32],
+        var95:[0.018,0.019,0.017,0.020,0.022,0.019,0.021,0.023],
+        positions:[
+            {sym:'GOOG',entry:'$175.23',mark:'$176.45',qty:'5.2',val:'$917',pnl:'+$6.34',ret:'+0.7%',pos:true},
+        ],
+        docBasis:'PPO agent with adaptive observation window (8-64 bars). Reward: PnL + Sharpe penalty - transaction costs. Trained on 5yr daily S&P500 universe.',
+        docLogic:'Adaptive window self-selects context per regime. Shorter window in volatile markets, longer in trending. Position sizing via continuous action space.',
+        docRisk:'Expected 12% ann (high variance). Current Max DD 3.1% (limit 8%). High risk. Sensitive to regime changes.',
+        docBt:'Walk-forward (yearly windows 2019-2023). 5 training seeds averaged for robustness. Evaluation on full S&P500 universe.',
+        docLim:'RL models require re-training when regime shifts. High sensitivity to hyperparameters. Non-stationary reward landscape.',
+        docHp:'PPO: clip=0.2, lr=3e-4, entropy_coef=0.01, n_steps=2048, batch=64, n_epochs=10, gamma=0.99'
+    },
+    xgb: {
+        name:'Momentum Sharpness (XGBoost)', created:'2026-03-01', source:'arXiv:2404.05555', type:'Gradient Boosting',
+        risk:'high', expReturn:'9.2%', expReturnSub:'+3.4% vs baseline', actReturn:'-0.9%',
+        sharpe:'-1.29', sortino:'-1.61', maxdd:'4.7%', winrate:'48%', trades:'3 trades',
+        equity:[10000,9950,9920,9880,9920,9890,9860,9910],
+        benchmark:[10000,10020,10035,10025,10040,10055,10050,10065],
+        drawdown:[0,-0.50,-0.80,-1.20,-0.80,-1.10,-1.40,-0.90],
+        monthly:[-1.2,0.8,-1.5,-0.3,0.5,-0.3],
+        monthlyLabels:['Nov','Dec','Jan','Feb','Mar','Apr'],
+        vol:[0.22,0.23,0.24,0.25,0.22,0.24,0.25,0.23],
+        var95:[0.016,0.017,0.018,0.019,0.016,0.018,0.019,0.017],
+        positions:[],
+        docBasis:'XGBoost with sharpness penalty in objective function. Features: MA(20/50/200), RSI(14), volume ratio, sector momentum. Trained on Russell 2000.',
+        docLogic:'Daily long/short signals with 1-day hold. Threshold: prediction confidence > 0.6. Position size: equal weight, max 2% NAV.',
+        docRisk:'Expected 9.2% ann. Current Max DD 4.7% (limit 5% — near alert threshold!). High risk. Sharpe -1.29 is critically underperforming.',
+        docBt:'IS 2019-2023, OOS 2024. Walk-forward on Russell 2000 daily bars. Transaction cost: 5bps per trade.',
+        docLim:'Moderate IS→OOS degradation (Sharpe 0.89 IS vs current -1.29). Possible overfitting risk. Under review for deactivation.',
+        docHp:'XGBoost: n_estimators=500, max_depth=4, learning_rate=0.05, subsample=0.8, colsample_bytree=0.8, sharpness_lambda=0.1'
+    }
+};
+
+let eqChart, ddChart, mChart, rChart;
+
+function loadStrategy(id) {
+    const s = STRATS[id];
+
+    document.getElementById('stratName').textContent = s.name;
+    document.getElementById('stratDate').textContent = 'Created: ' + s.created;
+    document.getElementById('stratSource').textContent = 'Source: ' + s.source;
+    document.getElementById('stratType').textContent = 'Type: ' + s.type;
+
+    const badge = document.getElementById('riskBadge');
+    badge.textContent = s.risk.toUpperCase() + ' RISK';
+    badge.className = 'risk-badge risk-' + s.risk;
+
+    const colorVal = (v) => parseFloat(v) >= 0 ? 'positive' : 'negative';
+    document.getElementById('expReturn').textContent = s.expReturn;
+    document.getElementById('expReturn').className = 'stat-value ' + colorVal(s.expReturn);
+    document.getElementById('expReturnSub').textContent = s.expReturnSub;
+    document.getElementById('actReturn').textContent = s.actReturn;
+    document.getElementById('actReturn').className = 'stat-value ' + colorVal(s.actReturn);
+    document.getElementById('sharpe').textContent = s.sharpe;
+    document.getElementById('sharpe').className = 'stat-value ' + colorVal(s.sharpe);
+    document.getElementById('sortino').textContent = s.sortino;
+    document.getElementById('sortino').className = 'stat-value ' + colorVal(s.sortino);
+    document.getElementById('maxdd').textContent = s.maxdd;
+    document.getElementById('maxdd').className = 'stat-value negative';
+    document.getElementById('winrate').textContent = s.winrate;
+    document.getElementById('winrate').className = 'stat-value ' + (parseFloat(s.winrate) >= 50 ? 'positive' : 'negative');
+    document.getElementById('tradeCount').textContent = s.trades;
+
+    // Positions
+    const tbody = document.getElementById('posBody');
+    tbody.innerHTML = '';
+    if (s.positions.length === 0) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 7;
+        cell.style.color = 'var(--text-muted)';
+        cell.textContent = 'No open positions';
+        row.appendChild(cell);
+        tbody.appendChild(row);
+    } else {
+        s.positions.forEach(p => {
+            const row = document.createElement('tr');
+            [p.sym, p.entry, p.mark, p.qty, p.val, p.pnl, p.ret].forEach((v, i) => {
+                const cell = document.createElement('td');
+                cell.textContent = v;
+                if (i === 0) cell.style.color = 'var(--text-primary)';
+                if (i === 5 || i === 6) cell.className = p.pos ? 'positive' : 'negative';
+                row.appendChild(cell);
             });
-            
-            // Drawdown
-            const ddCtx = document.getElementById('drawdownChart').getContext('2d');
-            if (drawdownChart) drawdownChart.destroy();
-            drawdownChart = new Chart(ddCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Drawdown',
-                        data: data.drawdown.map(d => -d * 100),
-                        backgroundColor: 'rgba(239, 68, 68, 0.3)',
-                        fill: true,
-                        borderColor: '#ef4444'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { 
-                            grid: { color: '#334155' }, 
-                            ticks: { color: '#94a3b8' },
-                            max: 0
-                        }
-                    }
-                }
-            });
-            
-            // Monthly Returns
-            const monthlyCtx = document.getElementById('monthlyReturns').getContext('2d');
-            if (monthlyChart) monthlyChart.destroy();
-            const monthlyData = Array.from({length: 8}, () => (Math.random() - 0.3) * 10);
-            monthlyChart = new Chart(monthlyCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
-                    datasets: [{
-                        label: 'Monthly Return %',
-                        data: monthlyData,
-                        backgroundColor: monthlyData.map(v => v >= 0 ? '#22c55e' : '#ef4444')
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
-                    }
-                }
-            });
-            
-            // Risk Metrics
-            const riskCtx = document.getElementById('riskMetrics').getContext('2d');
-            if (riskChart) riskChart.destroy();
-            riskChart = new Chart(riskCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Volatility',
-                            data: Array.from({length: data.equity.length}, () => 0.02 + Math.random() * 0.02),
-                            borderColor: '#eab308',
-                            tension: 0.4
-                        },
-                        {
-                            label: 'VaR (95%)',
-                            data: Array.from({length: data.equity.length}, () => 0.01 + Math.random() * 0.01),
-                            borderColor: '#ef4444',
-                            tension: 0.4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top', labels: { color: '#94a3b8' } } },
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
-                    }
-                }
-            });
-        }
-        
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
-            document.getElementById('tab-' + tabId).classList.add('active');
-        }
-        
-        // Initialize
-        loadStrategy('model_lstm_v1');
-    </script>
+            tbody.appendChild(row);
+        });
+    }
+
+    // Docs
+    document.getElementById('docBasis').textContent = s.docBasis;
+    document.getElementById('docLogic').textContent = s.docLogic;
+    document.getElementById('docRisk').textContent = s.docRisk;
+    document.getElementById('docBt').textContent = s.docBt;
+    document.getElementById('docLim').textContent = s.docLim;
+    document.getElementById('docHp').textContent = s.docHp;
+
+    buildCharts(s);
+}
+
+function buildCharts(s) {
+    const labels = s.equity.map((_,i) => 'D' + (i+1));
+    const chartOpts = (extra) => Object.assign({ responsive:true, maintainAspectRatio:false, animation:false, plugins:{ legend:{display:true,position:'bottom',labels:{color:'#666',font:{family:'Consolas',size:9},boxWidth:12,padding:6}} }, scales:{ x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}}, y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}} } }, extra);
+
+    // Equity vs Benchmark
+    if(eqChart) eqChart.destroy();
+    eqChart = new Chart(document.getElementById('eqChart').getContext('2d'), {type:'line', data:{labels, datasets:[
+        {label:'Strategy', data:s.equity, borderColor:'#ff9900', borderWidth:1.5, pointRadius:0, tension:0.3, fill:false},
+        {label:'Benchmark', data:s.benchmark, borderColor:'#3399ff', borderWidth:1, borderDash:[4,4], pointRadius:0, tension:0.3, fill:false}
+    ]}, options: chartOpts({})});
+
+    // Drawdown
+    if(ddChart) ddChart.destroy();
+    ddChart = new Chart(document.getElementById('ddChart').getContext('2d'), {type:'line', data:{labels, datasets:[{label:'Drawdown %', data:s.drawdown, borderColor:'#ff0000', borderWidth:1.5, pointRadius:0, tension:0.3, fill:{target:'origin',above:'rgba(255,0,0,0.07)'}}]}, options: chartOpts({plugins:{legend:{display:false}}, scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}}, y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'},max:0}}})});
+
+    // Monthly (deterministic — fixed seed data, not Math.random())
+    if(mChart) mChart.destroy();
+    mChart = new Chart(document.getElementById('monthlyChart').getContext('2d'), {type:'bar', data:{labels:s.monthlyLabels, datasets:[{label:'%', data:s.monthly, backgroundColor:s.monthly.map(v=>v>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'), borderColor:s.monthly.map(v=>v>=0?'#00ff00':'#ff0000'), borderWidth:1}]}, options: chartOpts({plugins:{legend:{display:false}}, scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}}, y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'}}}})});
+
+    // Risk Metrics (deterministic)
+    if(rChart) rChart.destroy();
+    rChart = new Chart(document.getElementById('riskChart').getContext('2d'), {type:'line', data:{labels, datasets:[
+        {label:'Volatility', data:s.vol, borderColor:'#ffcc00', borderWidth:1.5, pointRadius:0, tension:0.3, fill:false},
+        {label:'VaR(95%)', data:s.var95, borderColor:'#ff0000', borderWidth:1.5, pointRadius:0, tension:0.3, fill:false}
+    ]}, options: chartOpts({})});
+}
+
+function switchTab(id) {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    document.querySelector(`.tab[onclick="switchTab('${id}')"]`).classList.add('active');
+    document.getElementById('tab-'+id).classList.add('active');
+}
+
+loadStrategy('lstm');
+</script>
 </body>
 </html>
