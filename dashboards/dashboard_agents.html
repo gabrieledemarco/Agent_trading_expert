@@ -76,6 +76,7 @@
         .log-tag{color:var(--orange);}
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
+    <script src="dashboard_data.js"></script>
 </head>
 <body>
 <div class="terminal">
@@ -338,11 +339,37 @@ function viewLogs(id) {
     addLog('info', 'System', 'Showing last logs for ' + a.name);
 }
 
+
+
+async function hydrateAgentActivityFromApi() {
+    try {
+        const response = await fetch('/dashboard/agent-activity?limit=20');
+        if (!response.ok) return;
+        const payload = await response.json();
+        const activities = Array.isArray(payload.activities) ? payload.activities : [];
+        if (!activities.length) return;
+
+        const console_ = document.getElementById('logConsole');
+        console_.innerHTML = '';
+        logEntryCount = 0;
+
+        activities.forEach((a) => {
+            const msg = a.message || 'No message';
+            const status = String(a.status || 'INFO').toLowerCase();
+            const type = status.includes('error') ? 'error' : status.includes('warn') ? 'warn' : status.includes('complete') ? 'success' : 'info';
+            addLog(type, a.agent_name || 'Agent', msg);
+        });
+    } catch (err) {
+        // Keep local simulated logs as fallback.
+    }
+}
+
 // Init
 renderAgents();
 addLog('success', 'System', 'Agent monitor initialized');
 addLog('info', 'TradingExecutor', 'Active — paper trading mode');
 addLog('info', 'MonitoringAgent', 'All systems nominal');
+hydrateAgentActivityFromApi();
 updateFooter();
 function toggleSidebar(){const terminal=document.querySelector('.terminal');const isCollapsed=terminal.classList.toggle('sidebar-collapsed');localStorage.setItem('sidebarCollapsed',isCollapsed);}
 if(localStorage.getItem('sidebarCollapsed')==='true'){document.querySelector('.terminal').classList.add('sidebar-collapsed');}
