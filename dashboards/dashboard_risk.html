@@ -72,6 +72,17 @@
         ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
         *{scrollbar-width:thin;scrollbar-color:var(--border) var(--bg-primary);}
         .main{min-height:calc(100vh - 64px);}
+        .terminal { transition:grid-template-columns 0.3s ease; }
+        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
+        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
+        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
+        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
+        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
+        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
+        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
+        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
+        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
+        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
 </head>
 <body>
@@ -251,6 +262,7 @@
         <div>Trading Agent v1.1 | Research Use Only</div>
     </footer>
 </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
 
 <script>
 function switchTab(id){
@@ -303,6 +315,13 @@ new Chart(document.getElementById('stressChart').getContext('2d'),{type:'bar',da
     {label:'Estimated Impact ($)',data:stressImpact,backgroundColor:stressImpact.map(v=>v<-500?'rgba(255,0,0,0.6)':v<-300?'rgba(255,204,0,0.6)':'rgba(255,153,0,0.5)'),borderColor:stressImpact.map(v=>v<-500?'#ff0000':v<-300?'#ffcc00':'#ff9900'),borderWidth:1},
     {label:'Max Loss Limit (-$500)',data:new Array(8).fill(-500),borderColor:'#666',borderWidth:1,borderDash:[6,3],type:'line',pointRadius:0}
 ]},options:{...CHART_OPT,scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>'$'+v}}}}});
+        function toggleSidebar() {
+            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.querySelector('.terminal').classList.add('sidebar-collapsed');
+        }
 </script>
 </body>
 </html>

@@ -89,6 +89,17 @@
         ::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
         * { scrollbar-width:thin; scrollbar-color:var(--border) var(--bg-primary); }
         .main{min-height:calc(100vh - 64px);}
+        .terminal { transition:grid-template-columns 0.3s ease; }
+        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
+        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
+        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
+        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
+        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
+        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
+        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
+        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
+        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
+        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
 </head>
 <body>
@@ -481,6 +492,7 @@ function updateStatsRow() {
         <div class="stat-box"><div class="stat-box-label">Max DD (Portfolio)</div><div class="stat-box-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</div><div class="stat-box-sub">limit: ${portfolioData.maxDrawdownLimit}%</div></div>
         <div class="stat-box"><div class="stat-box-label">Correlation</div><div class="stat-box-value neutral">${portfolioData.correlation.toFixed(2)}</div><div class="stat-box-sub">avg pairwise</div></div>
         <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">${portfolioData.diversification.toFixed(2)}</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
     `;
 }
 
@@ -620,6 +632,13 @@ buildDDChart();
 setInterval(updateTime, 1000);
 updateTime();
 loadResizeStates();
+        function toggleSidebar() {
+            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.querySelector('.terminal').classList.add('sidebar-collapsed');
+        }
 </script>
 </body>
 </html>
