@@ -289,8 +289,8 @@ function buildWFCharts() {
     const isEq=[10000], oosEq=[10000];
     wfData.forEach(w=>{isEq.push(isEq[isEq.length-1]*(1+w.isSharpe*0.02)); oosEq.push(oosEq[oosEq.length-1]*(1+w.oosSharpe*0.015));});
     new Chart(document.getElementById('isOosChart').getContext('2d'),{type:'line',data:{labels:['Start',...months],datasets:[
-        {label:'IS',data:isEq.map(v=>Math.round(v)),borderColor:'#ffcc00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'OOS',data:oosEq.map(v=>Math.round(v)),borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+        {label:'IS',data:isEq.map(v=>Math.round(v),borderColor:'#ffcc00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+        {label:'OOS',data:oosEq.map(v=>Math.round(v),borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
         {label:'Benchmark',data:isEq.map((_,i)=>10000+i*8),borderColor:'#3399ff',borderWidth:1,borderDash:[4,4],pointRadius:0}
     ]},options:CHART_OPT});
 
