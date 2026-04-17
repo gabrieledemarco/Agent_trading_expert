@@ -60,6 +60,13 @@
         .doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
         .doc-item h4{color:var(--blue);font-size:11px;margin-bottom:4px;}
         .doc-item p{color:var(--text-muted);font-size:11px;line-height:1.5;}
+        .risk-section{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;}
+        .risk-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+        .risk-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+        .risk-param-box{background:var(--bg-primary);border:1px solid var(--border);padding:10px;text-align:center;}
+        .risk-param-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;}
+        .risk-param-value{font-size:14px;font-weight:bold;margin-bottom:4px;}
+        .risk-param-desc{color:var(--text-muted);font-size:9px;line-height:1.3;}
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
 </head>
@@ -128,6 +135,7 @@
 
         <div class="tabs">
             <button class="tab active" onclick="switchTab('perf')">Performance</button>
+            <button class="tab" onclick="switchTab('risk')">Risk Management</button>
             <button class="tab" onclick="switchTab('pos')">Positions</button>
             <button class="tab" onclick="switchTab('doc')">Documentation</button>
         </div>
@@ -140,6 +148,185 @@
             <div class="charts-2">
                 <div class="card"><div class="card-title">Monthly Returns (Deterministic)</div><div class="chart-container"><canvas id="monthlyChart"></canvas></div></div>
                 <div class="card"><div class="card-title">Risk Metrics Evolution</div><div class="chart-container"><canvas id="riskChart"></canvas></div></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-risk">
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">POSITION SIZING & EXPOSURE</div>
+                <div class="risk-grid-4">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Position Size Method</div>
+                        <div class="risk-param-value" style="color:var(--orange)">Kelly Criterion (¼)</div>
+                        <div class="risk-param-desc">Optimal sizing based on edge and volatility</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Position Size</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">5.0% NAV</div>
+                        <div class="risk-param-desc">Hard limit per single position</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Current Exposure</div>
+                        <div class="risk-param-value" style="color:var(--green)">2.8% NAV</div>
+                        <div class="risk-param-desc">Active: $280 / $10,000</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Leverage Allowed</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">1.0x (None)</div>
+                        <div class="risk-param-desc">Conservative cash-only approach</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">STOP LOSS & TAKE PROFIT</div>
+                <div class="risk-grid-3">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Stop Loss Type</div>
+                        <div class="risk-param-value" style="color:var(--red)">ATR-Based Dynamic</div>
+                        <div class="risk-param-desc">1.5× ATR(14) from entry</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Take Profit Type</div>
+                        <div class="risk-param-value" style="color:var(--green)">Target-Based</div>
+                        <div class="risk-param-desc">3.0× risk distance (R:R = 1:3)</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Trailing Stop</div>
+                        <div class="risk-param-value" style="color:var(--orange)">Enabled</div>
+                        <div class="risk-param-desc">Activates at +2R, trails at 1.0× ATR</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">RISK PER TRADE & DRAWDOWN LIMITS</div>
+                <div class="risk-grid-4">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Risk Per Trade</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">1.0% NAV</div>
+                        <div class="risk-param-desc">Max loss per single trade: $100</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Daily Loss</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">3.0% NAV</div>
+                        <div class="risk-param-desc">Circuit breaker: $300 daily loss</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Drawdown Limit</div>
+                        <div class="risk-param-value" style="color:var(--red)">15.0%</div>
+                        <div class="risk-param-desc">Strategy paused if DD exceeds limit</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Current Drawdown</div>
+                        <div class="risk-param-value" style="color:var(--green)">2.3%</div>
+                        <div class="risk-param-desc">Well within safe limits</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">DYNAMIC SIZING & VOLATILITY ADJUSTMENT</div>
+                <div class="risk-grid-3">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Vol-Adjusted Sizing</div>
+                        <div class="risk-param-value" style="color:var(--orange)">Active</div>
+                        <div class="risk-param-desc">Position size scales inverse to realized vol</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Current Vol Regime</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">22% (Medium)</div>
+                        <div class="risk-param-desc">20-day realized volatility (annualized)</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Sizing Multiplier</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">0.85x</div>
+                        <div class="risk-param-desc">Reduced size due to elevated volatility</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section" style="margin-bottom:8px;">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">RISK/REWARD & KELLY OPTIMIZATION</div>
+                <div class="risk-grid-4">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Target R:R Ratio</div>
+                        <div class="risk-param-value" style="color:var(--green)">1:3.0</div>
+                        <div class="risk-param-desc">Min acceptable: 1:2.0</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Historical R:R</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">1:2.1</div>
+                        <div class="risk-param-desc">Actual avg from last 50 trades</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Kelly %</div>
+                        <div class="risk-param-value" style="color:var(--orange)">8.2%</div>
+                        <div class="risk-param-desc">Optimal: (Win% × AvgWin - Loss% × AvgLoss) / AvgWin</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Applied Kelly</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">2.05%</div>
+                        <div class="risk-param-desc">¼ Kelly for safety (8.2% ÷ 4)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="risk-section">
+                <div class="card-title" style="color:var(--orange);margin-bottom:8px;font-size:12px;">CORRELATION & DIVERSIFICATION CHECKS</div>
+                <div class="card" style="margin-bottom:8px;">
+                    <table style="font-size:10px;">
+                        <thead>
+                            <tr>
+                                <th>Strategy Pair</th>
+                                <th>Correlation</th>
+                                <th>Status</th>
+                                <th>Combined Risk</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="color:var(--text-primary)">LSTM + HF Cointegration</td>
+                                <td style="color:var(--green)">0.12</td>
+                                <td><span style="background:rgba(0,255,0,0.1);color:var(--green);padding:2px 6px;border-radius:3px;font-size:9px;">LOW</span></td>
+                                <td>2.1%</td>
+                                <td style="color:var(--text-muted)">Good diversification</td>
+                            </tr>
+                            <tr>
+                                <td style="color:var(--text-primary)">LSTM + RL PPO</td>
+                                <td style="color:var(--yellow)">0.68</td>
+                                <td><span style="background:rgba(255,204,0,0.1);color:var(--yellow);padding:2px 6px;border-radius:3px;font-size:9px;">MEDIUM</span></td>
+                                <td>4.3%</td>
+                                <td style="color:var(--text-muted)">Both momentum-based, moderate overlap</td>
+                            </tr>
+                            <tr>
+                                <td style="color:var(--text-primary)">LSTM + Momentum Sharp</td>
+                                <td style="color:var(--red)">0.89</td>
+                                <td><span style="background:rgba(255,0,0,0.1);color:var(--red);padding:2px 6px;border-radius:3px;font-size:9px;">HIGH</span></td>
+                                <td>6.8%</td>
+                                <td style="color:var(--yellow)">⚠ High correlation - consider reducing exposure</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="risk-grid-3">
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Portfolio Correlation</div>
+                        <div class="risk-param-value" style="color:var(--yellow)">0.52</div>
+                        <div class="risk-param-desc">Average pairwise correlation</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Diversification Ratio</div>
+                        <div class="risk-param-value" style="color:var(--green)">1.38</div>
+                        <div class="risk-param-desc">Portfolio σ / Weighted avg σ (higher is better)</div>
+                    </div>
+                    <div class="risk-param-box">
+                        <div class="risk-param-label">Max Correlated Exposure</div>
+                        <div class="risk-param-value" style="color:var(--text-primary)">8.5% NAV</div>
+                        <div class="risk-param-desc">Limit for strategies with corr > 0.7</div>
+                    </div>
+                </div>
             </div>
         </div>
 
