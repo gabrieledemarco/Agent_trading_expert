@@ -139,25 +139,29 @@
             <div class="stat-box"><div class="stat-label">Positions</div><div class="stat-value neutral" id="posCount">3</div></div>
             <div class="stat-box"><div class="stat-label">Unrealized</div><div class="stat-value positive" id="unrealVal">+$192</div></div>
             <div class="stat-box"><div class="stat-label">Realized</div><div class="stat-value negative" id="realVal">-$382</div></div>
-            <div class="stat-box"><div class="stat-label">Win Rate (live)</div><div class="stat-value negative">47%</div></div>
+            <div class="stat-box"><div class="stat-label">Win Rate (live)</div><div class="stat-value neutral" id="winRateVal">0.00%</div></div>
         </div>
 
         <div class="grid-2">
             <div class="card">
-                <div class="card-title"><span>EQUITY (SIMULATED LIVE)</span></div>
+                <div class="card-title"><span>EQUITY (LIVE)</span></div>
                 <div class="chart-container"><canvas id="liveChart"></canvas></div>
             </div>
             <div class="card">
                 <div class="card-title"><span>OPEN POSITIONS</span></div>
                 <table>
                     <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>Unreal P&amp;L</th><th>Hold</th></tr></thead>
-                    <tbody>
-                        <tr><td class="neutral">AAPL</td><td><span class="badge badge-long">LONG</span></td><td>3.8</td><td>$263.11</td><td id="aaplMark">$265.23</td><td class="positive" id="aaplPnl">+$8.06</td><td>2d</td></tr>
-                        <tr><td class="neutral">MSFT</td><td><span class="badge badge-short">SHORT</span></td><td>2.1</td><td>$418.54</td><td id="msftMark">$417.12</td><td class="positive" id="msftPnl">+$2.98</td><td>1d</td></tr>
-                        <tr><td class="neutral">GOOG</td><td><span class="badge badge-long">LONG</span></td><td>5.2</td><td>$175.23</td><td id="googMark">$176.45</td><td class="positive" id="googPnl">+$6.34</td><td>3h</td></tr>
-                    </tbody>
+                    <tbody id="openPositionsBody"></tbody>
                 </table>
             </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span>STRATEGY ACTIVITY MONITOR</span></div>
+            <table>
+                <thead><tr><th>Strategy</th><th>Status</th><th>Stage</th><th>Sharpe</th><th>Max DD</th><th>Trades</th><th>Last Activity</th></tr></thead>
+                <tbody id="strategyActivityBody"></tbody>
+            </table>
         </div>
 
         <div class="card">
@@ -178,156 +182,176 @@
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
 
 <script>
+const REFRESH_MS = 5000;
 let tick = 0;
-let logCount = 0;
-let equityData = [];
-let equityLabels = [];
 let liveChart;
-let equity = 10000;
-const aaplBase = 265.23, msftBase = 417.12, googBase = 176.45;
+let chartLabels = [];
+let chartValues = [];
 
-const logMessages = [
-    ['info','[TradingExecutor]','Checking signal for AAPL on 5m bar'],
-    ['info','[HFAgent]','Cointegration spread: SPY/QQQ = 0.021'],
-    ['info','[MonitorAgent]','Portfolio VaR(95%) = $210 — within limit'],
-    ['warn','[RiskMgr]','Momentum Sharpness DD approaching limit: 4.7%'],
-    ['info','[TradingExecutor]','No new signals generated this bar'],
-    ['success','[HFAgent]','Entry signal: BUY SPY @ market'],
-    ['info','[MonitorAgent]','System health check: all components OK'],
-    ['info','[ResearchAgent]','Scheduled run in 2h 14m'],
-    ['warn','[RiskMgr]','Intraday Momentum Sharpe below threshold'],
-    ['info','[TradingExecutor]','Mark-to-market update complete'],
-    ['info','[DataFeed]','Bar close received: AAPL 5m'],
-    ['success','[MLEngineer]','Portfolio Opt v2 validation: step 3/5'],
-];
+const fmtCurrency = (value) => {
+    const num = Number(value || 0);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(num);
+};
 
-function addLog(type, tag, msg) {
-    const console_ = document.getElementById('logConsole');
-    const t = new Date().toLocaleTimeString();
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
+const fmtPercent = (value) => `${(Number(value || 0) * 100).toFixed(2)}%`;
 
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'log-time';
-    timeSpan.textContent = '[' + t + '] ';
+function setText(id, value) {
+    const node = document.getElementById(id);
+    if (node) node.textContent = value;
+}
 
-    const tagSpan = document.createElement('span');
-    tagSpan.className = 'log-tag';
-    tagSpan.textContent = tag + ' ';
-
-    const msgSpan = document.createElement('span');
-    msgSpan.className = 'log-' + type;
-    msgSpan.textContent = msg;
-
-    entry.appendChild(timeSpan);
-    entry.appendChild(tagSpan);
-    entry.appendChild(msgSpan);
-
-    console_.insertBefore(entry, console_.firstChild);
-    // Keep max 50 entries
-    while (console_.children.length > 50) {
-        console_.removeChild(console_.lastChild);
-    }
-    logCount++;
-    document.getElementById('logCounter').textContent = logCount + ' events';
+function setValueWithClass(id, value, formatter = fmtCurrency) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    const numeric = Number(value || 0);
+    node.textContent = formatter(numeric);
+    node.className = `stat-value ${numeric > 0 ? 'positive' : numeric < 0 ? 'negative' : 'neutral'}`;
 }
 
 function buildLiveChart() {
     const ctx = document.getElementById('liveChart').getContext('2d');
     liveChart = new Chart(ctx, {
         type: 'line',
-        data: { labels: equityLabels, datasets: [{ label: 'Equity', data: equityData, borderColor: '#ff9900', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] },
+        data: {
+            labels: chartLabels,
+            datasets: [{ label: 'Equity', data: chartValues, borderColor: '#ff9900', borderWidth: 1.5, pointRadius: 0, tension: 0.25, fill: false }]
+        },
         options: {
             responsive: true, maintainAspectRatio: false, animation: false,
             plugins: { legend: { display: false } },
             scales: {
                 x: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, maxTicksLimit: 8 } },
-                y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, callback: v => '$' + v.toLocaleString() } }
+                y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, callback: v => '$' + Number(v).toLocaleString() } }
             }
         }
     });
 }
 
-function updateLivePrices() {
-    // Simulate small price movements
-    const aaplDelta = (Math.random() - 0.48) * 0.5;
-    const msftDelta = (Math.random() - 0.52) * 0.4;
-    const googDelta = (Math.random() - 0.48) * 0.3;
+function renderAlerts(alerts) {
+    const alertContainer = document.querySelector('.alert-card');
+    if (!alertContainer) return;
 
-    const aaplMark = aaplBase + aaplDelta + (tick * 0.02);
-    const msftMark = msftBase + msftDelta - (tick * 0.01);
-    const googMark = googBase + googDelta + (tick * 0.015);
-
-    const aaplPnl = (aaplMark - 263.11) * 3.8;
-    const msftPnl = (418.54 - msftMark) * 2.1; // short
-    const googPnl = (googMark - 175.23) * 5.2;
-
-    document.getElementById('aaplMark').textContent = '$' + aaplMark.toFixed(2);
-    document.getElementById('msftMark').textContent = '$' + msftMark.toFixed(2);
-    document.getElementById('googMark').textContent = '$' + googMark.toFixed(2);
-
-    const fmt = (v) => (v >= 0 ? '+' : '') + '$' + v.toFixed(2);
-    const setColor = (el, v) => { el.textContent = fmt(v); el.className = v >= 0 ? 'positive' : 'negative'; };
-    setColor(document.getElementById('aaplPnl'), aaplPnl);
-    setColor(document.getElementById('msftPnl'), msftPnl);
-    setColor(document.getElementById('googPnl'), googPnl);
-
-    const totalUnreal = aaplPnl + msftPnl + googPnl;
-    const unrealEl = document.getElementById('unrealVal');
-    unrealEl.textContent = fmt(totalUnreal);
-    unrealEl.className = 'stat-value ' + (totalUnreal >= 0 ? 'positive' : 'negative');
+    const title = '<div class="alert-title">&#9888; ACTIVE ALERTS</div>';
+    const items = (alerts || []).map((alert, idx) => {
+        const color = idx % 3 === 0 ? 'var(--red)' : idx % 3 === 1 ? 'var(--yellow)' : 'var(--blue)';
+        return `<div class="alert-item"><span class="alert-dot" style="background:${color}"></span>${alert}</div>`;
+    });
+    alertContainer.innerHTML = title + items.join('');
 }
 
-function tick_() {
-    tick++;
-    const t = new Date().toLocaleTimeString();
-    document.getElementById('lastUpdate').textContent = t;
-    document.getElementById('tickCount').textContent = tick;
+function renderPositions(positions) {
+    const tbody = document.getElementById('openPositionsBody');
+    if (!tbody) return;
+    const rows = (positions || []).map((p) => {
+        const sideClass = p.side === 'SHORT' ? 'badge-short' : 'badge-long';
+        return `
+            <tr>
+                <td class="neutral">${p.symbol}</td>
+                <td><span class="badge ${sideClass}">${p.side}</span></td>
+                <td>${Number(p.quantity || 0).toFixed(4)}</td>
+                <td>${fmtCurrency(p.entry_price || 0)}</td>
+                <td>${fmtCurrency(p.entry_price || 0)}</td>
+                <td class="neutral">N/A</td>
+                <td>${p.model_name || 'N/A'}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="7" class="neutral">Nessuna posizione aperta.</td></tr>';
+}
 
-    // Equity simulation: small random walk
-    const delta = (Math.random() - 0.51) * 15;
-    equity = Math.max(9500, Math.min(10500, equity + delta));
-    equityData.push(Math.round(equity));
-    equityLabels.push(t);
-    if (equityData.length > 60) { equityData.shift(); equityLabels.shift(); }
+function renderStrategyActivity(strategies) {
+    const tbody = document.getElementById('strategyActivityBody');
+    if (!tbody) return;
+    const rows = (strategies || []).map((s) => {
+        const sharpe = Number(s.sharpe_ratio || 0);
+        const dd = Number(s.max_drawdown || 0);
+        const statusClass = String(s.status || '').includes('APPROVED') ? 'positive' : 'neutral';
+        return `
+            <tr>
+                <td class="neutral">${s.strategy_name || s.strategy_id || 'UNKNOWN'}</td>
+                <td class="${statusClass}">${s.status || 'UNKNOWN'}</td>
+                <td class="neutral">${s.stage || 'N/A'}</td>
+                <td class="${sharpe >= 0 ? 'positive' : 'negative'}">${sharpe.toFixed(2)}</td>
+                <td class="${dd <= 0.1 ? 'positive' : 'negative'}">${(dd * 100).toFixed(2)}%</td>
+                <td class="neutral">${Number(s.executed_trades || 0)}</td>
+                <td class="neutral">${s.last_activity || 'N/A'}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="7" class="neutral">Nessuna strategia disponibile.</td></tr>';
+}
 
-    if (liveChart) {
-        liveChart.data.labels = equityLabels;
-        liveChart.data.datasets[0].data = equityData;
-        liveChart.update('none');
-    }
+function renderLogs(logs) {
+    const console_ = document.getElementById('logConsole');
+    if (!console_) return;
+    const entries = (logs || []).map((log) => {
+        const time = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '--:--:--';
+        const status = String(log.status || 'info').toLowerCase();
+        const klass = status.includes('fail') ? 'log-error' : status.includes('warn') ? 'log-warn' : status.includes('success') || status.includes('complete') ? 'log-success' : 'log-info';
+        return `
+            <div class="log-entry">
+                <span class="log-time">[${time}] </span>
+                <span class="log-tag">[${log.agent_name || 'System'}] </span>
+                <span class="${klass}">${log.message || 'No message'}</span>
+            </div>
+        `;
+    });
+    console_.innerHTML = entries.length ? entries.join('') : '<div class="log-entry"><span class="log-info">No logs available.</span></div>';
+    setText('logCounter', `${entries.length} events`);
+}
 
-    // Update equity display
-    document.getElementById('equityVal').textContent = '$' + Math.round(equity).toLocaleString();
-    const pnl = equity - 10190;
-    const pnlEl = document.getElementById('pnlVal');
-    pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + Math.round(Math.abs(pnl));
-    pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
+function renderChart(equityHistory) {
+    chartLabels = (equityHistory || []).map((point) => point.label);
+    chartValues = (equityHistory || []).map((point) => Number(point.equity || 0));
+    if (!liveChart) return;
+    liveChart.data.labels = chartLabels;
+    liveChart.data.datasets[0].data = chartValues;
+    liveChart.update('none');
+}
 
-    updateLivePrices();
+async function refreshLiveMonitor() {
+    tick += 1;
+    setText('tickCount', String(tick));
+    setText('lastUpdate', new Date().toLocaleTimeString());
 
-    // Add a log message every 3-5 ticks
-    if (tick % 4 === 0) {
-        const entry = logMessages[Math.floor(tick / 4) % logMessages.length];
-        addLog(entry[0], entry[1], entry[2]);
+    try {
+        const response = await fetch('/live/monitor', { headers: { Accept: 'application/json' } });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        const portfolio = data.portfolio || {};
+
+        setText('feedStatus', data.feed_status || 'UNKNOWN');
+        setValueWithClass('equityVal', portfolio.equity);
+        setValueWithClass('pnlVal', portfolio.daily_pnl);
+        setText('posCount', String(portfolio.positions_count || 0));
+        setValueWithClass('unrealVal', portfolio.unrealized_pnl);
+        setValueWithClass('realVal', portfolio.realized_pnl);
+        setText('winRateVal', fmtPercent(portfolio.win_rate_live || 0));
+
+        renderAlerts(data.alerts || []);
+        renderPositions(data.open_positions || []);
+        renderStrategyActivity(data.strategy_activity || []);
+        renderLogs(data.system_logs || []);
+        renderChart(data.equity_history || []);
+    } catch (error) {
+        renderAlerts([`Errore caricamento live monitor: ${error.message}`]);
     }
 }
 
-// Initialize
+function toggleSidebar() {
+    const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', isCollapsed);
+}
+
+if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    document.querySelector('.terminal').classList.add('sidebar-collapsed');
+}
+
 buildLiveChart();
-addLog('success', '[System]', 'Live monitor started');
-addLog('info', '[MonitorAgent]', 'All agents nominal');
-addLog('info', '[DataFeed]', 'Connected to price feed');
-
-setInterval(tick_, 2000);
-tick_();
-        function toggleSidebar() {
-            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        }
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.querySelector('.terminal').classList.add('sidebar-collapsed');
-        }
+refreshLiveMonitor();
+setInterval(refreshLiveMonitor, REFRESH_MS);
 </script>
 </body>
 </html>
