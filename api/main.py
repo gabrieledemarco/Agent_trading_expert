@@ -247,6 +247,133 @@ async def list_strategies():
         return {"strategies": []}
 
 
+@app.get("/live/monitor")
+async def get_live_monitor_data():
+    """Return live-monitor payload sourced from persisted strategy/trading data."""
+    from collections import defaultdict
+    from datetime import datetime
+    from pathlib import Path
+    import json
+
+    from data.storage.data_manager import DataStorageManager
+
+    db = DataStorageManager()
+
+    summary = db.get_dashboard_summary()
+    logs = db.get_agent_logs(limit=50)
+    trades = db.get_trades(limit=200)
+    performance = db.get_performance(days=60)
+
+    validated_dir = Path("models/validated")
+    strategies = []
+    if validated_dir.exists():
+        for file_path in validated_dir.glob("*_validation.json"):
+            try:
+                with open(file_path, encoding="utf-8") as fp:
+                    data = json.load(fp)
+                profile = data.get("risk_return_profile", {})
+                strategies.append(
+                    {
+                        "strategy_id": data.get("model_name"),
+                        "strategy_name": data.get("model_name"),
+                        "status": str(data.get("validation_status", "UNKNOWN")).upper(),
+                        "risk_score": profile.get("risk_score", "UNKNOWN"),
+                        "sharpe_ratio": float(profile.get("sharpe_ratio", 0) or 0),
+                        "max_drawdown": float(profile.get("max_drawdown", 0) or 0),
+                        "cagr": float(profile.get("cagr", 0) or 0),
+                    }
+                )
+            except Exception as exc:  # defensive parsing for partial files
+                logger.warning("Skipping strategy validation file %s: %s", file_path, exc)
+
+    strategy_trade_counts = defaultdict(int)
+    for trade in trades:
+        strategy_trade_counts[str(trade.get("model_name", "UNKNOWN"))] += 1
+
+    for strategy in strategies:
+        strategy["executed_trades"] = strategy_trade_counts.get(strategy["strategy_name"], 0)
+        strategy["stage"] = "RUNNING" if strategy["executed_trades"] > 0 else "IDLE"
+        strategy["last_activity"] = "Trade updates" if strategy["executed_trades"] > 0 else "No trades yet"
+
+    positions = defaultdict(lambda: {"symbol": "", "quantity": 0.0, "entry_price": 0.0, "model_names": set()})
+    for trade in trades:
+        symbol = str(trade.get("symbol") or "").upper()
+        if not symbol:
+            continue
+
+        action = str(trade.get("action", "")).lower()
+        signed_qty = float(trade.get("quantity") or 0.0)
+        if action in {"sell", "short"}:
+            signed_qty *= -1
+
+        row = positions[symbol]
+        row["symbol"] = symbol
+        row["quantity"] += signed_qty
+        row["entry_price"] = float(trade.get("price") or row["entry_price"] or 0.0)
+        model_name = trade.get("model_name")
+        if model_name:
+            row["model_names"].add(str(model_name))
+
+    open_positions = []
+    for _, row in positions.items():
+        if abs(row["quantity"]) < 1e-8:
+            continue
+        open_positions.append(
+            {
+                "symbol": row["symbol"],
+                "side": "LONG" if row["quantity"] > 0 else "SHORT",
+                "quantity": abs(round(row["quantity"], 4)),
+                "entry_price": row["entry_price"],
+                "model_name": ", ".join(sorted(row["model_names"])) if row["model_names"] else "UNKNOWN",
+            }
+        )
+
+    open_positions = sorted(open_positions, key=lambda x: x["symbol"])
+
+    equity_history = []
+    for point in reversed(performance):
+        timestamp = point.get("timestamp")
+        try:
+            ts = datetime.fromisoformat(str(timestamp))
+            label = ts.strftime("%H:%M:%S")
+        except Exception:
+            label = str(timestamp)
+        equity_history.append({"label": label, "equity": float(point.get("equity") or 0)})
+
+    alerts = []
+    for strategy in strategies:
+        if strategy["sharpe_ratio"] < 0:
+            alerts.append(
+                f"{strategy['strategy_name']}: Sharpe negativo ({strategy['sharpe_ratio']:.2f})"
+            )
+        if strategy["max_drawdown"] > 0.10:
+            alerts.append(
+                f"{strategy['strategy_name']}: Max DD elevato ({strategy['max_drawdown']:.2%})"
+            )
+    if not alerts:
+        alerts.append("Nessun alert critico dalle strategie validate.")
+
+    return {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "portfolio": {
+            "equity": float(summary.get("current_equity") or 0),
+            "daily_pnl": 0.0,
+            "positions_count": len(open_positions),
+            "unrealized_pnl": 0.0,
+            "realized_pnl": 0.0,
+            "win_rate_live": 0.0,
+        },
+        "alerts": alerts[:8],
+        "equity_history": equity_history[-60:],
+        "open_positions": open_positions,
+        "strategy_activity": strategies,
+        "system_logs": logs,
+        "feed_status": "ACTIVE",
+        "mode": "PAPER",
+        "connected": True,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
