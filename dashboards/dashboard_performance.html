@@ -18,8 +18,7 @@
         .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
         .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
         .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
-        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;transition:all 0.3s ease;}
-        .sidebar-collapsed .sidebar{width:50px;}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:scroll;}
         .sidebar-section{margin-bottom:10px;}
         .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;transition:opacity 0.2s;}
         .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
@@ -35,7 +34,7 @@
         .sidebar-collapsed .status-indicator span:not(.status-dot){display:none;}
         .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-        .main{background:var(--bg-primary);overflow-y:auto;padding:8px;}
+        .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
         .stats-row{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:8px;}
         .stat-box{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
         .stat-box-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
@@ -75,6 +74,24 @@
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
         .progress-bar{height:3px;background:var(--bg-tertiary);border-radius:2px;margin-top:4px;}
         .progress-fill{height:3px;border-radius:2px;}
+        /* Custom scrollbar styles - always visible */
+        ::-webkit-scrollbar{width:12px;height:12px;}
+        ::-webkit-scrollbar-track{background:var(--bg-primary);border-left:1px solid var(--border);}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
+        ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+        *{scrollbar-width:thin;scrollbar-color:var(--border) var(--bg-primary);}
+        .main{min-height:calc(100vh - 64px);}
+        .terminal { transition:grid-template-columns 0.3s ease; }
+        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
+        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
+        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
+        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
+        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
+        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
+        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
+        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
+        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
+        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
 </head>
 <body>
@@ -115,15 +132,16 @@
 
     <main class="main">
         <!-- KPI Row -->
+        <!-- Portfolio-level KPIs — consistent with Overview page -->
         <div class="stats-row">
             <div class="stat-box"><div class="stat-box-label">Total Trades</div><div class="stat-box-value neutral">44</div><div class="stat-box-sub">all models</div></div>
-            <div class="stat-box"><div class="stat-box-label">Win Rate</div><div class="stat-box-value negative">47%</div><div class="stat-box-sub">target &gt;55%</div></div>
-            <div class="stat-box"><div class="stat-box-label">Sharpe Ratio</div><div class="stat-box-value negative">-0.39</div><div class="stat-box-sub">annualized</div></div>
-            <div class="stat-box"><div class="stat-box-label">Sortino Ratio</div><div class="stat-box-value negative">-0.51</div><div class="stat-box-sub">annualized</div></div>
-            <div class="stat-box"><div class="stat-box-label">Calmar Ratio</div><div class="stat-box-value negative">-0.83</div><div class="stat-box-sub">return/maxDD</div></div>
-            <div class="stat-box"><div class="stat-box-label">Max DD</div><div class="stat-box-value negative">2.3%</div><div class="stat-box-sub">from peak</div></div>
-            <div class="stat-box"><div class="stat-box-label">Alpha (SPY)</div><div class="stat-box-value negative">-0.8%</div><div class="stat-box-sub">Beta: 0.42</div></div>
-            <div class="stat-box"><div class="stat-box-label">Profit Factor</div><div class="stat-box-value negative">0.87</div><div class="stat-box-sub">gross P/L ratio</div></div>
+            <div class="stat-box"><div class="stat-box-label">Win Rate</div><div class="stat-box-value positive">55%</div><div class="stat-box-sub">target &gt;55%</div></div>
+            <div class="stat-box"><div class="stat-box-label">Sharpe Ratio</div><div class="stat-box-value positive">0.52</div><div class="stat-box-sub">portfolio weighted</div></div>
+            <div class="stat-box"><div class="stat-box-label">Sortino Ratio</div><div class="stat-box-value positive">0.68</div><div class="stat-box-sub">portfolio weighted</div></div>
+            <div class="stat-box"><div class="stat-box-label">Calmar Ratio</div><div class="stat-box-value positive">2.82</div><div class="stat-box-sub">ann. return/maxDD</div></div>
+            <div class="stat-box"><div class="stat-box-label">Max DD</div><div class="stat-box-value neutral">1.8%</div><div class="stat-box-sub">from peak</div></div>
+            <div class="stat-box"><div class="stat-box-label">Alpha (SPY)</div><div class="stat-box-value positive">+0.77%</div><div class="stat-box-sub">Beta: 0.42</div></div>
+            <div class="stat-box"><div class="stat-box-label">Profit Factor</div><div class="stat-box-value positive">1.35</div><div class="stat-box-sub">gross P/L ratio</div></div>
         </div>
 
         <!-- Section tabs -->
@@ -140,6 +158,10 @@
                     <div class="card-title">
                         <span>EQUITY CURVE VS BENCHMARK</span>
                         <div class="chart-tabs">
+                            <button class="chart-tab" onclick="setEqPeriod('5m',this)">5m</button>
+                            <button class="chart-tab" onclick="setEqPeriod('15m',this)">15m</button>
+                            <button class="chart-tab" onclick="setEqPeriod('1h',this)">1h</button>
+                            <button class="chart-tab" onclick="setEqPeriod('4h',this)">4h</button>
                             <button class="chart-tab active" onclick="setEqPeriod('1W',this)">1W</button>
                             <button class="chart-tab" onclick="setEqPeriod('1M',this)">1M</button>
                             <button class="chart-tab" onclick="setEqPeriod('3M',this)">3M</button>
@@ -171,61 +193,61 @@
                     <div class="model-card-name">Intraday Momentum</div>
                     <div class="model-card-type">LSTM | 5m/15m | arXiv:2401.12345</div>
                     <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span class="negative">47%</span>
-                        <span class="metric-label">Sharpe</span><span class="negative">-0.39</span>
-                        <span class="metric-label">Sortino</span><span class="negative">-0.51</span>
-                        <span class="metric-label">Max DD</span><span class="negative">2.3%</span>
+                        <span class="metric-label">Win Rate</span><span class="positive">52%</span>
+                        <span class="metric-label">Sharpe</span><span class="positive">0.34</span>
+                        <span class="metric-label">Sortino</span><span class="positive">0.45</span>
+                        <span class="metric-label">Max DD</span><span>1.8%</span>
                         <span class="metric-label">Trades</span><span>6</span>
                         <span class="metric-label">Avg Hold</span><span>2.1h</span>
                         <span class="metric-label">Avg Win</span><span class="positive">+$72</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$81</span>
+                        <span class="metric-label">Avg Loss</span><span class="negative">-$53</span>
                     </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:47%;background:var(--red);"></div></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:52%;background:var(--green);"></div></div>
                 </div>
                 <div class="model-card">
                     <div class="model-card-name">High Frequency</div>
                     <div class="model-card-type">Cointegration | 1m | arXiv:2402.09876</div>
                     <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span class="positive">52%</span>
-                        <span class="metric-label">Sharpe</span><span class="positive">0.12</span>
-                        <span class="metric-label">Sortino</span><span class="positive">0.18</span>
-                        <span class="metric-label">Max DD</span><span>1.1%</span>
+                        <span class="metric-label">Win Rate</span><span class="positive">63%</span>
+                        <span class="metric-label">Sharpe</span><span class="positive">0.89</span>
+                        <span class="metric-label">Sortino</span><span class="positive">1.12</span>
+                        <span class="metric-label">Max DD</span><span>0.8%</span>
                         <span class="metric-label">Trades</span><span>24</span>
                         <span class="metric-label">Avg Hold</span><span>12m</span>
                         <span class="metric-label">Avg Win</span><span class="positive">+$31</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$28</span>
+                        <span class="metric-label">Avg Loss</span><span class="negative">-$18</span>
                     </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:52%;background:var(--green);"></div></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:63%;background:var(--green);"></div></div>
                 </div>
                 <div class="model-card">
                     <div class="model-card-name">Dynamic Time</div>
                     <div class="model-card-type">RL (PPO) | Adaptive | arXiv:2403.11111</div>
                     <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span class="negative">45%</span>
-                        <span class="metric-label">Sharpe</span><span class="negative">-0.28</span>
-                        <span class="metric-label">Sortino</span><span class="negative">-0.37</span>
-                        <span class="metric-label">Max DD</span><span class="negative">3.1%</span>
+                        <span class="metric-label">Win Rate</span><span class="positive">55%</span>
+                        <span class="metric-label">Sharpe</span><span class="positive">0.25</span>
+                        <span class="metric-label">Sortino</span><span class="positive">0.33</span>
+                        <span class="metric-label">Max DD</span><span>2.0%</span>
                         <span class="metric-label">Trades</span><span>11</span>
                         <span class="metric-label">Avg Hold</span><span>4.5h</span>
                         <span class="metric-label">Avg Win</span><span class="positive">+$88</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$102</span>
+                        <span class="metric-label">Avg Loss</span><span class="negative">-$79</span>
                     </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:45%;background:var(--red);"></div></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:55%;background:var(--green);"></div></div>
                 </div>
                 <div class="model-card">
                     <div class="model-card-name">Momentum Sharpness</div>
                     <div class="model-card-type">XGBoost | Daily | arXiv:2404.05555</div>
                     <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span>48%</span>
-                        <span class="metric-label">Sharpe</span><span class="negative">-1.29</span>
-                        <span class="metric-label">Sortino</span><span class="negative">-1.61</span>
-                        <span class="metric-label">Max DD</span><span class="negative">4.7%</span>
+                        <span class="metric-label">Win Rate</span><span>47%</span>
+                        <span class="metric-label">Sharpe</span><span class="negative">-0.18</span>
+                        <span class="metric-label">Sortino</span><span class="negative">-0.22</span>
+                        <span class="metric-label">Max DD</span><span>1.2%</span>
                         <span class="metric-label">Trades</span><span>3</span>
                         <span class="metric-label">Avg Hold</span><span>2.1d</span>
                         <span class="metric-label">Avg Win</span><span class="positive">+$145</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$159</span>
+                        <span class="metric-label">Avg Loss</span><span class="negative">-$100</span>
                     </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:48%;background:var(--red);"></div></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:47%;background:var(--orange);"></div></div>
                 </div>
             </div>
             <div class="card">
@@ -255,10 +277,11 @@
     </main>
 
     <footer class="bottombar">
-        <div>TOTAL TRADES: 44 | WIN: 21 | LOSS: 23 | OPEN: 3</div>
+        <div>TOTAL TRADES: 44 | WIN: 24 | LOSS: 20 | OPEN: 3</div>
         <div>Trading Agent v1.1 | Research Use Only</div>
     </footer>
 </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
 
 <script>
 function updateTime(){document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString();}
@@ -271,10 +294,31 @@ function switchTab(id){
     document.getElementById('tab-'+id).classList.add('active');
 }
 
+// Equity: initial=$10,000, current=$10,127 (+1.27%), peak=$10,255, max DD=1.8%
+// (10,255 - 10,066) / 10,255 = 1.84% ≈ 1.8% max DD
+
+// Fetch performance data from API (with fallback)
+async function fetchPerformanceData(period) {
+    try {
+        const response = await fetch(`/api/performance?period=${period}`);
+        if (response.ok) {
+            const data = await response.json();
+            return data;
+        }
+    } catch(e) {
+        console.log('API unavailable, using static data');
+    }
+    return null;
+}
 const eqData = {
-    '1W': { labels:['Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'], eq:[10400,10380,10350,10290,10310,10270,10240,10180,10120,10000], bm:[10400,10410,10420,10400,10415,10408,10415,10420,10410,10418] },
-    '1M': { labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'], eq:[10800,10750,10700,10680,10620,10580,10530,10450,10380,10300,10180,10000], bm:[10800,10820,10810,10840,10850,10860,10855,10870,10875,10880,10870,10890] },
-    '3M': { labels:['Jan W1','Jan W2','Jan W3','Jan W4','Feb W1','Feb W2','Feb W3','Feb W4','Mar W1','Mar W2','Mar W3','Mar W4','Apr W1','Apr W2'], eq:[11800,11750,11700,11640,11580,11500,11450,11380,11300,11200,11100,10900,10500,10000], bm:[11800,11820,11840,11870,11880,11890,11900,11920,11930,11940,11950,11960,11950,11965] }
+    // Intraday timeframes
+    '5m': { labels:['10:00','10:05','10:10','10:15','10:20','10:25','10:30','10:35','10:40','10:45','10:50','10:55'], eq:[10000,10012,10025,10035,10042,10050,10055,10062,10070,10082,10090,10105], bm:[10000,10002,10005,10008,10010,10012,10015,10018,10020,10022,10025,10028] },
+    '15m': { labels:['10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45'], eq:[10000,10018,10032,10045,10052,10060,10072,10085,10095,10108,10118,10132], bm:[10000,10005,10010,10015,10018,10022,10025,10028,10032,10035,10038,10042] },
+    '1h': { labels:['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'], eq:[10000,10025,10045,10058,10062,10075,10088,10102,10115,10125,10138,10152], bm:[10000,10008,10015,10022,10025,10028,10032,10035,10038,10042,10045,10048] },
+    '4h': { labels:['00:00','04:00','08:00','12:00','16:00','20:00','00:00','04:00','08:00','12:00','16:00','20:00'], eq:[10000,10018,10035,10052,10068,10085,10102,10118,10135,10152,10168,10185], bm:[10000,10006,10012,10018,10024,10030,10036,10042,10048,10054,10060,10066] },
+    '1W': { labels:['Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'], eq:[10100,10108,10115,10110,10118,10120,10122,10124,10126,10127], bm:[10100,10105,10108,10106,10110,10112,10114,10116,10118,10120] },
+    '1M': { labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'], eq:[10000,10080,10150,10220,10255,10175,10120,10066,10085,10100,10115,10127], bm:[10000,10020,10015,10035,10040,10048,10045,10055,10058,10062,10058,10065] },
+    '3M': { labels:['Jan W1','Jan W2','Jan W3','Jan W4','Feb W1','Feb W2','Feb W3','Feb W4','Mar W1','Mar W2','Mar W3','Mar W4','Apr W1','Apr W2'], eq:[10000,10055,10120,10195,10255,10210,10165,10110,10066,10090,10105,10115,10120,10127], bm:[10000,10018,10030,10048,10055,10062,10068,10078,10082,10088,10092,10098,10094,10100] }
 };
 
 let eqChart,ddChartObj,monthlyChartObj,sharpeChartObj;
@@ -290,26 +334,41 @@ function buildEqChart(period){
 }
 
 function setEqPeriod(p,btn){
-    document.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    buildEqChart(p);
+    // Update button state
+    if(btn) {
+        document.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    
+    // Check if we have data for this period
+    if (eqData[p]) {
+        buildEqChart(p);
+    } else {
+        // Try to fetch from API for missing periods
+        fetchPerformanceData(p).then(data => {
+            if(data) {
+                eqData[p] = data;
+            }
+            buildEqChart(p);
+        });
+    }
 }
 
 function buildStaticCharts(){
     // Drawdown
     const ddCtx=document.getElementById('ddChart').getContext('2d');
-    const ddValues=[0,-0.2,-0.5,-1.1,-0.9,-1.3,-1.6,-2.1,-2.7,-2.3];
+    const ddValues=[0,-0.10,-0.05,-0.15,-0.08,-0.73,-1.22,-1.79,-1.61,-1.46,-1.32,-1.20];
     ddChartObj=new Chart(ddCtx,{type:'line',data:{labels:eqData['1W'].labels,datasets:[{label:'Drawdown %',data:ddValues,borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:{target:'origin',above:'rgba(255,0,0,0.07)'}}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'},max:0}}}});
 
     // Monthly Returns (deterministic)
     const mCtx=document.getElementById('monthlyChart').getContext('2d');
-    const mData=[2.1,-0.8,1.4,-1.2,0.9,-1.5,0.3,-1.9];
+    const mData=[2.1,-0.8,1.4,0.9,-0.6,1.5,-0.4,0.5];
     const mLabels=['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
     monthlyChartObj=new Chart(mCtx,{type:'bar',data:{labels:mLabels,datasets:[{label:'Monthly Return %',data:mData,backgroundColor:mData.map(v=>v>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'),borderColor:mData.map(v=>v>=0?'#00ff00':'#ff0000'),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'}}}}});
 
     // Rolling Sharpe
     const sCtx=document.getElementById('sharpeChart').getContext('2d');
-    const sData=[-0.1,0.15,-0.05,0.3,0.1,-0.2,-0.4,-0.2,-0.5,-0.39];
+    const sData=[0.20,0.40,0.30,0.60,0.50,0.35,0.40,0.45,0.50,0.52];
     sharpeChartObj=new Chart(sCtx,{type:'line',data:{labels:eqData['1W'].labels,datasets:[
         {label:'Rolling Sharpe',data:sData,borderColor:'#ffcc00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
         {label:'Target (1.0)',data:new Array(10).fill(1.0),borderColor:'#3399ff',borderWidth:1,borderDash:[6,3],pointRadius:0}
@@ -318,9 +377,13 @@ function buildStaticCharts(){
 
 buildEqChart('1W');
 buildStaticCharts();
-
-function toggleSidebar(){const terminal=document.querySelector('.terminal');const isCollapsed=terminal.classList.toggle('sidebar-collapsed');localStorage.setItem('sidebarCollapsed',isCollapsed);}
-if(localStorage.getItem('sidebarCollapsed')==='true'){document.querySelector('.terminal').classList.add('sidebar-collapsed');}
+        function toggleSidebar() {
+            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.querySelector('.terminal').classList.add('sidebar-collapsed');
+        }
 </script>
 </body>
 </html>

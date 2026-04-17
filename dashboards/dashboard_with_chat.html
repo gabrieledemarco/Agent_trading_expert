@@ -17,8 +17,7 @@
         .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
         .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
         .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
-        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;transition:all 0.3s ease;}
-        .sidebar-collapsed .sidebar{width:50px;}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:scroll;}
         .sidebar-section{margin-bottom:10px;}
         .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;transition:opacity 0.2s;}
         .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
@@ -35,7 +34,7 @@
         .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
         .main{background:var(--bg-primary);overflow-y:hidden;padding:0;display:flex;flex-direction:column;}
-        .chat-area{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+        .chat-area{flex:1;overflow-y:scroll;padding:12px;display:flex;flex-direction:column;gap:8px;}
         .chat-input-row{padding:8px 12px;border-top:1px solid var(--border);background:var(--bg-secondary);display:flex;gap:8px;align-items:flex-end;}
         .chat-input{flex:1;background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:8px 10px;font-family:var(--font);font-size:12px;resize:none;min-height:36px;max-height:80px;outline:none;}
         .chat-input:focus{border-color:var(--orange);}
@@ -57,6 +56,24 @@
         .msg-bot .msg-body .bad{color:var(--red);}
         .msg-typing .msg-body{color:var(--text-muted);}
         .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+        /* Custom scrollbar styles - always visible */
+        ::-webkit-scrollbar{width:12px;height:12px;}
+        ::-webkit-scrollbar-track{background:var(--bg-primary);border-left:1px solid var(--border);}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
+        ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+        *{scrollbar-width:thin;scrollbar-color:var(--border) var(--bg-primary);}
+        .main,.chat-area{min-height:calc(100vh - 64px);}
+        .terminal { transition:grid-template-columns 0.3s ease; }
+        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
+        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
+        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
+        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
+        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
+        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
+        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
+        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
+        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
+        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
 </head>
 <body>
@@ -118,6 +135,7 @@
         <div>Trading Agent v1.1 | Research Use Only</div>
     </footer>
 </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
 
 <script>
 // SECURITY FIX: All chat output uses DOM APIs (createElement, textContent) — never innerHTML with user input.
@@ -201,8 +219,13 @@ function handleKey(e) {
 
 // Welcome message
 addMessage('bot', 'Ciao! Sono il Chat Assistant del Trading Agent.\n\nPosso risponderti su:\n  • Performance e metriche del portafoglio\n  • Modelli ML attivi e loro statistiche\n  • Stato degli agenti\n  • Paper arXiv ricercati\n  • Rischio e posizioni aperte\n\nUsa i pulsanti rapidi in basso o scrivi la tua domanda.');
-function toggleSidebar(){const terminal=document.querySelector('.terminal');const isCollapsed=terminal.classList.toggle('sidebar-collapsed');localStorage.setItem('sidebarCollapsed',isCollapsed);}
-if(localStorage.getItem('sidebarCollapsed')==='true'){document.querySelector('.terminal').classList.add('sidebar-collapsed');}
+        function toggleSidebar() {
+            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.querySelector('.terminal').classList.add('sidebar-collapsed');
+        }
 </script>
 </body>
 </html>
