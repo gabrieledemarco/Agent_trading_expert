@@ -106,7 +106,7 @@
             <div class="stat-box"><div class="stat-box-label">Win Rate</div><div class="stat-box-value negative">47%</div><div class="stat-box-sub">target &gt;55%</div></div>
             <div class="stat-box"><div class="stat-box-label">Sharpe Ratio</div><div class="stat-box-value negative">-0.39</div><div class="stat-box-sub">annualized</div></div>
             <div class="stat-box"><div class="stat-box-label">Sortino Ratio</div><div class="stat-box-value negative">-0.51</div><div class="stat-box-sub">annualized</div></div>
-            <div class="stat-box"><div class="stat-box-label">Calmar Ratio</div><div class="stat-box-value negative">-0.83</div><div class="stat-box-sub">return/maxDD</div></div>
+            <div class="stat-box"><div class="stat-box-label">Calmar Ratio</div><div class="stat-box-value negative">-1.04</div><div class="stat-box-sub">return/maxDD</div></div>
             <div class="stat-box"><div class="stat-box-label">Max DD</div><div class="stat-box-value negative">2.3%</div><div class="stat-box-sub">from peak</div></div>
             <div class="stat-box"><div class="stat-box-label">Alpha (SPY)</div><div class="stat-box-value negative">-0.8%</div><div class="stat-box-sub">Beta: 0.42</div></div>
             <div class="stat-box"><div class="stat-box-label">Profit Factor</div><div class="stat-box-value negative">0.87</div><div class="stat-box-sub">gross P/L ratio</div></div>
@@ -257,10 +257,11 @@ function switchTab(id){
     document.getElementById('tab-'+id).classList.add('active');
 }
 
+// Equity values consistent with: initial=$10,000, current=$9,941 (-0.59%), peak=$10,175, max DD=2.3%
 const eqData = {
-    '1W': { labels:['Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'], eq:[10400,10380,10350,10290,10310,10270,10240,10180,10120,10000], bm:[10400,10410,10420,10400,10415,10408,10415,10420,10410,10418] },
-    '1M': { labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'], eq:[10800,10750,10700,10680,10620,10580,10530,10450,10380,10300,10180,10000], bm:[10800,10820,10810,10840,10850,10860,10855,10870,10875,10880,10870,10890] },
-    '3M': { labels:['Jan W1','Jan W2','Jan W3','Jan W4','Feb W1','Feb W2','Feb W3','Feb W4','Mar W1','Mar W2','Mar W3','Mar W4','Apr W1','Apr W2'], eq:[11800,11750,11700,11640,11580,11500,11450,11380,11300,11200,11100,10900,10500,10000], bm:[11800,11820,11840,11870,11880,11890,11900,11920,11930,11940,11950,11960,11950,11965] }
+    '1W': { labels:['Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'], eq:[10060,10050,10035,10015,10020,10005,9990,9975,9958,9941], bm:[10060,10070,10075,10065,10072,10068,10074,10078,10073,10080] },
+    '1M': { labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'], eq:[10000,10080,10130,10175,10155,10120,10090,10060,10030,10005,9975,9941], bm:[10000,10020,10015,10035,10040,10048,10045,10055,10058,10062,10058,10065] },
+    '3M': { labels:['Jan W1','Jan W2','Jan W3','Jan W4','Feb W1','Feb W2','Feb W3','Feb W4','Mar W1','Mar W2','Mar W3','Mar W4','Apr W1','Apr W2'], eq:[10000,10045,10095,10145,10175,10160,10135,10105,10075,10050,10020,9995,9965,9941], bm:[10000,10018,10030,10048,10055,10062,10068,10078,10082,10088,10092,10098,10094,10100] }
 };
 
 let eqChart,ddChartObj,monthlyChartObj,sharpeChartObj;
@@ -284,7 +285,7 @@ function setEqPeriod(p,btn){
 function buildStaticCharts(){
     // Drawdown
     const ddCtx=document.getElementById('ddChart').getContext('2d');
-    const ddValues=[0,-0.2,-0.5,-1.1,-0.9,-1.3,-1.6,-2.1,-2.7,-2.3];
+    const ddValues=[0,-0.15,-0.25,-0.59,-0.39,-0.74,-1.06,-1.36,-1.72,-2.30];
     ddChartObj=new Chart(ddCtx,{type:'line',data:{labels:eqData['1W'].labels,datasets:[{label:'Drawdown %',data:ddValues,borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:{target:'origin',above:'rgba(255,0,0,0.07)'}}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'},max:0}}}});
 
     // Monthly Returns (deterministic)
