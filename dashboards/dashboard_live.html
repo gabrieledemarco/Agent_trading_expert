@@ -3,115 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Live Monitor | Trading Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <style>
-        :root { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414; --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa; --text-muted: #666666; --orange: #ff9900; --green: #00ff00; --red: #ff0000; --font: "Consolas", "Monaco", monospace; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { background: var(--bg-primary); color: var(--text-secondary); font-family: var(--font); font-size: 12px; height: 100%; overflow: hidden; }
-        .terminal { display: grid; grid-template-columns: 180px 1fr; grid-template-rows: 40px 1fr 24px; height: 100vh; }
-        .topbar { grid-column: 1 / -1; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
-        .topbar-brand { color: var(--orange); font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
-        .topbar-brand span { background: var(--orange); color: #000; padding: 2px 6px; border-radius: 2px; font-size: 10px; }
-        .live-indicator { display: flex; align-items: center; gap: 4px; }
-        .live-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 8px 0; display: flex; flex-direction: column; }
-        .sidebar-section { margin-bottom: 12px; }
-        .sidebar-title { padding: 4px 12px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
-        .sidebar-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-secondary); }
-        .sidebar-item:hover { background: var(--bg-tertiary); }
-        .sidebar-item.active { color: var(--orange); background: var(--bg-tertiary); }
-        .status-indicator { margin-top: auto; padding: 8px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 10px; }
-        .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
-        .main { background: var(--bg-primary); overflow-y: auto; padding: 8px; }
-        .ticker { background: var(--bg-secondary); border: 1px solid var(--border); padding: 8px 12px; display: flex; gap: 24px; margin-bottom: 8px; }
-        .ticker-label { color: var(--text-muted); }
-        .ticker-value { color: var(--text-primary); font-weight: bold; }
-        .ticker-change.positive { color: var(--green); }
-        .ticker-change.negative { color: var(--red); }
-        .stats-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 8px; }
-        .stat-box { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; text-align: center; }
-        .stat-box-label { color: var(--text-muted); font-size: 10px; margin-bottom: 4px; }
-        .stat-box-value { color: var(--text-primary); font-size: 18px; font-weight: bold; }
-        .card { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; margin-bottom: 8px; }
-        .card-title { color: var(--orange); font-size: 11px; margin-bottom: 8px; }
-        .chart-container { height: 150px; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { text-align: left; padding: 4px 8px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: normal; }
-        td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
-        .pnl-positive { color: var(--green); }
-        .pnl-negative { color: var(--red); }
-        .log-console { background: var(--bg-primary); border: 1px solid var(--border); padding: 8px; height: 120px; overflow-y: auto; font-size: 10px; }
-        .log-entry { padding: 2px 0; }
-        .log-entry .time { color: var(--text-muted); }
-        .log-entry .info { color: var(--text-secondary); }
-        .bottombar { grid-column: 1 / -1; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: var(--text-muted); }
+        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;}
+        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;display:flex;align-items:center;gap:10px;}
+        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+        .live-pill{display:flex;align-items:center;gap:5px;background:rgba(0,255,0,0.08);border:1px solid rgba(0,255,0,0.2);padding:2px 8px;font-size:10px;color:var(--green);}
+        .live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 1.2s infinite;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+        .sidebar-section{margin-bottom:10px;}
+        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;}
+        .sidebar-item:hover{background:var(--bg-tertiary);}
+        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
+        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;}
+        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+        .main{background:var(--bg-primary);overflow-y:auto;padding:8px;}
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+        .grid-3{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:8px;}
+        .stat-box{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
+        .stat-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
+        .stat-value{font-size:16px;font-weight:bold;}
+        .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;}
+        .card-title{color:var(--orange);font-size:11px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+        .chart-container{height:120px;position:relative;}
+        table{width:100%;border-collapse:collapse;font-size:11px;}
+        th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:normal;font-size:10px;text-transform:uppercase;}
+        td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
+        tr:hover{background:var(--bg-tertiary);}
+        .positive{color:var(--green);}
+        .negative{color:var(--red);}
+        .neutral{color:var(--text-primary);}
+        .log-console{background:var(--bg-primary);border:1px solid var(--border);padding:8px;height:130px;overflow-y:auto;font-size:10px;}
+        .log-entry{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+        .log-time{color:var(--text-muted);}
+        .log-info{color:var(--text-secondary);}
+        .log-warn{color:var(--yellow);}
+        .log-success{color:var(--green);}
+        .log-error{color:var(--red);}
+        .log-tag{color:var(--orange);}
+        .alert-card{background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.25);padding:10px 12px;margin-bottom:8px;}
+        .alert-title{color:var(--yellow);font-size:11px;margin-bottom:6px;}
+        .alert-item{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11px;}
+        .alert-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+        .badge{padding:1px 6px;border-radius:3px;font-size:9px;}
+        .badge-long{background:rgba(0,255,0,0.1);color:var(--green);}
+        .badge-short{background:rgba(255,0,0,0.1);color:var(--red);}
+        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <header class="topbar">
-            <div class="topbar-brand"><span>TA</span> LIVE MONITOR<div class="live-indicator"><span class="live-dot"></span>LIVE</div></div>
-            <div>Last Update: <span id="lastUpdate">--:--:--</span></div>
-        </header>
-        <nav class="sidebar">
-            <div class="sidebar-section"><div class="sidebar-title">Dashboard</div>
-                <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+<div class="terminal">
+    <header class="topbar">
+        <div class="topbar-brand"><span>TA</span> LIVE MONITOR <div class="live-pill"><span class="live-dot"></span>LIVE</div></div>
+        <div style="font-size:10px;">Tick: <span id="tickCount" style="color:var(--orange)">0</span> | Update: <span id="lastUpdate" style="color:var(--orange)">--:--:--</span></div>
+    </header>
+
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Dashboard</div>
+            <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Analisi</div>
+            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+            <a href="dashboard_live.html" class="sidebar-item active"><span>▶</span> Live Monitor</a>
+            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge" style="background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;">6</span></a>
+            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Strategie</div>
+            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies</a>
+            <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
+            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Sistema</div>
+            <a href="dashboard_agents.html" class="sidebar-item"><span>▧</span> Agents</a>
+            <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
+        </div>
+        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
+    </nav>
+
+    <main class="main">
+        <div class="alert-card">
+            <div class="alert-title">&#9888; ACTIVE ALERTS</div>
+            <div class="alert-item"><span class="alert-dot" style="background:var(--red)"></span>Intraday Momentum: Sharpe sotto soglia (-0.39 &lt; 0.0) — revisione consigliata</div>
+            <div class="alert-item"><span class="alert-dot" style="background:var(--yellow)"></span>Momentum Sharpness: Max DD vicino al limite (4.7% / 5.0%)</div>
+            <div class="alert-item"><span class="alert-dot" style="background:var(--blue)"></span>Portfolio Opt v2: Validazione in corso, nessun trade attivo</div>
+        </div>
+
+        <div class="grid-3">
+            <div class="stat-box"><div class="stat-label">Equity</div><div class="stat-value neutral" id="equityVal">$10,000</div></div>
+            <div class="stat-box"><div class="stat-label">Daily P&amp;L</div><div class="stat-value negative" id="pnlVal">-$190</div></div>
+            <div class="stat-box"><div class="stat-label">Positions</div><div class="stat-value neutral" id="posCount">3</div></div>
+            <div class="stat-box"><div class="stat-label">Unrealized</div><div class="stat-value positive" id="unrealVal">+$192</div></div>
+            <div class="stat-box"><div class="stat-label">Realized</div><div class="stat-value negative" id="realVal">-$382</div></div>
+            <div class="stat-box"><div class="stat-label">Win Rate (live)</div><div class="stat-value negative">47%</div></div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title"><span>EQUITY (SIMULATED LIVE)</span></div>
+                <div class="chart-container"><canvas id="liveChart"></canvas></div>
             </div>
-            <div class="sidebar-section"><div class="sidebar-title">Analisi</div>
-                <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
-                <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Documentation</a>
-                <a href="dashboard_live.html" class="sidebar-item active"><span>▶</span> Live Monitor</a>
-            </div>
-            <div class="sidebar-section"><div class="sidebar-title">Sistema</div>
-                <a href="dashboard_agents.html" class="sidebar-item"><span>▧</span> Agents</a>
-                <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
-            </div>
-            <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
-        </nav>
-        <main class="main">
-            <div class="ticker">
-                <div><span class="ticker-label">EQUITY </span><span class="ticker-value">$10,000</span></div>
-                <div><span class="ticker-label">P&amp;L </span><span class="ticker-change negative">-$190</span></div>
-                <div><span class="ticker-label">RETURN </span><span class="ticker-change negative">-1.90%</span></div>
-                <div><span class="ticker-label">POSITIONS </span><span class="ticker-value">3</span></div>
-            </div>
-            <div class="stats-row">
-                <div class="stat-box"><div class="stat-box-label">EQUITY</div><div class="stat-box-value">$10,000</div></div>
-                <div class="stat-box"><div class="stat-box-label">DAILY P&amp;L</div><div class="stat-box-value" style="color:var(--red)">-$190</div></div>
-                <div class="stat-box"><div class="stat-box-label">WIN RATE</div><div class="stat-box-value">47%</div></div>
-                <div class="stat-box"><div class="stat-box-label">SHARPE</div><div class="stat-box-value" style="color:var(--red)">-0.39</div></div>
-                <div class="stat-box"><div class="stat-box-label">OPEN POS</div><div class="stat-box-value">3</div></div>
-                <div class="stat-box"><div class="stat-box-label">MAX DD</div><div class="stat-box-value" style="color:var(--red)">2.3%</div></div>
-            </div>
-            <div class="card"><div class="card-title">EQUITY CURVE (LIVE)</div><canvas id="chart" class="chart-container"></canvas></div>
-            <div class="card"><div class="card-title">OPEN POSITIONS</div>
-                <table><thead><tr><th>SYMBOL</th><th>ENTRY</th><th>CURRENT</th><th>P&amp;L</th><th>HOLD</th></tr></thead>
-                <tbody>
-                    <tr><td style="color:var(--text-primary)">AAPL</td><td>$263.11</td><td>$265.23</td><td class="pnl-positive">+$212</td><td>2d</td></tr>
-                    <tr><td style="color:var(--text-primary)">MSFT</td><td>$418.54</td><td>$417.12</td><td class="pnl-negative">-$142</td><td>1d</td></tr>
-                    <tr><td style="color:var(--text-primary)">GOOG</td><td>$175.23</td><td>$176.45</td><td class="pnl-positive">+$122</td><td>3h</td></tr>
-                </tbody>
+            <div class="card">
+                <div class="card-title"><span>OPEN POSITIONS</span></div>
+                <table>
+                    <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>Unreal P&amp;L</th><th>Hold</th></tr></thead>
+                    <tbody>
+                        <tr><td class="neutral">AAPL</td><td><span class="badge badge-long">LONG</span></td><td>3.8</td><td>$263.11</td><td id="aaplMark">$265.23</td><td class="positive" id="aaplPnl">+$8.06</td><td>2d</td></tr>
+                        <tr><td class="neutral">MSFT</td><td><span class="badge badge-short">SHORT</span></td><td>2.1</td><td>$418.54</td><td id="msftMark">$417.12</td><td class="positive" id="msftPnl">+$2.98</td><td>1d</td></tr>
+                        <tr><td class="neutral">GOOG</td><td><span class="badge badge-long">LONG</span></td><td>5.2</td><td>$175.23</td><td id="googMark">$176.45</td><td class="positive" id="googPnl">+$6.34</td><td>3h</td></tr>
+                    </tbody>
                 </table>
             </div>
-            <div class="card"><div class="card-title">SYSTEM LOG</div>
-                <div class="log-console" id="log-console">
-                    <div class="log-entry"><span class="time">[17:35:01]</span> <span class="info">Model loaded: model_intraday_momentum</span></div>
-                    <div class="log-entry"><span class="time">[17:35:01]</span> <span class="info">Connected to data feed</span></div>
-                    <div class="log-entry"><span class="time">[17:34:58]</span> <span class="info">Fetching live prices...</span></div>
-                    <div class="log-entry"><span class="time">[17:34:55]</span> <span class="info">Position opened: AAPL BUY 3.8</span></div>
-                </div>
-            </div>
-        </main>
-        <footer class="bottombar">CONN: <span style="color:var(--green)">CONNECTED</span> | MODE: <span style="color:var(--orange)">PAPER</span> | Trading Agent v1.0</footer>
-    </div>
-    <script>
-        function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
-        setInterval(updateTime, 1000); updateTime();
-        const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
-        let equity = 10000;
-        function draw() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; const data = [10000,10050,10080,10020,10050,10090,10050,10100,10050,10080]; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle='#333'; ctx.lineWidth=1; for(let i=0;i<canvas.height;i+=20){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(canvas.width,i);ctx.stroke();} const min=Math.min(...data)-50,max=Math.max(...data)+50,range=max-min; ctx.beginPath(); data.forEach((v,i)=>{const x=(i/(data.length-1))*canvas.width,y=canvas.height-((v-min)/range)*canvas.height; if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}); ctx.strokeStyle='#ff9900'; ctx.lineWidth=1.5; ctx.stroke(); }
-        window.addEventListener('resize',draw); draw();
-    </script>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span>SYSTEM LOG (LIVE)</span><span style="color:var(--text-muted);font-size:10px;" id="logCounter">0 events</span></div>
+            <div class="log-console" id="logConsole"></div>
+        </div>
+    </main>
+
+    <footer class="bottombar">
+        <div style="display:flex;gap:16px;">
+            <span>CONN: <span style="color:var(--green)">CONNECTED</span></span>
+            <span>MODE: <span style="color:var(--orange)">PAPER</span></span>
+            <span>FEED: <span id="feedStatus" style="color:var(--green)">ACTIVE</span></span>
+        </div>
+        <div>Trading Agent v1.1 | Research Use Only</div>
+    </footer>
+</div>
+
+<script>
+let tick = 0;
+let logCount = 0;
+let equityData = [];
+let equityLabels = [];
+let liveChart;
+let equity = 10000;
+const aaplBase = 265.23, msftBase = 417.12, googBase = 176.45;
+
+const logMessages = [
+    ['info','[TradingExecutor]','Checking signal for AAPL on 5m bar'],
+    ['info','[HFAgent]','Cointegration spread: SPY/QQQ = 0.021'],
+    ['info','[MonitorAgent]','Portfolio VaR(95%) = $210 — within limit'],
+    ['warn','[RiskMgr]','Momentum Sharpness DD approaching limit: 4.7%'],
+    ['info','[TradingExecutor]','No new signals generated this bar'],
+    ['success','[HFAgent]','Entry signal: BUY SPY @ market'],
+    ['info','[MonitorAgent]','System health check: all components OK'],
+    ['info','[ResearchAgent]','Scheduled run in 2h 14m'],
+    ['warn','[RiskMgr]','Intraday Momentum Sharpe below threshold'],
+    ['info','[TradingExecutor]','Mark-to-market update complete'],
+    ['info','[DataFeed]','Bar close received: AAPL 5m'],
+    ['success','[MLEngineer]','Portfolio Opt v2 validation: step 3/5'],
+];
+
+function addLog(type, tag, msg) {
+    const console_ = document.getElementById('logConsole');
+    const t = new Date().toLocaleTimeString();
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'log-time';
+    timeSpan.textContent = '[' + t + '] ';
+
+    const tagSpan = document.createElement('span');
+    tagSpan.className = 'log-tag';
+    tagSpan.textContent = tag + ' ';
+
+    const msgSpan = document.createElement('span');
+    msgSpan.className = 'log-' + type;
+    msgSpan.textContent = msg;
+
+    entry.appendChild(timeSpan);
+    entry.appendChild(tagSpan);
+    entry.appendChild(msgSpan);
+
+    console_.insertBefore(entry, console_.firstChild);
+    // Keep max 50 entries
+    while (console_.children.length > 50) {
+        console_.removeChild(console_.lastChild);
+    }
+    logCount++;
+    document.getElementById('logCounter').textContent = logCount + ' events';
+}
+
+function buildLiveChart() {
+    const ctx = document.getElementById('liveChart').getContext('2d');
+    liveChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: equityLabels, datasets: [{ label: 'Equity', data: equityData, borderColor: '#ff9900', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] },
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, maxTicksLimit: 8 } },
+                y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, callback: v => '$' + v.toLocaleString() } }
+            }
+        }
+    });
+}
+
+function updateLivePrices() {
+    // Simulate small price movements
+    const aaplDelta = (Math.random() - 0.48) * 0.5;
+    const msftDelta = (Math.random() - 0.52) * 0.4;
+    const googDelta = (Math.random() - 0.48) * 0.3;
+
+    const aaplMark = aaplBase + aaplDelta + (tick * 0.02);
+    const msftMark = msftBase + msftDelta - (tick * 0.01);
+    const googMark = googBase + googDelta + (tick * 0.015);
+
+    const aaplPnl = (aaplMark - 263.11) * 3.8;
+    const msftPnl = (418.54 - msftMark) * 2.1; // short
+    const googPnl = (googMark - 175.23) * 5.2;
+
+    document.getElementById('aaplMark').textContent = '$' + aaplMark.toFixed(2);
+    document.getElementById('msftMark').textContent = '$' + msftMark.toFixed(2);
+    document.getElementById('googMark').textContent = '$' + googMark.toFixed(2);
+
+    const fmt = (v) => (v >= 0 ? '+' : '') + '$' + v.toFixed(2);
+    const setColor = (el, v) => { el.textContent = fmt(v); el.className = v >= 0 ? 'positive' : 'negative'; };
+    setColor(document.getElementById('aaplPnl'), aaplPnl);
+    setColor(document.getElementById('msftPnl'), msftPnl);
+    setColor(document.getElementById('googPnl'), googPnl);
+
+    const totalUnreal = aaplPnl + msftPnl + googPnl;
+    const unrealEl = document.getElementById('unrealVal');
+    unrealEl.textContent = fmt(totalUnreal);
+    unrealEl.className = 'stat-value ' + (totalUnreal >= 0 ? 'positive' : 'negative');
+}
+
+function tick_() {
+    tick++;
+    const t = new Date().toLocaleTimeString();
+    document.getElementById('lastUpdate').textContent = t;
+    document.getElementById('tickCount').textContent = tick;
+
+    // Equity simulation: small random walk
+    const delta = (Math.random() - 0.51) * 15;
+    equity = Math.max(9500, Math.min(10500, equity + delta));
+    equityData.push(Math.round(equity));
+    equityLabels.push(t);
+    if (equityData.length > 60) { equityData.shift(); equityLabels.shift(); }
+
+    if (liveChart) {
+        liveChart.data.labels = equityLabels;
+        liveChart.data.datasets[0].data = equityData;
+        liveChart.update('none');
+    }
+
+    // Update equity display
+    document.getElementById('equityVal').textContent = '$' + Math.round(equity).toLocaleString();
+    const pnl = equity - 10190;
+    const pnlEl = document.getElementById('pnlVal');
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + Math.round(Math.abs(pnl));
+    pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
+
+    updateLivePrices();
+
+    // Add a log message every 3-5 ticks
+    if (tick % 4 === 0) {
+        const entry = logMessages[Math.floor(tick / 4) % logMessages.length];
+        addLog(entry[0], entry[1], entry[2]);
+    }
+}
+
+// Initialize
+buildLiveChart();
+addLog('success', '[System]', 'Live monitor started');
+addLog('info', '[MonitorAgent]', 'All agents nominal');
+addLog('info', '[DataFeed]', 'Connected to price feed');
+
+setInterval(tick_, 2000);
+tick_();
+</script>
 </body>
 </html>

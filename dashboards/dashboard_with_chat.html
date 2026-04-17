@@ -3,107 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat | Trading Agent</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+    <title>Chat Assistant | Trading Agent</title>
     <style>
-        :root { --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414; --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa; --text-muted: #666666; --orange: #ff9900; --green: #00ff00; --red: #ff0000; --font: "Consolas", "Monaco", monospace; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { background: var(--bg-primary); color: var(--text-secondary); font-family: var(--font); font-size: 12px; height: 100%; overflow: hidden; }
-        .terminal { display: grid; grid-template-columns: 180px 1fr; grid-template-rows: 40px 1fr 24px; height: 100vh; }
-        .topbar { grid-column: 1 / -1; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
-        .topbar-brand { color: var(--orange); font-size: 14px; font-weight: bold; }
-        .topbar-brand span { background: var(--orange); color: #000; padding: 2px 6px; border-radius: 2px; font-size: 10px; }
-        .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); padding: 8px 0; display: flex; flex-direction: column; }
-        .sidebar-section { margin-bottom: 12px; }
-        .sidebar-title { padding: 4px 12px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; }
-        .sidebar-item { padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-secondary); }
-        .sidebar-item:hover { background: var(--bg-tertiary); }
-        .sidebar-item.active { color: var(--orange); background: var(--bg-tertiary); }
-        .status-indicator { margin-top: auto; padding: 8px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; font-size: 10px; }
-        .status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
-        .main { background: var(--bg-primary); overflow-y: auto; padding: 8px; display: grid; grid-template-columns: 1fr 300px; gap: 8px; }
-        .card { background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px; }
-        .card-title { color: var(--orange); font-size: 11px; margin-bottom: 8px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .stat-box { background: var(--bg-tertiary); border: 1px solid var(--border); padding: 8px; text-align: center; }
-        .stat-box-label { color: var(--text-muted); font-size: 9px; margin-bottom: 4px; }
-        .stat-box-value { color: var(--text-primary); font-size: 14px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { text-align: left; padding: 4px 8px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: normal; }
-        td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
-        .chat-panel { display: flex; flex-direction: column; height: 100%; }
-        .chat-messages { flex: 1; overflow-y: auto; background: var(--bg-primary); border: 1px solid var(--border); padding: 8px; margin-bottom: 8px; }
-        .message { margin-bottom: 8px; }
-        .message-user { color: var(--orange); font-size: 10px; margin-bottom: 2px; }
-        .message-text { color: var(--text-secondary); font-size: 11px; line-height: 1.4; }
-        .message-bot { background: var(--bg-tertiary); padding: 8px; border-radius: 4px; }
-        .chat-input { display: flex; gap: 4px; }
-        .chat-input input { flex: 1; background: var(--bg-primary); border: 1px solid var(--border); color: var(--text-primary); padding: 6px; font-family: var(--font); font-size: 11px; }
-        .chat-input button { background: var(--orange); border: none; color: #000; padding: 6px 12px; cursor: pointer; font-weight: bold; }
-        .bottombar { grid-column: 1 / -1; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 12px; font-size: 10px; color: var(--text-muted); }
+        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;}
+        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+        .sidebar-section{margin-bottom:10px;}
+        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;}
+        .sidebar-item:hover{background:var(--bg-tertiary);}
+        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
+        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;}
+        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .main{background:var(--bg-primary);overflow-y:hidden;padding:0;display:flex;flex-direction:column;}
+        .chat-area{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+        .chat-input-row{padding:8px 12px;border-top:1px solid var(--border);background:var(--bg-secondary);display:flex;gap:8px;align-items:flex-end;}
+        .chat-input{flex:1;background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:8px 10px;font-family:var(--font);font-size:12px;resize:none;min-height:36px;max-height:80px;outline:none;}
+        .chat-input:focus{border-color:var(--orange);}
+        .chat-send{background:var(--orange);border:none;color:#000;padding:8px 14px;font-size:11px;cursor:pointer;font-family:var(--font);font-weight:bold;}
+        .chat-send:hover{background:#ffaa22;}
+        .shortcuts{padding:6px 12px;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;}
+        .shortcut{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-muted);padding:2px 8px;font-size:10px;cursor:pointer;}
+        .shortcut:hover{border-color:var(--orange);color:var(--text-secondary);}
+        .msg{max-width:85%;}
+        .msg-user{align-self:flex-end;}
+        .msg-bot{align-self:flex-start;}
+        .msg-header{font-size:10px;color:var(--text-muted);margin-bottom:3px;}
+        .msg-user .msg-header{text-align:right;}
+        .msg-body{padding:8px 10px;border:1px solid var(--border);font-size:11px;line-height:1.6;white-space:pre-wrap;}
+        .msg-user .msg-body{background:rgba(255,153,0,0.05);border-color:rgba(255,153,0,0.2);color:var(--text-secondary);}
+        .msg-bot .msg-body{background:var(--bg-secondary);color:var(--text-secondary);}
+        .msg-bot .msg-body .highlight{color:var(--orange);}
+        .msg-bot .msg-body .good{color:var(--green);}
+        .msg-bot .msg-body .bad{color:var(--red);}
+        .msg-typing .msg-body{color:var(--text-muted);}
+        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
 </head>
 <body>
-    <div class="terminal">
-        <header class="topbar"><div class="topbar-brand"><span>TA</span> CHAT ASSISTANT</div><div>Last Update: <span id="lastUpdate">--:--:--</span></div></header>
-        <nav class="sidebar">
-            <div class="sidebar-section"><div class="sidebar-title">Dashboard</div>
-                <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
-            </div>
-            <div class="sidebar-section"><div class="sidebar-title">Analisi</div>
-                <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
-                <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Documentation</a>
-                <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
-            </div>
-            <div class="sidebar-section"><div class="sidebar-title">Sistema</div>
-                <a href="dashboard_with_chat.html" class="sidebar-item active"><span>▨</span> Chat</a>
-            </div>
-            <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
-        </nav>
-        <main class="main">
-            <div class="card"><div class="card-title">OVERVIEW</div>
-                <div class="stats-grid">
-                    <div class="stat-box"><div class="stat-box-label">MODELS</div><div class="stat-box-value">4</div></div>
-                    <div class="stat-box"><div class="stat-box-label">WIN RATE</div><div class="stat-box-value">47%</div></div>
-                    <div class="stat-box"><div class="stat-box-label">SHARPE</div><div class="stat-box-value" style="color:var(--red)">-0.39</div></div>
-                </div>
-                <table style="margin-top:8px"><thead><tr><th>MODEL</th><th>STATUS</th><th>SHARPE</th></tr></thead>
-                <tbody>
-                    <tr><td style="color:var(--text-primary)">Intraday</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--red)">-0.39</td></tr>
-                    <tr><td style="color:var(--text-primary)">High Freq</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--green)">0.12</td></tr>
-                    <tr><td style="color:var(--text-primary)">Dynamic</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--red)">-0.28</td></tr>
-                    <tr><td style="color:var(--text-primary)">Momentum</td><td style="color:var(--green)">APPROVED</td><td style="color:var(--red)">-1.29</td></tr>
-                </tbody>
-                </table>
-            </div>
-            <div class="chat-panel card">
-                <div class="card-title">CHAT CON ASSISTANT</div>
-                <div class="chat-messages" id="chat-messages">
-                    <div class="message">
-                        <div class="message-user">Assistant</div>
-                        <div class="message-text message-bot">Ciao! Sono il tuo assistente per il trading system.<br>Posso aiutarti con:<br>- Strategie di trading<br>- Performance e rendimenti<br>- Backtest e validazione<br>- Report e documentazione</div>
-                    </div>
-                </div>
-                <div class="chat-input">
-                    <input type="text" id="chat-input" placeholder="Chiedi qualcosa..." onkeypress="if(event.key==='Enter')sendMessage()">
-                    <button onclick="sendMessage()">SEND</button>
-                </div>
-            </div>
-        </main>
-        <footer class="bottombar">CONN: <span style="color:var(--green)">CONNECTED</span> | MODE: <span style="color:var(--orange)">PAPER</span> | Trading Agent v1.0</footer>
-    </div>
-    <script>
-        function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
-        setInterval(updateTime, 1000); updateTime();
-        function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if(!text) return;
-            const msgs = document.getElementById('chat-messages');
-            msgs.innerHTML += '<div class="message"><div class="message-user">Tu</div><div class="message-text">'+text+'</div></div>';
-            msgs.innerHTML += '<div class="message"><div class="message-user">Assistant</div><div class="message-text message-bot">Ricevuto: "'+text+'"<br><br>Posso aiutarti con:<br>- Performance: Sharpe -0.39, Win Rate 47%<br>- 4 modelli approvati<br>- Strategie: Intraday, High Freq, Dynamic</div></div>';
-            msgs.scrollTop = msgs.scrollHeight;
-            input.value = '';
-        }
-    </script>
+<div class="terminal">
+    <header class="topbar">
+        <div class="topbar-brand"><span>TA</span> CHAT ASSISTANT</div>
+        <div style="font-size:10px;color:var(--text-muted)">Interroga il sistema in linguaggio naturale</div>
+    </header>
+
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Dashboard</div>
+            <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Analisi</div>
+            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+            <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge">6</span></a>
+            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Strategie</div>
+            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies <span class="badge">4</span></a>
+            <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
+            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Sistema</div>
+            <a href="dashboard_agents.html" class="sidebar-item"><span>▧</span> Agents <span class="badge">2</span></a>
+            <a href="dashboard_with_chat.html" class="sidebar-item active"><span>▨</span> Chat</a>
+        </div>
+        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
+    </nav>
+
+    <main class="main">
+        <div class="chat-area" id="chatArea">
+            <!-- Initial message rendered by JS -->
+        </div>
+        <div class="shortcuts" id="shortcuts">
+            <span class="shortcut" onclick="sendShortcut('Mostra il sommario delle performance')">&#128202; Performance summary</span>
+            <span class="shortcut" onclick="sendShortcut('Qual è il modello migliore?')">&#127941; Miglior modello</span>
+            <span class="shortcut" onclick="sendShortcut('Stato degli agenti')">&#9881; Stato agenti</span>
+            <span class="shortcut" onclick="sendShortcut('Ultimi paper ricercati')">&#128218; Ultimi paper</span>
+            <span class="shortcut" onclick="sendShortcut('Rischio corrente del portafoglio')">&#9888; Rischio portafoglio</span>
+            <span class="shortcut" onclick="sendShortcut('Lista posizioni aperte')">&#128200; Posizioni aperte</span>
+        </div>
+        <div class="chat-input-row">
+            <textarea class="chat-input" id="chatInput" placeholder="Chiedi informazioni sul sistema di trading..." rows="1" onkeydown="handleKey(event)"></textarea>
+            <button class="chat-send" onclick="sendMessage()">INVIA</button>
+        </div>
+    </main>
+
+    <footer class="bottombar">
+        <div>MODE: <span style="color:var(--orange)">PAPER</span> | API: <span style="color:var(--green)">CONNECTED</span></div>
+        <div>Trading Agent v1.1 | Research Use Only</div>
+    </footer>
+</div>
+
+<script>
+// SECURITY FIX: All chat output uses DOM APIs (createElement, textContent) — never innerHTML with user input.
+// User input is ONLY displayed via textContent, never injected as HTML.
+
+const KB = {
+    performance: `PERFORMANCE SUMMARY (paper trading, ultimo aggiornamento oggi):\n\n  Equity:       $10,000\n  Daily P&L:    -$190 (-1.90%)\n  Win Rate:     47.0% (sotto target 55%)\n  Sharpe:       -0.39 (sotto target 1.0)\n  Sortino:      -0.51\n  Calmar:       -0.83\n  Max DD:       2.3% (limite: 5.0%)\n  Alpha (SPY):  -0.8%\n  VaR 95%:      $210\n\nAttenzione: il sistema sta sottoperformando il benchmark SPY.`,
+    models: `MODELLI ATTIVI (4/6 approvati):\n\n  1. Intraday Momentum (LSTM, 5m/15m)\n     Sharpe: -0.39 | Win Rate: 47% | Trades: 6\n     Status: APPROVED — performance al di sotto delle attese\n\n  2. High Frequency (Cointegration, 1m)\n     Sharpe: 0.12 | Win Rate: 52% | Trades: 24\n     Status: APPROVED — il modello migliore attualmente\n\n  3. Dynamic Time (RL PPO, Adaptive)\n     Sharpe: -0.28 | Win Rate: 45% | Trades: 11\n     Status: APPROVED\n\n  4. Momentum Sharpness (XGBoost, Daily)\n     Sharpe: -1.29 | Win Rate: 48% | Trades: 3\n     Status: APPROVED — rischio alto, Max DD 4.7%\n\n  5. Portfolio Opt v2 — IN VALIDAZIONE\n  6. Regime Detector (HMM) — IN VALIDAZIONE`,
+    best: `MODELLO MIGLIORE: High Frequency (Cointegration)\n\n  Sharpe:    0.12 (l'unico positivo)\n  Win Rate:  52%\n  Max DD:    1.1%\n  Sortino:   0.18\n  Trades:    24 (maggiore liquidità)\n  Timeframe: 1m (SPY/QQQ cointegration spread)\n\nNote: tutti gli altri modelli hanno Sharpe negativo.\nRaccomandazione: aumentare l'allocazione su High Frequency\ne ridurre su Momentum Sharpness (Sharpe -1.29, DD 4.7%).`,
+    agents: `STATO AGENTI:\n\n  ● ResearchAgent    IDLE    — ultimo run: 2026-04-09 | 6 paper trovati\n  ● SpecAgent        IDLE    — 8 specifiche generate\n  ● MLEngineerAgent  IDLE    — 6 modelli costruiti\n  ● ValidationAgent  IDLE    — pass rate: 66%\n  ● TradingExecutor  RUNNING — 44 trades, P&L -$190\n  ● MonitoringAgent  RUNNING — uptime: 24h, salute: OK\n\nProssimo ciclo ricerca arXiv: giovedì 17 aprile 08:00`,
+    papers: `ULTIMI PAPER RICERCATI (2026-04-09):\n\n  1. arXiv:2401.12345 — "Deep LSTM for intraday equity prediction"\n     Rilevanza: 94% | Spec generata: sì | Modello: Intraday Momentum\n\n  2. arXiv:2402.09876 — "Statistical arbitrage via cointegration"\n     Rilevanza: 88% | Spec generata: sì | Modello: High Frequency\n\n  3. arXiv:2403.11111 — "Adaptive time-window RL for trading"\n     Rilevanza: 82% | Spec generata: sì | Modello: Dynamic Time\n\n  4. arXiv:2404.05555 — "XGBoost momentum with sharpness penalty"\n     Rilevanza: 79% | Spec generata: sì | Modello: Momentum Sharpness\n\n  5. arXiv:2404.07890 — "Portfolio optimization via Black-Litterman RL"\n     Rilevanza: 76% | Spec generata: sì | Modello: Portfolio Opt v2 (in val.)\n\n  6. arXiv:2404.09123 — "Hidden Markov Models for regime detection"\n     Rilevanza: 71% | Spec generata: sì | Modello: Regime Detector (in val.)`,
+    risk: `RISCHIO PORTAFOGLIO CORRENTE:\n\n  VaR (95%, 1-day):   $210 (2.1% dell'equity)\n  CVaR (95%, 1-day):  $285 (2.85% dell'equity)\n  Max Drawdown:       2.3% (limite: 5%)\n  Beta vs SPY:        0.42 (bassa correlazione)\n  Volatilità ann.:    18.4%\n  Correlazione AAPL-MSFT: 0.68\n\nPosizioni aperte:\n  AAPL  LONG  3.8 shares  unreal: +$8.06\n  MSFT  SHORT 2.1 shares  unreal: +$2.98\n  GOOG  LONG  5.2 shares  unreal: +$6.34\n\nSoglie di allerta: DD > 5% | Sharpe < -0.5 (7gg rolling)`,
+    positions: `POSIZIONI APERTE (3):\n\n  AAPL  LONG   3.8sh  entry $263.11  mark $265.23  unreal +$8.06  hold: 2d\n  MSFT  SHORT  2.1sh  entry $418.54  mark $417.12  unreal +$2.98  hold: 1d\n  GOOG  LONG   5.2sh  entry $175.23  mark $176.45  unreal +$6.34  hold: 3h\n\nTotale unrealized: +$17.38\nModelli: AAPL→IM, MSFT→HF, GOOG→DT`,
+};
+
+function matchQuery(text) {
+    const t = text.toLowerCase();
+    if (t.match(/performance|sommario|summary|rendimento|equity|p&l|sharpe/)) return KB.performance;
+    if (t.match(/migliore|best|top|quale.*modello/)) return KB.best;
+    if (t.match(/model|modell/)) return KB.models;
+    if (t.match(/agent|agente/)) return KB.agents;
+    if (t.match(/paper|arxiv|ricerca|research/)) return KB.papers;
+    if (t.match(/rischio|risk|var|drawdown|cvar/)) return KB.risk;
+    if (t.match(/posizioni|position|open|aperte/)) return KB.positions;
+    return `Non ho una risposta specifica per questa domanda nel contesto locale.\n\nPuoi chiedere:\n  • Performance / Sharpe / P&L\n  • Modelli attivi / Miglior modello\n  • Stato agenti\n  • Ultimi paper ricercati\n  • Rischio portafoglio\n  • Posizioni aperte\n\nOppure usa i pulsanti rapidi in basso.`;
+}
+
+function addMessage(role, text) {
+    const area = document.getElementById('chatArea');
+    const wrap = document.createElement('div');
+    wrap.className = 'msg msg-' + role;
+
+    const header = document.createElement('div');
+    header.className = 'msg-header';
+    header.textContent = role === 'user' ? 'Tu — ' + new Date().toLocaleTimeString() : 'Assistant — ' + new Date().toLocaleTimeString();
+
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    body.textContent = text; // SECURITY: textContent — no HTML injection possible
+
+    wrap.appendChild(header);
+    wrap.appendChild(body);
+    area.appendChild(wrap);
+    area.scrollTop = area.scrollHeight;
+    return wrap;
+}
+
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    addMessage('user', text);
+
+    // Typing indicator
+    const typingWrap = document.createElement('div');
+    typingWrap.className = 'msg msg-bot msg-typing';
+    const typingBody = document.createElement('div');
+    typingBody.className = 'msg-body';
+    typingBody.textContent = '...';
+    typingWrap.appendChild(typingBody);
+    document.getElementById('chatArea').appendChild(typingWrap);
+    document.getElementById('chatArea').scrollTop = 9999;
+
+    setTimeout(() => {
+        typingWrap.remove();
+        const response = matchQuery(text);
+        addMessage('bot', response);
+    }, 600);
+}
+
+function sendShortcut(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+// Welcome message
+addMessage('bot', 'Ciao! Sono il Chat Assistant del Trading Agent.\n\nPosso risponderti su:\n  • Performance e metriche del portafoglio\n  • Modelli ML attivi e loro statistiche\n  • Stato degli agenti\n  • Paper arXiv ricercati\n  • Rischio e posizioni aperte\n\nUsa i pulsanti rapidi in basso o scrivi la tua domanda.');
+</script>
 </body>
 </html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+    <title>Research | Trading Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <style>
+        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;}
+        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+        .topbar-actions{display:flex;gap:6px;align-items:center;}
+        .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--font);}
+        .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+        .search-input{background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-family:var(--font);font-size:11px;width:200px;outline:none;}
+        .search-input:focus{border-color:var(--orange);}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+        .sidebar-section{margin-bottom:10px;}
+        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;}
+        .sidebar-item:hover{background:var(--bg-tertiary);}
+        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
+        .sidebar-item.active .badge{background:rgba(255,153,0,0.15);color:var(--orange);}
+        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;}
+        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .main{background:var(--bg-primary);overflow-y:hidden;display:grid;grid-template-columns:1fr 340px;gap:0;height:100%;}
+        .paper-list{overflow-y:auto;padding:8px;border-right:1px solid var(--border);}
+        .paper-detail{overflow-y:auto;padding:8px;background:var(--bg-secondary);}
+        .filter-bar{display:flex;gap:6px;margin-bottom:8px;align-items:center;flex-wrap:wrap;}
+        .filter-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 8px;font-size:10px;cursor:pointer;font-family:var(--font);}
+        .filter-btn.active{background:var(--orange);color:#000;border-color:var(--orange);}
+        .filter-btn:hover{border-color:var(--orange);color:var(--text-secondary);}
+        .stats-mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+        .stat-mini{background:var(--bg-secondary);border:1px solid var(--border);padding:8px;text-align:center;}
+        .stat-mini-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:2px;}
+        .stat-mini-value{color:var(--text-primary);font-size:14px;font-weight:bold;}
+        .paper-card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;margin-bottom:6px;cursor:pointer;transition:border-color 0.15s;}
+        .paper-card:hover{border-color:var(--orange);}
+        .paper-card.selected{border-color:var(--orange);background:rgba(255,153,0,0.03);}
+        .paper-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+        .paper-id{color:var(--blue);font-size:10px;}
+        .paper-date-sm{color:var(--text-muted);font-size:9px;}
+        .paper-title-sm{color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:4px;}
+        .paper-snippet{color:var(--text-muted);font-size:10px;line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+        .paper-footer{display:flex;align-items:center;gap:8px;}
+        .relevance-score{font-size:10px;color:var(--blue);}
+        .relevance-bar-sm{flex:1;height:2px;background:var(--bg-tertiary);border-radius:2px;}
+        .relevance-fill-sm{height:2px;border-radius:2px;background:var(--blue);}
+        .paper-status{font-size:9px;padding:1px 6px;}
+        .status-deployed{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
+        .status-validation{background:rgba(51,153,255,0.1);color:var(--blue);border:1px solid rgba(51,153,255,0.2);}
+        .status-pending{background:rgba(102,102,102,0.2);color:var(--text-muted);}
+        .tags-sm{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;}
+        .tag-sm{background:rgba(51,153,255,0.08);border:1px solid rgba(51,153,255,0.15);color:var(--blue);padding:1px 5px;font-size:9px;}
+        /* Detail panel */
+        .detail-title{color:var(--orange);font-size:12px;margin-bottom:4px;}
+        .detail-section{margin-bottom:12px;}
+        .detail-section-title{color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--border);}
+        .kv{display:grid;grid-template-columns:110px 1fr;gap:2px;font-size:10px;margin-bottom:4px;}
+        .kv-l{color:var(--text-muted);}
+        .detail-abstract{color:var(--text-secondary);font-size:11px;line-height:1.6;}
+        .detail-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+        .dm-box{background:var(--bg-primary);border:1px solid var(--border);padding:6px;text-align:center;}
+        .dm-label{color:var(--text-muted);font-size:9px;margin-bottom:2px;}
+        .dm-value{color:var(--text-primary);font-size:13px;font-weight:bold;}
+        .detail-btn{width:100%;padding:6px;background:var(--orange);color:#000;border:none;font-family:var(--font);font-size:11px;cursor:pointer;margin-bottom:4px;font-weight:bold;}
+        .detail-btn:hover{background:#ffaa22;}
+        .detail-btn-sec{width:100%;padding:6px;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border);font-family:var(--font);font-size:11px;cursor:pointer;margin-bottom:4px;}
+        .chart-container-sm{height:100px;position:relative;margin-bottom:8px;}
+        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+    </style>
+</head>
+<body>
+<div class="terminal">
+    <header class="topbar">
+        <div class="topbar-brand"><span>TA</span> RESEARCH BROWSER</div>
+        <div class="topbar-actions">
+            <input class="search-input" id="searchInput" placeholder="Search papers..." oninput="filterPapers()" />
+            <button class="btn" onclick="simulateResearchRun()">&#9654; Run Research</button>
+        </div>
+    </header>
+
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Dashboard</div>
+            <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Analisi</div>
+            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+            <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            <a href="dashboard_research.html" class="sidebar-item active"><span>◈</span> Research <span class="badge">6</span></a>
+            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Strategie</div>
+            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies <span class="badge">4</span></a>
+            <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
+            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Sistema</div>
+            <a href="dashboard_agents.html" class="sidebar-item"><span>▧</span> Agents <span class="badge">2</span></a>
+            <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
+        </div>
+        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
+    </nav>
+
+    <main class="main">
+        <div class="paper-list">
+            <div class="stats-mini">
+                <div class="stat-mini"><div class="stat-mini-label">Total Papers</div><div class="stat-mini-value">6</div></div>
+                <div class="stat-mini"><div class="stat-mini-label">Deployed</div><div class="stat-mini-value" style="color:var(--green)">4</div></div>
+                <div class="stat-mini"><div class="stat-mini-label">In Validation</div><div class="stat-mini-value" style="color:var(--blue)">2</div></div>
+                <div class="stat-mini"><div class="stat-mini-label">Avg Relevance</div><div class="stat-mini-value">82%</div></div>
+            </div>
+            <div class="filter-bar">
+                <span style="color:var(--text-muted);font-size:10px;">Filter:</span>
+                <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+                <button class="filter-btn" onclick="setFilter('deployed',this)">Deployed</button>
+                <button class="filter-btn" onclick="setFilter('validation',this)">Validation</button>
+                <button class="filter-btn" onclick="setFilter('LSTM',this)">LSTM</button>
+                <button class="filter-btn" onclick="setFilter('RL',this)">RL</button>
+                <button class="filter-btn" onclick="setFilter('arbitrage',this)">Arbitrage</button>
+            </div>
+            <div id="paperList"></div>
+        </div>
+
+        <div class="paper-detail" id="paperDetail">
+            <div style="color:var(--text-muted);font-size:11px;padding-top:20px;text-align:center;">Select a paper to view details</div>
+        </div>
+    </main>
+
+    <footer class="bottombar">
+        <div>Last research run: 2026-04-09 08:00 | Next: 2026-04-17 08:00</div>
+        <div>Trading Agent v1.1 | Research Use Only</div>
+    </footer>
+</div>
+
+<script>
+const PAPERS = [
+    {
+        id:'arXiv:2401.12345', date:'Jan 2024', indexed:'2026-04-09',
+        title:'Deep LSTM Networks for Intraday Equity Price Prediction using Technical Indicators',
+        abstract:'Stacked LSTM architecture (128→64 units, dropout 0.2) trained on 5-min OHLCV bars augmented with RSI, MACD, Bollinger Band features. Outperforms naive benchmark by 2.3% annualized return on SPY/QQQ over 2-year OOS period. Novel sharpness-adjusted loss function reduces overconfident predictions.',
+        tags:['LSTM','Intraday','5m bars','SPY','QQQ','Technical Indicators'],
+        relevance:94, status:'deployed', model:'Intraday Momentum',
+        metrics:{sharpeIS:'0.91',sharpeLive:'-0.39',winRateIS:'56%',winRateLive:'47%',ddIS:'3.1%',ddLive:'2.3%'},
+        authors:'Chen et al., 2024', venue:'ICML Workshop on Financial ML'
+    },
+    {
+        id:'arXiv:2402.09876', date:'Feb 2024', indexed:'2026-04-09',
+        title:'Statistical Arbitrage via Cointegration in US Equity ETFs',
+        abstract:'Pairs trading framework exploiting cointegration between SPY and QQQ. Z-score entry at |z|>1.5, exit at |z|<0.5. 1-minute bars, 2% NAV max per trade. Backtested 2020–2023: Sharpe 1.42, Max DD 3.2%, win rate 58%. Stable across 2022 rate hiking cycle.',
+        tags:['Cointegration','Pairs Trading','1m','SPY','QQQ','Statistical Arbitrage'],
+        relevance:88, status:'deployed', model:'High Frequency',
+        metrics:{sharpeIS:'1.42',sharpeLive:'0.12',winRateIS:'58%',winRateLive:'52%',ddIS:'3.2%',ddLive:'1.1%'},
+        authors:'Patel & Smith, 2024', venue:'Journal of Computational Finance'
+    },
+    {
+        id:'arXiv:2403.11111', date:'Mar 2024', indexed:'2026-04-09',
+        title:'Adaptive Time-Window Reinforcement Learning for Automated Trading',
+        abstract:'PPO agent with adaptive observation window (8-64 bars). Reward: PnL + Sharpe penalty - transaction costs. Trained on 5yr daily S&P500. Agent shortens window in volatile regimes, lengthens in trending. Reduces Max DD by 18% vs fixed-window baselines.',
+        tags:['RL','PPO','Adaptive','Daily','S&P500'],
+        relevance:82, status:'deployed', model:'Dynamic Time',
+        metrics:{sharpeIS:'0.78',sharpeLive:'-0.28',winRateIS:'51%',winRateLive:'45%',ddIS:'5.8%',ddLive:'3.1%'},
+        authors:'Liu et al., 2024', venue:'NeurIPS Workshop'
+    },
+    {
+        id:'arXiv:2404.05555', date:'Apr 2024', indexed:'2026-04-09',
+        title:'Gradient Boosting with Sharpness Penalty for Daily Momentum Strategies',
+        abstract:'XGBoost with sharpness penalty in objective. Features: MA(20/50/200), RSI(14), volume ratios, sector momentum. Russell 2000 daily. Transaction cost: 5bps. IS Sharpe 0.89, OOS 0.52. Moderate overfitting risk noted by authors.',
+        tags:['XGBoost','Momentum','Daily','Russell 2000','Gradient Boosting'],
+        relevance:79, status:'deployed', model:'Momentum Sharpness',
+        metrics:{sharpeIS:'0.89',sharpeLive:'-1.29',winRateIS:'53%',winRateLive:'48%',ddIS:'4.1%',ddLive:'4.7%'},
+        authors:'Wang & Garcia, 2024', venue:'Quantitative Finance Letters'
+    },
+    {
+        id:'arXiv:2404.07890', date:'Apr 2024', indexed:'2026-04-09',
+        title:'Portfolio Optimization via Black-Litterman with Reinforcement Learning Views',
+        abstract:'Combines Black-Litterman model with RL-generated return views. RL agent provides tactical asset allocation signals which are blended into the prior using Bayesian updating. Tested on 30-asset universe (Dow Jones components). Sharpe 1.31 OOS over 2022-2023, Max DD 4.8%.',
+        tags:['Portfolio Opt','Black-Litterman','RL','Bayesian','Asset Allocation'],
+        relevance:76, status:'validation', model:'Portfolio Opt v2',
+        metrics:{sharpeIS:'1.31',sharpeLive:'—',winRateIS:'64%',winRateLive:'—',ddIS:'4.8%',ddLive:'—'},
+        authors:'Kim et al., 2024', venue:'arXiv preprint'
+    },
+    {
+        id:'arXiv:2404.09123', date:'Apr 2024', indexed:'2026-04-09',
+        title:'Hidden Markov Models for Market Regime Detection and Adaptive Strategy Switching',
+        abstract:'HMM with 3 states (bull/bear/sideways) trained on VIX, yield curve, and equity returns. State-conditional strategy weights dynamically rebalance portfolio. Meta-strategy switching reduces max drawdown by 25% on full S&P500 universe over 2018-2023 period.',
+        tags:['HMM','Regime Detection','Meta-Strategy','VIX','Adaptive'],
+        relevance:71, status:'validation', model:'Regime Detector',
+        metrics:{sharpeIS:'1.08',sharpeLive:'—',winRateIS:'—',winRateLive:'—',ddIS:'3.9%',ddLive:'—'},
+        authors:'Rodriguez et al., 2024', venue:'arXiv preprint'
+    }
+];
+
+let currentFilter = 'all';
+let selectedPaper = null;
+
+function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderList();
+}
+
+function filterPapers() { renderList(); }
+
+function renderList() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const list = document.getElementById('paperList');
+    list.innerHTML = '';
+
+    const filtered = PAPERS.filter(p => {
+        const matchFilter = currentFilter === 'all' || p.status === currentFilter || p.tags.some(t => t.toLowerCase().includes(currentFilter.toLowerCase()));
+        const matchSearch = !search || p.title.toLowerCase().includes(search) || p.id.toLowerCase().includes(search) || p.tags.some(t => t.toLowerCase().includes(search));
+        return matchFilter && matchSearch;
+    });
+
+    filtered.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'paper-card' + (selectedPaper === p.id ? ' selected' : '');
+        card.onclick = () => showDetail(p);
+
+        const statusClass = { deployed: 'status-deployed', validation: 'status-validation', pending: 'status-pending' };
+
+        const header = document.createElement('div');
+        header.className = 'paper-card-header';
+
+        const idSpan = document.createElement('span');
+        idSpan.className = 'paper-id';
+        idSpan.textContent = p.id;
+
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'paper-date-sm';
+        dateSpan.textContent = p.date;
+
+        header.appendChild(idSpan);
+        header.appendChild(dateSpan);
+
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'paper-title-sm';
+        titleDiv.textContent = p.title;
+
+        const snippetDiv = document.createElement('div');
+        snippetDiv.className = 'paper-snippet';
+        snippetDiv.textContent = p.abstract;
+
+        const tagsDiv = document.createElement('div');
+        tagsDiv.className = 'tags-sm';
+        p.tags.slice(0, 4).forEach(t => {
+            const tag = document.createElement('span');
+            tag.className = 'tag-sm';
+            tag.textContent = t;
+            tagsDiv.appendChild(tag);
+        });
+
+        const footer = document.createElement('div');
+        footer.className = 'paper-footer';
+
+        const relDiv = document.createElement('div');
+        relDiv.style.display = 'flex';
+        relDiv.style.alignItems = 'center';
+        relDiv.style.gap = '6px';
+        relDiv.style.flex = '1';
+
+        const relScore = document.createElement('span');
+        relScore.className = 'relevance-score';
+        relScore.textContent = p.relevance + '%';
+
+        const relBar = document.createElement('div');
+        relBar.className = 'relevance-bar-sm';
+        const relFill = document.createElement('div');
+        relFill.className = 'relevance-fill-sm';
+        relFill.style.width = p.relevance + '%';
+        relBar.appendChild(relFill);
+
+        relDiv.appendChild(relScore);
+        relDiv.appendChild(relBar);
+
+        const statusSpan = document.createElement('span');
+        statusSpan.className = 'paper-status ' + statusClass[p.status];
+        statusSpan.textContent = p.status.toUpperCase();
+
+        footer.appendChild(relDiv);
+        footer.appendChild(statusSpan);
+
+        card.appendChild(header);
+        card.appendChild(titleDiv);
+        card.appendChild(snippetDiv);
+        card.appendChild(tagsDiv);
+        card.appendChild(footer);
+
+        list.appendChild(card);
+    });
+}
+
+function showDetail(p) {
+    selectedPaper = p.id;
+    renderList();
+
+    const detail = document.getElementById('paperDetail');
+    detail.innerHTML = '';
+
+    // Title section
+    const titleSec = document.createElement('div');
+    titleSec.className = 'detail-section';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'detail-title';
+    titleEl.textContent = p.title;
+
+    const idEl = document.createElement('div');
+    idEl.style.cssText = 'color:var(--blue);font-size:10px;margin-bottom:4px;';
+    idEl.textContent = p.id + ' — ' + p.date;
+
+    const authorEl = document.createElement('div');
+    authorEl.style.cssText = 'color:var(--text-muted);font-size:10px;margin-bottom:8px;';
+    authorEl.textContent = p.authors + ' | ' + p.venue;
+
+    titleSec.appendChild(titleEl);
+    titleSec.appendChild(idEl);
+    titleSec.appendChild(authorEl);
+    detail.appendChild(titleSec);
+
+    // Abstract
+    const absSec = document.createElement('div');
+    absSec.className = 'detail-section';
+    const absTitle = document.createElement('div');
+    absTitle.className = 'detail-section-title';
+    absTitle.textContent = 'Abstract';
+    const absText = document.createElement('div');
+    absText.className = 'detail-abstract';
+    absText.textContent = p.abstract;
+    absSec.appendChild(absTitle);
+    absSec.appendChild(absText);
+    detail.appendChild(absSec);
+
+    // Tags
+    const tagSec = document.createElement('div');
+    tagSec.className = 'detail-section';
+    const tagTitle = document.createElement('div');
+    tagTitle.className = 'detail-section-title';
+    tagTitle.textContent = 'Keywords';
+    const tagsDiv = document.createElement('div');
+    tagsDiv.className = 'tags-sm';
+    p.tags.forEach(t => {
+        const tag = document.createElement('span');
+        tag.className = 'tag-sm';
+        tag.textContent = t;
+        tagsDiv.appendChild(tag);
+    });
+    tagSec.appendChild(tagTitle);
+    tagSec.appendChild(tagsDiv);
+    detail.appendChild(tagSec);
+
+    // Metrics comparison IS vs Live
+    const metSec = document.createElement('div');
+    metSec.className = 'detail-section';
+    const metTitle = document.createElement('div');
+    metTitle.className = 'detail-section-title';
+    metTitle.textContent = 'Performance: IS vs Live';
+    const metGrid = document.createElement('div');
+    metGrid.className = 'detail-metrics';
+    [
+        ['Sharpe (IS)', p.metrics.sharpeIS],
+        ['Sharpe (Live)', p.metrics.sharpeLive],
+        ['Win Rate (IS)', p.metrics.winRateIS],
+        ['Win Rate (Live)', p.metrics.winRateLive],
+        ['Max DD (IS)', p.metrics.ddIS],
+        ['Max DD (Live)', p.metrics.ddLive],
+    ].forEach(([lbl, val]) => {
+        const box = document.createElement('div');
+        box.className = 'dm-box';
+        const l = document.createElement('div');
+        l.className = 'dm-label';
+        l.textContent = lbl;
+        const v = document.createElement('div');
+        v.className = 'dm-value';
+        v.textContent = val;
+        if (val !== '—') {
+            const n = parseFloat(val);
+            if (!isNaN(n) && lbl.includes('Sharpe')) v.style.color = n >= 0 ? 'var(--green)' : 'var(--red)';
+        }
+        box.appendChild(l);
+        box.appendChild(v);
+        metGrid.appendChild(box);
+    });
+    metSec.appendChild(metTitle);
+    metSec.appendChild(metGrid);
+    detail.appendChild(metSec);
+
+    // Model link
+    const modSec = document.createElement('div');
+    modSec.className = 'detail-section';
+    const modTitle = document.createElement('div');
+    modTitle.className = 'detail-section-title';
+    modTitle.textContent = 'Deployed Model';
+    const modLink = document.createElement('div');
+    modLink.style.cssText = 'color:var(--text-secondary);font-size:11px;margin-bottom:8px;';
+    modLink.textContent = p.model || 'Not yet deployed';
+    modSec.appendChild(modTitle);
+    modSec.appendChild(modLink);
+    detail.appendChild(modSec);
+
+    // Actions
+    const actSec = document.createElement('div');
+    actSec.className = 'detail-section';
+    if (p.status === 'deployed') {
+        const btn = document.createElement('button');
+        btn.className = 'detail-btn-sec';
+        btn.textContent = 'View Strategy Detail';
+        btn.onclick = () => { window.location.href = 'strategy.html'; };
+        actSec.appendChild(btn);
+    }
+    const btn2 = document.createElement('button');
+    btn2.className = 'detail-btn-sec';
+    btn2.textContent = 'View in Documentation';
+    btn2.onclick = () => { window.location.href = 'dashboard_documentation.html'; };
+    actSec.appendChild(btn2);
+    detail.appendChild(actSec);
+}
+
+function simulateResearchRun() {
+    const btn = document.querySelector('.btn');
+    btn.textContent = '... Searching arXiv';
+    btn.disabled = true;
+    setTimeout(() => {
+        btn.textContent = '&#9654; Run Research';
+        btn.disabled = false;
+        btn.innerHTML = '&#9654; Run Research';
+    }, 2000);
+}
+
+renderList();
+showDetail(PAPERS[0]);
+</script>
+</body>
+</html>

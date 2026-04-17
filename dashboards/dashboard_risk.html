@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+    <title>Risk Management | Trading Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <style>
+        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;}
+        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+        .sidebar-section{margin-bottom:10px;}
+        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;}
+        .sidebar-item:hover{background:var(--bg-tertiary);}
+        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
+        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;}
+        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        .main{background:var(--bg-primary);overflow-y:auto;padding:8px;}
+        .stats-row{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:8px;}
+        .stat-box{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
+        .stat-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
+        .stat-value{font-size:15px;font-weight:bold;}
+        .stat-sub{color:var(--text-muted);font-size:9px;margin-top:2px;}
+        .positive{color:var(--green);}
+        .negative{color:var(--red);}
+        .neutral{color:var(--text-primary);}
+        .warn{color:var(--yellow);}
+        .tabs{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+        .tab{background:transparent;border:none;color:var(--text-muted);padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font);}
+        .tab:hover{color:var(--text-secondary);}
+        .tab.active{color:var(--orange);border-bottom:2px solid var(--orange);margin-bottom:-5px;}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
+        .charts-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+        .charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+        .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;}
+        .card-title{color:var(--orange);font-size:11px;margin-bottom:8px;}
+        .chart-container{height:160px;position:relative;}
+        .chart-container-sm{height:120px;position:relative;}
+        table{width:100%;border-collapse:collapse;font-size:11px;}
+        th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:normal;font-size:10px;text-transform:uppercase;}
+        td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
+        tr:hover{background:var(--bg-tertiary);}
+        .badge{padding:1px 6px;border-radius:3px;font-size:9px;}
+        .badge-ok{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
+        .badge-warn{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.2);}
+        .badge-alert{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
+        .risk-gauge{height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;margin-top:4px;}
+        .risk-fill{height:8px;border-radius:4px;}
+        .corr-table{width:100%;border-collapse:collapse;font-size:10px;}
+        .corr-table th,.corr-table td{padding:4px 8px;text-align:center;border:1px solid var(--border);}
+        .corr-table th{color:var(--text-muted);font-weight:normal;}
+        .stress-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+        .stress-card{background:var(--bg-tertiary);border:1px solid var(--border);padding:10px;}
+        .stress-scenario{color:var(--text-primary);font-size:11px;margin-bottom:4px;}
+        .stress-impact{font-size:14px;font-weight:bold;}
+        .stress-desc{color:var(--text-muted);font-size:9px;margin-top:2px;}
+        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+    </style>
+</head>
+<body>
+<div class="terminal">
+    <header class="topbar">
+        <div class="topbar-brand"><span>TA</span> RISK MANAGEMENT</div>
+        <div style="font-size:10px;color:var(--text-muted)">Last risk calc: <span style="color:var(--orange)" id="lastCalc">--:--:--</span></div>
+    </header>
+
+    <nav class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Dashboard</div>
+            <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Analisi</div>
+            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
+            <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
+            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge">6</span></a>
+            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Strategie</div>
+            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies <span class="badge">4</span></a>
+            <a href="dashboard_risk.html" class="sidebar-item active"><span>◐</span> Risk Mgmt</a>
+            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Sistema</div>
+            <a href="dashboard_agents.html" class="sidebar-item"><span>▧</span> Agents <span class="badge">2</span></a>
+            <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
+        </div>
+        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
+    </nav>
+
+    <main class="main">
+        <div class="stats-row">
+            <div class="stat-box"><div class="stat-label">VaR (95%, 1d)</div><div class="stat-value negative">$210</div><div class="stat-sub">2.10% of equity</div></div>
+            <div class="stat-box"><div class="stat-label">CVaR (95%, 1d)</div><div class="stat-value negative">$285</div><div class="stat-sub">expected loss beyond VaR</div></div>
+            <div class="stat-box"><div class="stat-label">Max Drawdown</div><div class="stat-value warn">2.3%</div><div class="stat-sub">limit: 5.0%</div></div>
+            <div class="stat-box"><div class="stat-label">Portfolio Beta</div><div class="stat-value neutral">0.42</div><div class="stat-sub">vs SPY</div></div>
+            <div class="stat-box"><div class="stat-label">Ann. Volatility</div><div class="stat-value neutral">18.4%</div><div class="stat-sub">portfolio level</div></div>
+            <div class="stat-box"><div class="stat-label">Leverage</div><div class="stat-value positive">1.0×</div><div class="stat-sub">no leverage used</div></div>
+            <div class="stat-box"><div class="stat-label">Open Exposure</div><div class="stat-value neutral">$2,801</div><div class="stat-sub">28.0% of equity</div></div>
+            <div class="stat-box"><div class="stat-label">Risk Score</div><div class="stat-value warn">MEDIUM</div><div class="stat-sub">3 alerts active</div></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('portfolio')">Portfolio Risk</button>
+            <button class="tab" onclick="switchTab('positions')">Position Sizing</button>
+            <button class="tab" onclick="switchTab('correlation')">Correlation</button>
+            <button class="tab" onclick="switchTab('stress')">Stress Tests</button>
+        </div>
+
+        <!-- Portfolio Risk -->
+        <div class="tab-content active" id="tab-portfolio">
+            <div class="charts-2">
+                <div class="card">
+                    <div class="card-title">ROLLING VAR (95%) vs EQUITY</div>
+                    <div class="chart-container"><canvas id="varChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">VOLATILITY REGIME (ANN. VOL %)</div>
+                    <div class="chart-container"><canvas id="volChart"></canvas></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">RISK LIMITS MONITORING</div>
+                <table>
+                    <thead><tr><th>Metric</th><th>Current</th><th>Limit</th><th>Usage</th><th>Status</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>Max Drawdown</td><td class="warn">2.3%</td><td>5.0%</td>
+                            <td><div class="risk-gauge"><div class="risk-fill" style="width:46%;background:var(--yellow)"></div></div></td>
+                            <td><span class="badge badge-warn">46% USED</span></td>
+                        </tr>
+                        <tr>
+                            <td>VaR (95%, 1d)</td><td>$210</td><td>$500</td>
+                            <td><div class="risk-gauge"><div class="risk-fill" style="width:42%;background:var(--green)"></div></div></td>
+                            <td><span class="badge badge-ok">42% USED</span></td>
+                        </tr>
+                        <tr>
+                            <td>Max Open Exposure</td><td>$2,801</td><td>$5,000</td>
+                            <td><div class="risk-gauge"><div class="risk-fill" style="width:56%;background:var(--yellow)"></div></div></td>
+                            <td><span class="badge badge-warn">56% USED</span></td>
+                        </tr>
+                        <tr>
+                            <td>Momentum Sharpness DD</td><td class="negative">4.7%</td><td>5.0%</td>
+                            <td><div class="risk-gauge"><div class="risk-fill" style="width:94%;background:var(--red)"></div></div></td>
+                            <td><span class="badge badge-alert">94% — ALERT</span></td>
+                        </tr>
+                        <tr>
+                            <td>Intraday Momentum Sharpe</td><td class="negative">-0.39</td><td>&gt;0.0</td>
+                            <td><div class="risk-gauge"><div class="risk-fill" style="width:100%;background:var(--red)"></div></div></td>
+                            <td><span class="badge badge-alert">BREACH</span></td>
+                        </tr>
+                        <tr>
+                            <td>Portfolio Leverage</td><td>1.0×</td><td>2.0×</td>
+                            <td><div class="risk-gauge"><div class="risk-fill" style="width:50%;background:var(--green)"></div></div></td>
+                            <td><span class="badge badge-ok">50% USED</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Position Sizing -->
+        <div class="tab-content" id="tab-positions">
+            <div class="card" style="margin-bottom:8px;">
+                <div class="card-title">POSITION SIZING — KELLY CRITERION &amp; RISK BUDGET</div>
+                <table>
+                    <thead><tr><th>Model</th><th>Win Rate</th><th>Avg Win</th><th>Avg Loss</th><th>Full Kelly</th><th>Quarter Kelly</th><th>Risk Budget</th><th>Current Size</th><th>Sizing OK?</th></tr></thead>
+                    <tbody>
+                        <tr><td class="neutral">Intraday Momentum</td><td class="negative">47%</td><td class="positive">$72</td><td class="negative">$81</td><td class="negative">-5.4%</td><td class="negative">-1.4%</td><td>2.0%</td><td>3.0%</td><td><span class="badge badge-alert">OVERSIZED</span></td></tr>
+                        <tr><td class="neutral">High Frequency</td><td class="positive">52%</td><td class="positive">$31</td><td class="negative">$28</td><td>8.1%</td><td>2.0%</td><td>2.0%</td><td>2.0%</td><td><span class="badge badge-ok">OK</span></td></tr>
+                        <tr><td class="neutral">Dynamic Time</td><td class="negative">45%</td><td class="positive">$88</td><td class="negative">$102</td><td class="negative">-3.9%</td><td class="negative">-1.0%</td><td>2.0%</td><td>2.5%</td><td><span class="badge badge-warn">REVIEW</span></td></tr>
+                        <tr><td class="neutral">Momentum Sharpness</td><td>48%</td><td class="positive">$145</td><td class="negative">$159</td><td class="negative">-0.9%</td><td class="negative">-0.2%</td><td>1.5%</td><td>2.0%</td><td><span class="badge badge-alert">OVERSIZED</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="charts-2">
+                <div class="card">
+                    <div class="card-title">RECOMMENDED vs ACTUAL ALLOCATION</div>
+                    <div class="chart-container"><canvas id="allocChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">RISK BUDGET CONSUMPTION PER MODEL</div>
+                    <div class="chart-container"><canvas id="riskBudgetChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Correlation -->
+        <div class="tab-content" id="tab-correlation">
+            <div class="charts-2">
+                <div class="card">
+                    <div class="card-title">CORRELATION MATRIX (STRATEGY RETURNS)</div>
+                    <div class="chart-container"><canvas id="corrChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">ASSET CORRELATIONS (CURRENT POSITIONS)</div>
+                    <table class="corr-table" style="margin-top:8px;">
+                        <thead><tr><th></th><th>AAPL</th><th>MSFT</th><th>GOOG</th><th>SPY</th></tr></thead>
+                        <tbody>
+                            <tr><th>AAPL</th><td style="background:rgba(255,153,0,0.2)">1.00</td><td style="background:rgba(255,0,0,0.15)">0.68</td><td style="background:rgba(255,204,0,0.1)">0.54</td><td style="background:rgba(255,0,0,0.1)">0.72</td></tr>
+                            <tr><th>MSFT</th><td style="background:rgba(255,0,0,0.15)">0.68</td><td style="background:rgba(255,153,0,0.2)">1.00</td><td style="background:rgba(255,204,0,0.1)">0.61</td><td style="background:rgba(255,0,0,0.15)">0.78</td></tr>
+                            <tr><th>GOOG</th><td style="background:rgba(255,204,0,0.1)">0.54</td><td style="background:rgba(255,204,0,0.1)">0.61</td><td style="background:rgba(255,153,0,0.2)">1.00</td><td style="background:rgba(255,204,0,0.1)">0.65</td></tr>
+                            <tr><th>SPY</th><td style="background:rgba(255,0,0,0.1)">0.72</td><td style="background:rgba(255,0,0,0.15)">0.78</td><td style="background:rgba(255,204,0,0.1)">0.65</td><td style="background:rgba(255,153,0,0.2)">1.00</td></tr>
+                        </tbody>
+                    </table>
+                    <div style="color:var(--text-muted);font-size:10px;margin-top:8px;">Note: High intra-portfolio correlation (avg 0.64) reduces diversification benefit. Consider adding uncorrelated assets.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stress Tests -->
+        <div class="tab-content" id="tab-stress">
+            <div class="stress-grid">
+                <div class="stress-card"><div class="stress-scenario">2020 COVID Crash</div><div class="stress-impact negative">-$1,420</div><div class="stress-desc">SPY -34% in 23 days. Estimated portfolio impact.</div></div>
+                <div class="stress-card"><div class="stress-scenario">2022 Rate Hike Cycle</div><div class="stress-impact warn">-$680</div><div class="stress-desc">Fed +425bps in 12 months. Tech -40%.</div></div>
+                <div class="stress-card"><div class="stress-scenario">Flash Crash (+10% VIX)</div><div class="stress-impact negative">-$350</div><div class="stress-desc">VIX spike from 18 to 40 in single session.</div></div>
+                <div class="stress-card"><div class="stress-scenario">Liquidity Crisis</div><div class="stress-impact negative">-$520</div><div class="stress-desc">Bid-ask spreads 10× normal. Forced exit cost.</div></div>
+                <div class="stress-card"><div class="stress-scenario">Sector Rotation</div><div class="stress-impact warn">-$210</div><div class="stress-desc">Tech to value rotation -15% in 1 week.</div></div>
+                <div class="stress-card"><div class="stress-scenario">Black Swan (-20% SPY)</div><div class="stress-impact negative">-$840</div><div class="stress-desc">Tail risk scenario: 20% single-day drop.</div></div>
+                <div class="stress-card"><div class="stress-scenario">Cointegration Break</div><div class="stress-impact warn">-$290</div><div class="stress-desc">SPY/QQQ correlation drops to 0.3 for 30 days.</div></div>
+                <div class="stress-card"><div class="stress-scenario">Adverse Bull Run</div><div class="stress-impact negative">-$180</div><div class="stress-desc">SPY +20% — short positions hit stop losses.</div></div>
+            </div>
+            <div class="card">
+                <div class="card-title">STRESS TEST IMPACT vs RISK LIMITS</div>
+                <div class="chart-container"><canvas id="stressChart"></canvas></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bottombar">
+        <div>ALERTS: <span style="color:var(--red)">2 CRITICAL</span> | <span style="color:var(--yellow)">1 WARNING</span> | Limits: 3 active</div>
+        <div>Trading Agent v1.1 | Research Use Only</div>
+    </footer>
+</div>
+
+<script>
+function switchTab(id){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    document.querySelector(`.tab[onclick="switchTab('${id}')"]`).classList.add('active');
+    document.getElementById('tab-'+id).classList.add('active');
+}
+
+function updateTime(){document.getElementById('lastCalc').textContent=new Date().toLocaleTimeString();}
+setInterval(updateTime,1000); updateTime();
+
+const labels10=['D1','D2','D3','D4','D5','D6','D7','D8','D9','D10'];
+const CHART_OPT={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#666',font:{family:'Consolas',size:9},boxWidth:12,padding:6}}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}}}};
+const NO_LEGEND={...CHART_OPT,plugins:{legend:{display:false}}};
+
+// VaR chart
+new Chart(document.getElementById('varChart').getContext('2d'),{type:'line',data:{labels:labels10,datasets:[
+    {label:'VaR 95%',data:[180,190,195,205,215,220,210,200,208,210],borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+    {label:'CVaR 95%',data:[240,255,262,275,290,298,285,272,280,285],borderColor:'#ff6600',borderWidth:1,borderDash:[4,4],pointRadius:0,tension:0.3,fill:false},
+    {label:'VaR Limit ($500)',data:new Array(10).fill(500),borderColor:'#666',borderWidth:1,borderDash:[6,3],pointRadius:0}
+]},options:CHART_OPT});
+
+// Volatility
+new Chart(document.getElementById('volChart').getContext('2d'),{type:'line',data:{labels:labels10,datasets:[
+    {label:'Portfolio Vol (ann.%)',data:[16.2,17.1,18.0,19.2,20.1,19.5,18.8,18.2,18.6,18.4],borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:{target:'origin',above:'rgba(255,153,0,0.05)'}},
+    {label:'VIX',data:[18,19,21,23,22,20,19,18,19,18],borderColor:'#3399ff',borderWidth:1,borderDash:[4,4],pointRadius:0,tension:0.3,fill:false}
+]},options:CHART_OPT});
+
+// Allocation chart
+new Chart(document.getElementById('allocChart').getContext('2d'),{type:'bar',data:{labels:['Intraday Momentum','High Frequency','Dynamic Time','Momentum Sharpness'],datasets:[
+    {label:'Recommended (Quarter Kelly)',data:[0,2.0,0,0],backgroundColor:'rgba(0,255,0,0.5)',borderColor:'#00ff00',borderWidth:1},
+    {label:'Actual Allocation',data:[3.0,2.0,2.5,2.0],backgroundColor:'rgba(255,153,0,0.5)',borderColor:'#ff9900',borderWidth:1}
+]},options:CHART_OPT});
+
+// Risk budget
+new Chart(document.getElementById('riskBudgetChart').getContext('2d'),{type:'bar',data:{labels:['IM','HF','DT','MS'],datasets:[{label:'Risk Budget Used %',data:[150,100,125,133],backgroundColor:['rgba(255,0,0,0.5)','rgba(0,255,0,0.5)','rgba(255,204,0,0.5)','rgba(255,0,0,0.5)'],borderColor:['#ff0000','#00ff00','#ffcc00','#ff0000'],borderWidth:1}]},options:{...NO_LEGEND,scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'}}}}});
+
+// Correlation scatter (strategy returns)
+new Chart(document.getElementById('corrChart').getContext('2d'),{type:'scatter',data:{datasets:[
+    {label:'IM vs HF',data:[{x:-0.39,y:0.12},{x:0.5,y:0.3},{x:-0.5,y:-0.2},{x:0.3,y:0.1}],borderColor:'#ff9900',backgroundColor:'rgba(255,153,0,0.5)',pointRadius:4},
+    {label:'IM vs DT',data:[{x:-0.39,y:-0.28},{x:0.4,y:0.5},{x:-0.4,y:-0.3},{x:0.2,y:0.3}],borderColor:'#3399ff',backgroundColor:'rgba(51,153,255,0.5)',pointRadius:4},
+    {label:'IM vs XGB',data:[{x:-0.39,y:-1.29},{x:0.3,y:-0.5},{x:-0.3,y:-0.8},{x:0.1,y:-0.3}],borderColor:'#ff0000',backgroundColor:'rgba(255,0,0,0.5)',pointRadius:4}
+]},options:{...CHART_OPT,scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}},title:{display:true,text:'IM Returns',color:'#666'}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}},title:{display:true,text:'Other Strategy Returns',color:'#666'}}}}});
+
+// Stress test chart
+const stressScenarios=['COVID','Rate Hike','Flash Crash','Liquidity','Sector Rot.','Black Swan','Coint. Break','Bull Run'];
+const stressImpact=[-1420,-680,-350,-520,-210,-840,-290,-180];
+new Chart(document.getElementById('stressChart').getContext('2d'),{type:'bar',data:{labels:stressScenarios,datasets:[
+    {label:'Estimated Impact ($)',data:stressImpact,backgroundColor:stressImpact.map(v=>v<-500?'rgba(255,0,0,0.6)':v<-300?'rgba(255,204,0,0.6)':'rgba(255,153,0,0.5)'),borderColor:stressImpact.map(v=>v<-500?'#ff0000':v<-300?'#ffcc00':'#ff9900'),borderWidth:1},
+    {label:'Max Loss Limit (-$500)',data:new Array(8).fill(-500),borderColor:'#666',borderWidth:1,borderDash:[6,3],type:'line',pointRadius:0}
+]},options:{...CHART_OPT,scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>'$'+v}}}}});
+</script>
+</body>
+</html>
