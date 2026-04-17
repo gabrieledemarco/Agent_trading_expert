@@ -278,7 +278,7 @@ function updateLivePrices() {
     unrealEl.className = 'stat-value ' + (totalUnreal >= 0 ? 'positive' : 'negative');
 }
 
-function tick_() {
+async function tick_() {
     tick++;
     const t = new Date().toLocaleTimeString();
     document.getElementById('lastUpdate').textContent = t;
@@ -307,7 +307,6 @@ function tick_() {
     pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + Math.round(Math.abs(pnl));
     pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
 
-    updateLivePrices();
 
     // Add a log message every 3-5 ticks
     if (tick % 4 === 0) {

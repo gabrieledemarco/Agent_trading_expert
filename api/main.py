@@ -1,6 +1,7 @@
 """Simple API server for Trading Agents."""
 
 from fastapi import FastAPI, HTTPException
+import yfinance as yf
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
@@ -250,3 +251,16 @@ async def list_strategies():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.get("/api/price")
+async def get_price(symbol: str):
+    """Get real-time stock price from Yahoo Finance."""
+    try:
+        ticker = yf.Ticker(symbol)
+        data = ticker.history(period="1d", interval="1m")
+        if data.empty:
+            raise HTTPException(status_code=404, detail="No data found")
+        price = float(data["Close"].iloc[-1])
+        return {"symbol": symbol, "price": price}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
