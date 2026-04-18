@@ -100,6 +100,7 @@
         .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
         .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
+    <script src="config.js"></script>
     <script src="dashboard_data.js"></script>
 </head>
 <body>
@@ -574,7 +575,7 @@ function loadResizeStates() {
 
 async function hydrateAgentActivityFromApi() {
     try {
-        const response = await fetch('/dashboard/agent-activity?limit=20');
+        const response = await fetch((window.TRADING_API_BASE||'') + '/dashboard/agent-activity?limit=20');
         if (!response.ok) return;
         const payload = await response.json();
         const activities = Array.isArray(payload.activities) ? payload.activities : [];

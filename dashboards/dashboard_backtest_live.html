@@ -39,6 +39,16 @@
         ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
         ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
     </style>
+  <script src="config.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var base = window.TRADING_API_BASE || '';
+      if (base) {
+        var input = document.getElementById('apiUrl');
+        if (input) input.value = base;
+      }
+    });
+  </script>
 </head>
 <body>
 <div class="container">

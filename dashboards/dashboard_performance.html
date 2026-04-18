@@ -93,6 +93,7 @@
         .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
         .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
     </style>
+    <script src="config.js"></script>
     <script src="dashboard_data.js"></script>
 </head>
 <body>
@@ -301,7 +302,7 @@ function switchTab(id){
 // Fetch performance data from API (with fallback)
 async function fetchPerformanceData(period) {
     try {
-        const response = await fetch(`/api/performance?period=${period}`);
+        const response = await fetch((window.TRADING_API_BASE||'') + `/api/performance?period=${period}`);
         if (response.ok) {
             const data = await response.json();
             return data;

@@ -22,17 +22,14 @@
     return `${sign}${n.toFixed(decimals)}%`;
   }
 
-  function candidateApiPaths(path) {
+  function resolveApiUrl(path) {
     const normalized = path.startsWith('/') ? path : `/${path}`;
-    const candidates = [normalized];
+    const base = (window.TRADING_API_BASE || window.__API_BASE_PATH || '').replace(/\/$/, '');
+    return base ? `${base}${normalized}` : normalized;
+  }
 
-    // Optional base path for reverse proxy deployments.
-    if (window.__API_BASE_PATH && typeof window.__API_BASE_PATH === 'string') {
-      const base = window.__API_BASE_PATH.replace(/\/$/, '');
-      candidates.unshift(`${base}${normalized}`);
-    }
-
-    return [...new Set(candidates)];
+  function candidateApiPaths(path) {
+    return [resolveApiUrl(path)];
   }
 
   async function fetchJson(path) {
