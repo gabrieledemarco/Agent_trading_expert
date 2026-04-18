@@ -189,7 +189,6 @@
             </div>
         </div>
         <div class="log-panel resizable-section" data-section="log-panel">
-            <div class="log-title"><span>AGENT ACTIVITY LOG</span><span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span><button class="resize-btn" onclick="toggleResize('log-panel')" title="Minimize/Expand">⊟</button></div>
             <div class="log-title">
                 <span>AGENT ACTIVITY LOG</span>
                 <div style="display:flex;gap:8px;align-items:center;">
@@ -293,8 +292,7 @@ function renderAgents() {
             <div class="agent-actions">
                 <button class="agent-btn${a.status==='running'?' stop':''}" id="btn-${id}" onclick="toggleAgent('${id}')">${a.status==='running'?'&#9632; STOP':'&#9654; RUN'}</button>
                 <button class="agent-btn" onclick="viewLogs('${id}')">&#128203; LOGS</button>
-            </div>
-        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>`;
+            </div>`;
         grid.appendChild(card);
     });
 }
@@ -524,12 +522,6 @@ function toggleResize(sectionId) {
     const nextState = states[(states.indexOf(currentState) + 1) % states.length];
 
     section.classList.remove('minimized', 'expanded');
-    let currentState = section.dataset.resizeState || 'normal';
-    let nextIndex = (states.indexOf(currentState) + 1) % states.length;
-    let nextState = states[nextIndex];
-
-    section.classList.remove('minimized', 'expanded');
-
     if (nextState === 'minimized') {
         section.classList.add('minimized');
         if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
@@ -542,12 +534,6 @@ function toggleResize(sectionId) {
     }
 
     section.dataset.resizeState = nextState;
-    } else {
-        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
-    }
-
-    section.dataset.resizeState = nextState;
-
     const resizeStates = JSON.parse(localStorage.getItem('resizeStates_agents') || '{}');
     resizeStates[sectionId] = nextState;
     localStorage.setItem('resizeStates_agents', JSON.stringify(resizeStates));
@@ -604,15 +590,13 @@ addLog('info', 'MonitoringAgent', 'All systems nominal');
 hydrateAgentActivityFromApi();
 updateFooter();
 loadResizeStates();
-function toggleSidebar(){const terminal=document.querySelector('.terminal');const isCollapsed=terminal.classList.toggle('sidebar-collapsed');localStorage.setItem('sidebarCollapsed',isCollapsed);}
-if(localStorage.getItem('sidebarCollapsed')==='true'){document.querySelector('.terminal').classList.add('sidebar-collapsed');}
-        function toggleSidebar() {
-            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        }
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.querySelector('.terminal').classList.add('sidebar-collapsed');
-        }
+function toggleSidebar() {
+    const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', isCollapsed);
+}
+if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    document.querySelector('.terminal').classList.add('sidebar-collapsed');
+}
 </script>
 </body>
 </html>
