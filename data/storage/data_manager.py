@@ -110,6 +110,10 @@ class DataStorageManager:
         # Rileva il backend dalla URL
         db_url = db_url or os.getenv("DATABASE_URL")
 
+        # Normalizza postgres:// → postgresql:// (Render/Heroku compatibility)
+        if db_url and db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+
         if db_url and db_url.startswith("postgresql://"):
             if not HAS_POSTGRES:
                 raise RuntimeError("PostgreSQL URL provided but psycopg2 not installed")
@@ -337,6 +341,16 @@ class DataStorageManager:
                 message TEXT
             )
         """)
+
+        # Create indexes for query performance
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_trades_model ON trades(model_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades(timestamp DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_performance_model ON performance(model_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_performance_timestamp ON performance(timestamp DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_agent_logs_timestamp ON agent_logs(timestamp DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_agent_logs_agent ON agent_logs(agent_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_research_found_date ON research(found_date DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_validation_status ON validation(status)")
 
         cursor.close()
         conn.close()

@@ -56,8 +56,21 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+    """Health check endpoint — verifies database connectivity."""
+    try:
+        from data.storage.data_manager import DataStorageManager
+        db = DataStorageManager()
+        # Quick query to verify DB is reachable
+        conn = db._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return {"status": "healthy", "database": db.backend}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        return {"status": "degraded", "database": "unreachable", "error": str(e)}
 
 
 @app.post("/research")
