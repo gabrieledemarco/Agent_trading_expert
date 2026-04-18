@@ -1,9 +1,12 @@
 """Simple API server for Trading Agents."""
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
+
+from configs.paths import Paths
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,6 +16,8 @@ app = FastAPI(
     description="API for the multi-agent trading system",
     version="0.1.0",
 )
+
+app.mount("/dashboards", StaticFiles(directory=str(Paths.DASHBOARDS_DIR), html=True), name="dashboards")
 
 
 class TradeRequest(BaseModel):
