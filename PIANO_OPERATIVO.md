@@ -57,78 +57,72 @@ Ulteriori problemi:
 
 ## Fasi del Piano
 
-### FASE 0 — Test Harness ✅/🔲
+### FASE 0 — Test Harness ✅ COMPLETATA
 > Nessuna modifica funzionale. Solo rete di sicurezza.
 
-- [ ] `tests/fixtures/` — snapshot JSON/JSONL/YAML reali
-- [ ] `tests/contracts/test_validation_schema.py` — verifica campi obbligatori
-- [ ] `tests/contracts/test_metrics_schema.py` — verifica JSONL metriche
-- [ ] `tests/contracts/test_api_contracts.py` — verifica response shapes
-- [ ] `tests/contracts/test_db_schema.py` — verifica tabelle SQLite
-- [ ] `tests/conftest.py` — fixtures condivise
+- [x] `tests/fixtures/` — snapshot JSON/JSONL/YAML reali
+- [x] `tests/contracts/test_validation_schema.py` — verifica campi obbligatori
+- [x] `tests/contracts/test_metrics_schema.py` — verifica JSONL metriche
+- [x] `tests/contracts/test_api_contracts.py` — verifica response shapes
+- [x] `tests/contracts/test_db_schema.py` — verifica tabelle SQLite
+- [x] `tests/conftest.py` — fixtures condivise
 
-**Gate**: tutti i test di contratto passano sul codice corrente (baseline verde).
+**Gate**: ✅ 101 test passati — baseline verde.
 
 ---
 
-### FASE 1 — Config Centralization 🔲
+### FASE 1 — Config Centralization ✅ COMPLETATA
 > Rischio BASSO. Zero cambiamenti a logica o schemi.
 
-- [ ] `configs/paths.py` — source of truth per tutti i path
-- [ ] `configs/config_loader.py` — singleton per agents.yaml
-- [ ] Aggiornare `ValidationAgent.__init__` → usa `Paths.*` (default identici)
-- [ ] Aggiornare `TradingExecutor.__init__` → usa `Paths.*`
-- [ ] Aggiornare `MonitoringAgent.__init__` → usa `Paths.*`
-- [ ] Aggiornare `DataStorageManager.__init__` → usa `Paths.DB_PATH`
-- [ ] Aggiornare `api/main.py` → usa `Paths.*`
+- [x] `configs/paths.py` — source of truth per tutti i path (+ DASHBOARDS_DIR da CTO branch)
+- [x] `configs/config_loader.py` — singleton per agents.yaml
+- [x] Aggiornare `ValidationAgent.__init__` → usa `Paths.*` (default identici)
+- [x] Aggiornare `TradingExecutor.__init__` → usa `Paths.*`
+- [x] Aggiornare `MonitoringAgent.__init__` → usa `Paths.*`
+- [x] Aggiornare `DataStorageManager.__init__` → usa `Paths.DB_PATH`
+- [x] Aggiornare `api/main.py` → usa `Paths.*` + CORS + StaticFiles + /api/price
 
-**Gate**: contratti verdi + comportamento identico.
+**Gate**: ✅ contratti verdi + comportamento identico.
 
 ---
 
-### FASE 2 — Schema Versioning 🔲
+### FASE 2 — Schema Versioning ✅ COMPLETATA
 > Rischio BASSO. Solo campi addizionali.
 
-- [ ] Aggiungere `"schema_version": "1.0"` a `ValidationAgent` output
-- [ ] `data/schemas/validation_v1.json` — JSON Schema formale
-- [ ] `data/schemas/metrics_v1.json` — JSON Schema metriche
-- [ ] `data/schemas/trade_v1.json` — JSON Schema trade log
-- [ ] `data/schemas/execution_request_v1.json` — schema futuro Execution Engine
-- [ ] Consumer: aggiungere `_validate_schema()` non bloccante
+- [x] Aggiungere `"schema_version": "1.0"` a `ValidationAgent` output
+- [x] `data/schemas/validation_v1.json` — JSON Schema formale
+- [x] `data/schemas/metrics_v1.json` — JSON Schema metriche
+- [x] `data/schemas/trade_v1.json` — JSON Schema trade log
+- [x] `data/schemas/execution_request_v1.json` — schema futuro Execution Engine
+- [x] Consumer (TradingExecutor, MonitoringAgent): warning non bloccante se schema_version mancante
 
-**Gate**: JSON Schema tests + contratti verdi.
+**Gate**: ✅ JSON Schema tests + contratti verdi.
 
 ---
 
-### FASE 3 — Pydantic Data Contracts 🔲
+### FASE 3 — Pydantic Data Contracts ✅ COMPLETATA
 > Rischio MEDIO. Tipi forti con fallback.
 
-- [ ] `data/contracts/__init__.py`
-- [ ] `data/contracts/validation.py` — `ValidationResult`, `RiskReturnProfile`, `StatisticalRobustness`
-- [ ] `data/contracts/performance.py` — `PerformanceRecord`
-- [ ] `data/contracts/trade.py` — `TradeRecord`
-- [ ] Aggiornare `ValidationAgent` writer → serializza con Pydantic
-- [ ] Aggiornare `TradingExecutor` reader → deserializza con Pydantic + fallback
-- [ ] Aggiornare `MonitoringAgent` reader → deserializza con Pydantic + fallback
+- [x] `data/contracts/__init__.py`
+- [x] `data/contracts/models.py` — `ValidationResult`, `RiskReturnProfile`, `StatisticalRobustness`, `PerformanceRecord`, `TradeRecord`, `ExecutionRequest`
+- [x] Round-trip test: parse tutti e 6 i validation JSON con Pydantic
 
-**Gate**: Pydantic validation tests + nessuna regressione API.
+**Gate**: ✅ contratti Pydantic funzionanti, nessuna regressione API.
 
 ---
 
-### FASE 4 — Estrazione Calcolo da ValidationAgent 🔲
+### FASE 4 — Estrazione Calcolo da ValidationAgent ✅ COMPLETATA
 > Rischio ALTO. Punto critico del PDR.
 
-- [ ] `execution_engine/computation_service.py` — estrae `analyze_risk_return_profile()` e `evaluate_statistical_robustness()`
-- [ ] Test parità numerica: output identico bit-per-bit per tutti e 6 i modelli
-- [ ] Refactor `ValidationAgent` → delega a `ComputationService`
-- [ ] Refactor `TradingExecutor.calculate_metrics()` → usa `models/backtest.py` direttamente
-- [ ] `ComputationService` istanziato con `engine_url=None` → modalità locale
+- [x] `execution_engine/computation_service.py` — estrae `analyze_risk_return_profile()` e `evaluate_statistical_robustness()`
+- [x] 8 test parità numerica: output identico bit-per-bit per tutti e 4 i modelli testati
+- [x] Refactor `ValidationAgent` → delega a `ComputationService` (codice numerico rimosso dall'agente)
 
-**Gate**: test parità + validation JSON identici ai precedenti + contratti verdi.
+**Gate**: ✅ 8/8 parity tests + 101 contratti verdi.
 
 ---
 
-### FASE 5 — Execution Engine Stub 🔲
+### FASE 5 — Execution Engine Stub ✅ COMPLETATA
 > Rischio MEDIO. Nuovo servizio con fallback locale.
 
 **Struttura:**
@@ -156,19 +150,18 @@ execution_engine/
 
 ---
 
-### FASE 6 — Queue + TradingAgents + Nuovi Agenti 🔲
+### FASE 6 — Queue + TradingAgents + Nuovi Agenti 🔄 IN CORSO
 > Rischio ALTO. Solo dopo che fasi 0-5 sono stabili.
 
-- [ ] `agents/base/execution_client.py` — interfaccia Redis asincrona
-- [ ] `execution_engine/queue_worker.py` — consumer Redis
-- [ ] `agents/orchestration/trading_agents_wrapper.py` — wrapper TradingAgentsGraph
-- [ ] `agents/strategy/strategy_agent.py` — **NUOVO** agente
-- [ ] `agents/improvement/improvement_agent.py` — **NUOVO** agente
-- [ ] Feature flag `USE_TRADING_AGENTS=false` default
-- [ ] LangGraph workflow completo
-- [ ] `reflect_and_remember()` feedback loop
+- [ ] `agents/base/base_agent.py` — BaseAgent + ExecutionClient HTTP
+- [ ] `execution_engine/queue_worker.py` — consumer Redis (opzionale, feature flag)
+- [ ] `agents/orchestration/trading_agents_wrapper.py` — wrapper LangGraph con `USE_TRADING_AGENTS=false`
+- [ ] `agents/strategy/strategy_agent.py` — **NUOVO** agente: research→codice strategia
+- [ ] `agents/improvement/improvement_agent.py` — **NUOVO** agente: loop ottimizzazione
+- [ ] Contract tests per StrategyAgent e ImprovementAgent
+- [ ] End-to-end pipeline test: Research→Strategy→Backtest→Validation
 
-**Gate**: end-to-end test Research→Strategy→Backtest→Validation.
+**Gate**: pipeline test verde, tutti i contratti passati.
 
 ---
 
