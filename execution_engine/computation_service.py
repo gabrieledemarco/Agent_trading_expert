@@ -7,11 +7,45 @@ eventually expose the same interface over HTTP.
 
 from __future__ import annotations
 
+import uuid
+
 import numpy as np
 
 
 class ComputationService:
     """Stateless numerical computation helpers."""
+
+    # ── Strategy Execution ────────────────────────────────────────────────────
+
+    def run_strategy_code(
+        self,
+        strategy_code: str,
+        parameters: dict,
+        symbols: list,
+        start: str,
+        end: str,
+        initial_capital: float = 10_000.0,
+        transaction_cost: float = 0.001,
+        seed: int = 42,
+    ) -> dict:
+        """Compile and run strategy code; return full metrics dict."""
+        from execution_engine.runner import StrategyRunner
+        from execution_engine.metrics import MetricsCalculator
+
+        runner_output = StrategyRunner().run(strategy_code, parameters, symbols, start, end, seed)
+        metrics = MetricsCalculator().compute(
+            runner_output["prices"],
+            runner_output["signals"],
+            runner_output["position_sizes"],
+            initial_capital,
+            transaction_cost,
+        )
+        return {
+            "execution_id": str(uuid.uuid4()),
+            "strategy_id": parameters.get("strategy_id", "unknown"),
+            "status": "completed",
+            "risk_return": metrics,
+        }
 
     # ── Risk / Return ─────────────────────────────────────────────────────────
 

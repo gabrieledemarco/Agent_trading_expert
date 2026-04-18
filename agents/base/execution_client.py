@@ -40,16 +40,20 @@ class ExecutionClient:
         """Submit a full backtest request to the Execution Engine."""
         if self.engine_url:
             return self._post("/execute", request)
-        # Local fallback: return computation-only result
-        model_name = request.get("strategy_id", "unknown")
-        return {
-            "execution_id": f"local-{model_name[:8]}",
-            "strategy_id": model_name,
-            "status": "completed",
-            "risk_return": self._local_svc().analyze_risk_return_profile(model_name),
-            "robustness": self._local_svc().evaluate_statistical_robustness(model_name),
-            "backtest_config": request.get("backtest_config", {}),
-        }
+        # Local fallback: actually run the strategy code
+        svc = self._local_svc()
+        dataset = request.get("dataset", {})
+        config = request.get("backtest_config", {})
+        return svc.run_strategy_code(
+            strategy_code=request.get("strategy_code", "def run(data,params): return {'signals':['hold']*len(data['prices']),'position_sizes':[0.0]*len(data['prices'])}"),
+            parameters=request.get("parameters", {}),
+            symbols=dataset.get("symbols", ["AAPL"]),
+            start=dataset.get("start", "2022-01-01"),
+            end=dataset.get("end", "2023-12-31"),
+            initial_capital=config.get("initial_capital", 10_000.0),
+            transaction_cost=config.get("transaction_cost", 0.001),
+            seed=config.get("seed", 42),
+        )
 
     def health(self) -> dict:
         if self.engine_url:

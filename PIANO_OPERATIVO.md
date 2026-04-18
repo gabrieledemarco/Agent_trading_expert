@@ -125,43 +125,57 @@ Ulteriori problemi:
 ### FASE 5 — Execution Engine Stub ✅ COMPLETATA
 > Rischio MEDIO. Nuovo servizio con fallback locale.
 
-**Struttura:**
+**Struttura effettiva:**
 ```
 execution_engine/
 ├── __init__.py
-├── api.py              # FastAPI porta 8001
-├── sandbox.py          # RestrictedPython wrapper
-├── runner.py           # Esegue codice strategia
-├── backtest.py         # Importa models/backtest.py
-├── metrics.py          # Calcolo metriche
-├── queue_worker.py     # Consumer Redis (Fase 6)
-└── models.py           # ExecutionRequest, ExecutionResult (Pydantic)
+├── app.py              # FastAPI porta 8001 (GET /health, POST /execute)
+├── computation_service.py  # Risk/return + robustness (deterministic)
+├── runner.py           # StrategyRunner — esegue def run(data,params)
+├── metrics.py          # MetricsCalculator — Sharpe, drawdown, win-rate
+└── queue_worker.py     # Consumer Redis (opzionale, ENABLE_QUEUE_WORKER)
 ```
 
-- [ ] `execution_engine/models.py` — contratti JSON Engine
-- [ ] `execution_engine/api.py` — `GET /health`, `POST /execute`
-- [ ] `execution_engine/sandbox.py` — RestrictedPython + whitelist
-- [ ] `execution_engine/runner.py` — esecuzione deterministica
-- [ ] `execution_engine/backtest.py` — wrapper deterministico
-- [ ] `ComputationService` → dual mode: locale o HTTP verso Engine
-- [ ] Test dual-mode
+- [x] `execution_engine/app.py` — `GET /health`, `POST /execute` (FastAPI)
+- [x] `execution_engine/computation_service.py` — risk/return + robustness + `run_strategy_code()`
+- [x] `execution_engine/runner.py` — esecuzione deterministica (GBM sintetico, seeded LCG)
+- [x] `execution_engine/metrics.py` — Sharpe, Sortino, Calmar, drawdown, win-rate
+- [x] `ExecutionClient` → dual mode: locale (`run_strategy_code`) o HTTP verso Engine
+- [x] Test dual-mode (32 test in `test_execution_engine.py`)
 
-**Gate**: `GET /health` verde + ComputationService funziona in entrambe le modalità.
+**Gate**: ✅ 189 contratti verdi + esecuzione reale del codice strategia.
 
 ---
 
-### FASE 6 — Queue + TradingAgents + Nuovi Agenti 🔄 IN CORSO
+### FASE 6 — Queue + TradingAgents + Nuovi Agenti ✅ COMPLETATA
 > Rischio ALTO. Solo dopo che fasi 0-5 sono stabili.
 
-- [ ] `agents/base/base_agent.py` — BaseAgent + ExecutionClient HTTP
-- [ ] `execution_engine/queue_worker.py` — consumer Redis (opzionale, feature flag)
-- [ ] `agents/orchestration/trading_agents_wrapper.py` — wrapper LangGraph con `USE_TRADING_AGENTS=false`
-- [ ] `agents/strategy/strategy_agent.py` — **NUOVO** agente: research→codice strategia
-- [ ] `agents/improvement/improvement_agent.py` — **NUOVO** agente: loop ottimizzazione
-- [ ] Contract tests per StrategyAgent e ImprovementAgent
-- [ ] End-to-end pipeline test: Research→Strategy→Backtest→Validation
+- [x] `agents/base/base_agent.py` — BaseAgent ABC + ExecutionClient HTTP/locale
+- [x] `execution_engine/queue_worker.py` — consumer Redis (opzionale, `ENABLE_QUEUE_WORKER=false`)
+- [x] `agents/orchestration/trading_agents_wrapper.py` — wrapper LangGraph con `USE_TRADING_AGENTS=false`
+- [x] `agents/strategy/strategy_agent.py` — **NUOVO** agente: spec YAML→LLM/template→codice strategia
+- [x] `agents/improvement/improvement_agent.py` — **NUOVO** agente: loop ottimizzazione REJECTED
+- [x] 47 contract tests per StrategyAgent, ImprovementAgent, TradingAgentsWrapper, QueueWorker
+- [x] 9 end-to-end pipeline test: Research→Strategy→Backtest→Validation→Improvement→Decision
 
-**Gate**: pipeline test verde, tutti i contratti passati.
+**Gate**: ✅ 189 contratti verdi + pipeline completo funzionante.
+
+---
+
+### FASE 7 — Hardening & Produzione 🔜 PIANIFICATA
+> Rischio MEDIO. Robustezza, sicurezza, monitoring.
+
+- [ ] `execution_engine/sandbox.py` — RestrictedPython sandbox per codice utente non trusted
+- [ ] `execution_engine/models.py` — contratti Pydantic per ExecutionRequest/ExecutionResult (Engine-side)
+- [ ] Walk-forward validation nel `MetricsCalculator`
+- [ ] `agents/monitoring/monitoring_agent.py` → refactor per usare `BaseAgent`
+- [ ] `agents/validation/validation_agent.py` → refactor completo (delega tutto a `ExecutionClient`)
+- [ ] `agents/trading/trading_executor.py` → refactor (delega segnali a `ExecutionClient`)
+- [ ] Dashboard: aggiungi endpoint `/api/backtest/run` per trigger manuale da UI
+- [ ] MLflow integration per model registry
+- [ ] Deploy su server cloud (Docker Compose: API + Execution Engine + Redis)
+
+**Gate**: tutti gli agenti esistenti usano BaseAgent + ExecutionClient; sandbox attivo.
 
 ---
 

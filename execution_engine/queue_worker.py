@@ -136,36 +136,22 @@ class QueueWorker:
         if self._computation is None:
             self._computation = ComputationService()
 
-        strategy_code = job.get("strategy_code", "")
-        parameters = job.get("parameters", {})
         dataset = job.get("dataset", {})
         config = job.get("backtest_config", {})
 
-        symbols = dataset.get("symbols", ["AAPL"])
-        start = dataset.get("start", "2022-01-01")
-        end = dataset.get("end", "2023-12-31")
-
-        prices = self._computation._get_price_data(symbols[0], start, end)
-        run_fn = self._compile_strategy(strategy_code)
-
-        data = {
-            "prices": prices,
-            "dates": [str(i) for i in range(len(prices))],
-            "volume": [1_000_000.0] * len(prices),
-            "symbols": symbols,
-        }
-        output = run_fn(data, parameters)
-        signals = output.get("signals", [])
-        sizes = output.get("position_sizes", [])
-
-        initial_capital = config.get("initial_capital", 10_000)
-        risk_return = self._computation._compute_risk_return(prices, signals, sizes, initial_capital)
-
-        return {
-            "strategy_id": job.get("strategy_id"),
-            "risk_return": risk_return,
-            "execution_id": job.get("job_id"),
-        }
+        result = self._computation.run_strategy_code(
+            strategy_code=job.get("strategy_code", "def run(data,params): return {'signals':['hold']*len(data['prices']),'position_sizes':[0.0]*len(data['prices'])}"),
+            parameters=job.get("parameters", {}),
+            symbols=dataset.get("symbols", ["AAPL"]),
+            start=dataset.get("start", "2022-01-01"),
+            end=dataset.get("end", "2023-12-31"),
+            initial_capital=config.get("initial_capital", 10_000.0),
+            transaction_cost=config.get("transaction_cost", 0.001),
+            seed=config.get("seed", 42),
+        )
+        result["job_id"] = job.get("job_id")
+        result["strategy_id"] = job.get("strategy_id", result.get("strategy_id"))
+        return result
 
     def _compile_strategy(self, code: str):
         """Compile and return the run() function from strategy code."""
