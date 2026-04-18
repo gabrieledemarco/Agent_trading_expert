@@ -14,6 +14,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 
 from configs.paths import Paths
+from data.storage.data_manager import DataStorageManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ class MonitoringAgent:
         validated_dir: str = str(Paths.VALIDATED_DIR),
         monitoring_log_dir: str = str(Paths.MONITORING_DIR),
         alert_threshold: dict = None,
+        db_url: Optional[str] = None,
     ):
         self.trading_log_dir = Path(trading_log_dir)
         self.validated_dir = Path(validated_dir)
@@ -74,6 +76,13 @@ class MonitoringAgent:
         self.alert_history = []
         self.performance_history = []
         self._lock = threading.Lock()
+        
+        # Initialize database connection for Neon persistence
+        try:
+            self.db = DataStorageManager(db_url)
+        except RuntimeError as e:
+            logger.warning(f"Database not available: {e}")
+            self.db = None
 
     def load_performance_data(self, days: int = 30) -> list[PerformanceSnapshot]:
         """Load performance data from trading logs."""
@@ -335,6 +344,13 @@ class MonitoringAgent:
     def run_monitoring_cycle(self) -> list[Alert]:
         """Run a complete monitoring cycle."""
         logger.info("Running monitoring cycle...")
+        
+        # Log monitoring cycle start to Neon
+        if self.db:
+            try:
+                self.db.log_agent_activity("monitoring", "active", "Starting monitoring cycle")
+            except Exception as e:
+                logger.error(f"Failed to log to Neon: {e}")
 
         # Load data
         snapshots = self.load_performance_data(days=7)
@@ -362,6 +378,17 @@ class MonitoringAgent:
         for alert in alerts:
             self._log_alert(alert)
             logger.warning(f"Alert: {alert.alert_type} - {alert.message}")
+            
+            # Persist to Neon database
+            if self.db:
+                try:
+                    self.db.log_agent_activity(
+                        "monitoring",
+                        alert.severity.lower(),
+                        f"{alert.alert_type}: {alert.message}"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to persist alert to Neon: {e}")
 
         # Generate report
         report = self.generate_performance_report(snapshots, baseline)

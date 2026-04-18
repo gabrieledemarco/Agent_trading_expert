@@ -8,6 +8,8 @@ import feedparser
 import requests
 from pathlib import Path
 
+from data.storage.data_manager import DataStorageManager
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 class ResearchAgent:
     """Agent responsible for researching new ML/quant publications."""
 
-    def __init__(self, output_dir: str = "data/research_findings"):
+    def __init__(self, output_dir: str = "data/research_findings", db_url: Optional[str] = None):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.categories = [
@@ -23,6 +25,13 @@ class ResearchAgent:
             ("cs.LG", "Machine Learning"),
             ("stat.ML", "Machine Learning (Statistics)"),
         ]
+        
+        # Initialize database connection for Neon persistence
+        try:
+            self.db = DataStorageManager(db_url)
+        except RuntimeError as e:
+            logger.warning(f"Database not available: {e}")
+            self.db = None
 
     def search_arxiv(
         self,
@@ -83,7 +92,7 @@ class ResearchAgent:
         return papers
 
     def filter_relevant_papers(self, papers: list[dict]) -> list[dict]:
-        """Filter papers relevant to trading/ML."""
+        """Filter papers relevant to trading/ML and persist to database."""
         keywords = [
             "trading",
             "portfolio",
@@ -102,6 +111,26 @@ class ResearchAgent:
             text = (paper.get("title", "") + " " + paper.get("summary", "")).lower()
             if any(kw in text for kw in keywords):
                 relevant.append(paper)
+                
+                # Persist to Neon database
+                if self.db:
+                    try:
+                        # Extract paper_id from full arXiv URL
+                        paper_id = paper.get("id", "")
+                        if "arxiv.org" in paper_id:
+                            paper_id = paper_id.split("/")[-1]
+                        
+                        self.db.save_research({
+                            "id": paper_id,
+                            "title": paper.get("title", ""),
+                            "authors": ", ".join(paper.get("authors", [])),
+                            "published": paper.get("published", "")[:10],
+                            "categories": ", ".join(paper.get("categories", [])),
+                            "abstract": paper.get("summary", ""),
+                            "pdf_url": paper.get("pdf_url", ""),
+                        })
+                    except Exception as e:
+                        logger.error(f"Failed to persist paper to Neon: {e}")
 
         return relevant
 

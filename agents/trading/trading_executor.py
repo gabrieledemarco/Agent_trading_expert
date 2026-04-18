@@ -12,6 +12,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 
 from configs.paths import Paths
+from data.storage.data_manager import DataStorageManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ class TradingExecutorAgent:
         trading_log_dir: str = str(Paths.TRADING_LOGS),
         initial_capital: float = 10000,
         paper_trading: bool = True,
+        db_url: Optional[str] = None,
     ):
         self.model_path = Path(model_path)
         self.validated_dir = Path(validated_dir)
@@ -82,6 +84,13 @@ class TradingExecutorAgent:
         self.active_strategy = None
         self.strategy_profiles = {}
         self._lock = threading.Lock()
+        
+        # Initialize database connection for Neon persistence
+        try:
+            self.db = DataStorageManager(db_url)
+        except RuntimeError as e:
+            logger.warning(f"Database not available: {e}")
+            self.db = None
 
     def load_validated_strategies(self) -> list[StrategyProfile]:
         """Load all validated strategies."""
@@ -365,16 +374,51 @@ class TradingExecutorAgent:
         return self.calculate_metrics()
 
     def _log_trade(self, trade: Trade):
-        """Log trade to file."""
+        """Log trade to file and database."""
+        # Log to file
         log_file = self.log_dir / f"trades_{datetime.now().strftime('%Y-%m-%d')}.jsonl"
         with open(log_file, "a") as f:
             f.write(json.dumps(asdict(trade)) + "\n")
+        
+        # Persist to Neon database
+        if self.db:
+            try:
+                self.db.save_trade({
+                    "timestamp": trade.timestamp,
+                    "symbol": trade.symbol,
+                    "action": trade.action,
+                    "quantity": trade.quantity,
+                    "price": trade.price,
+                    "value": trade.value,
+                    "model_name": trade.model_name,
+                })
+                logger.debug(f"Persisted trade {trade.symbol} to Neon")
+            except Exception as e:
+                logger.error(f"Failed to persist trade to Neon: {e}")
 
     def _log_metrics(self, metrics: PerformanceMetrics):
-        """Log metrics to file."""
+        """Log metrics to file and database."""
+        # Log to file
         log_file = self.log_dir / f"metrics_{datetime.now().strftime('%Y-%m-%d')}.jsonl"
         with open(log_file, "a") as f:
             f.write(json.dumps(asdict(metrics)) + "\n")
+        
+        # Persist to Neon database
+        if self.db:
+            try:
+                self.db.save_performance({
+                    "timestamp": metrics.timestamp,
+                    "model_name": metrics.model_name,
+                    "equity": metrics.current_equity,
+                    "total_return": metrics.total_return,
+                    "sharpe_ratio": metrics.sharpe_ratio,
+                    "max_drawdown": metrics.max_drawdown,
+                    "win_rate": metrics.win_rate,
+                    "num_trades": metrics.num_trades,
+                })
+                logger.debug(f"Persisted performance to Neon")
+            except Exception as e:
+                logger.error(f"Failed to persist performance to Neon: {e}")
 
     def get_performance_summary(self) -> dict:
         """Get performance summary."""
