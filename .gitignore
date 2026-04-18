@@ -40,6 +40,11 @@ ENV/
 htmlcov/
 .tox/
 
+# SQLite (local dev only — production uses Neon PostgreSQL)
+*.db
+*.sqlite
+*.sqlite3
+
 # ML / Data
 *.h5
 *.pth

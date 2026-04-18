@@ -1,4 +1,4 @@
-"""Simple API server for Trading Agents."""
+"""Trading Agents API — data served exclusively from Neon PostgreSQL."""
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +11,16 @@ from configs.paths import Paths
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# DB singleton — created once at startup, shared across all requests.
+_db = None
+
+def get_db():
+    global _db
+    if _db is None:
+        from data.storage.data_manager import DataStorageManager
+        _db = DataStorageManager()
+    return _db
 
 app = FastAPI(
     title="Trading Agents API",
@@ -85,23 +95,13 @@ async def run_research(request: ResearchRequest):
 
 @app.get("/models")
 async def list_models():
-    """List available models."""
-    import os
-    from pathlib import Path
-    
-    models_dir = Path("models/versions")
-    if not models_dir.exists():
-        return {"models": []}
-    
-    models = []
-    for f in models_dir.glob("*.py"):
-        models.append({
-            "name": f.stem,
-            "type": "lstm",
-            "path": str(f)
-        })
-    
-    return {"models": models, "count": len(models)}
+    """List all models from the database."""
+    try:
+        rows = get_db().get_models()
+        return {"models": rows, "count": len(rows)}
+    except Exception as e:
+        logger.error(f"Error listing models: {e}", exc_info=True)
+        return {"models": [], "count": 0}
 
 
 @app.post("/trade/execute")
@@ -157,107 +157,56 @@ async def get_performance():
 # Dashboard endpoints
 @app.get("/dashboard/summary")
 async def get_dashboard_summary():
-    """Get dashboard summary data."""
+    """Get dashboard summary data from Neon PostgreSQL."""
     try:
-        from data.storage.data_manager import DataStorageManager
-        
-        db = DataStorageManager()
-        summary = db.get_dashboard_summary()
-        
-        return summary
+        return get_db().get_dashboard_summary()
     except Exception as e:
         logger.error(f"Error getting dashboard summary: {e}", exc_info=True)
-        # Return mock data if DB not initialized
-        return {
-            "research_papers": 0,
-            "specs_created": 0,
-            "models_implemented": 0,
-            "models_validated": 0,
-            "total_trades": 0,
-            "current_equity": 10000,
-            "total_return": 0,
-            "sharpe_ratio": 0
-        }
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.get("/dashboard/agent-activity")
 async def get_agent_activity(limit: int = 20):
-    """Get agent activity logs."""
+    """Get agent activity logs from Neon PostgreSQL."""
     try:
-        from data.storage.data_manager import DataStorageManager
-        
-        db = DataStorageManager()
-        logs = db.get_agent_logs(limit=limit)
-        
+        logs = get_db().get_agent_logs(limit=limit)
         return {"activities": logs}
     except Exception as e:
         logger.error(f"Error getting agent activity: {e}", exc_info=True)
-        return {"activities": []}
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.get("/dashboard/strategy/{strategy_name}")
 async def get_strategy_performance(strategy_name: str):
-    """Get performance for a specific strategy."""
+    """Get performance for a specific strategy from Neon PostgreSQL."""
     try:
-        from data.storage.data_manager import DataStorageManager
-        
-        db = DataStorageManager()
-        performance = db.get_performance(model_name=strategy_name, days=30)
-        
+        performance = get_db().get_performance(model_name=strategy_name, days=30)
         if not performance:
-            # Return mock data
-            return {
-                "strategy": strategy_name,
-                "equity": 10542,
-                "total_return": 0.054,
-                "sharpe_ratio": 1.23,
-                "max_drawdown": 0.082,
-                "win_rate": 0.62,
-                "risk_level": "MEDIUM",
-                "robustness": "HIGH"
-            }
-        
+            raise HTTPException(status_code=404, detail=f"No performance data for '{strategy_name}'")
         latest = performance[0]
         return {
             "strategy": strategy_name,
-            "equity": latest.get("equity", 0),
+            "equity":       latest.get("equity", 0),
             "total_return": latest.get("total_return", 0),
             "sharpe_ratio": latest.get("sharpe_ratio", 0),
             "max_drawdown": latest.get("max_drawdown", 0),
-            "win_rate": latest.get("win_rate", 0),
+            "win_rate":     latest.get("win_rate", 0),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error getting strategy performance: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.get("/strategies")
 async def list_strategies():
-    """List all strategies with their status."""
+    """List all strategies (models + validation) from Neon PostgreSQL."""
     try:
-        from pathlib import Path
-        
-        validated_dir = Path("models/validated")
-        if not validated_dir.exists():
-            return {"strategies": []}
-        
-        strategies = []
-        for f in validated_dir.glob("*_validation.json"):
-            import json
-            with open(f, encoding="utf-8") as fp:
-                data = json.load(fp)
-                strategies.append({
-                    "name": data.get("model_name"),
-                    "status": data.get("validation_status"),
-                    "risk_level": data.get("risk_return_profile", {}).get("risk_score", "UNKNOWN"),
-                    "sharpe_ratio": data.get("risk_return_profile", {}).get("sharpe_ratio", 0),
-                    "robustness": data.get("statistical_robustness", {}).get("robustness_score", "UNKNOWN"),
-                })
-        
-        return {"strategies": strategies}
+        return {"strategies": get_db().get_strategies()}
     except Exception as e:
         logger.error(f"Error listing strategies: {e}", exc_info=True)
-        return {"strategies": []}
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.get("/api/price")

@@ -6,8 +6,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Strategies | Trading Agent</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
         .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns 0.3s ease;}
@@ -41,9 +41,9 @@
         .strat-info h2{color:var(--text-primary);font-size:14px;margin-bottom:4px;}
         .strat-meta{display:flex;gap:12px;font-size:10px;color:var(--text-muted);}
         .risk-badge{padding:4px 12px;font-size:10px;font-weight:bold;}
-        .risk-low{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
-        .risk-medium{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.2);}
-        .risk-high{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
+        .risk-low{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+        .risk-medium{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid var(--yellow-a30);}
+        .risk-high{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
         .stats-row{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:8px;}
         .stat-box{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
         .stat-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
@@ -352,7 +352,7 @@
                             <tr>
                                 <td style="color:var(--text-primary)">LSTM + HF Cointegration</td>
                                 <td style="color:var(--green)">0.12</td>
-                                <td><span style="background:rgba(0,255,0,0.1);color:var(--green);padding:2px 6px;border-radius:3px;font-size:9px;">LOW</span></td>
+                                <td><span style="background:var(--green-a10);color:var(--green);padding:2px 6px;border-radius:3px;font-size:9px;">LOW</span></td>
                                 <td>2.1%</td>
                                 <td style="color:var(--text-muted)">Good diversification</td>
                             </tr>
@@ -366,7 +366,7 @@
                             <tr>
                                 <td style="color:var(--text-primary)">LSTM + Momentum Sharp</td>
                                 <td style="color:var(--red)">0.89</td>
-                                <td><span style="background:rgba(255,0,0,0.1);color:var(--red);padding:2px 6px;border-radius:3px;font-size:9px;">HIGH</span></td>
+                                <td><span style="background:var(--red-a10);color:var(--red);padding:2px 6px;border-radius:3px;font-size:9px;">HIGH</span></td>
                                 <td>6.8%</td>
                                 <td style="color:var(--yellow)">⚠ High correlation - consider reducing exposure</td>
                             </tr>

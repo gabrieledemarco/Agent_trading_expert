@@ -1,0 +1,163 @@
+/* ============================================================
+   Trading Agent Terminal — Design System Tokens
+   Bloomberg-style dark terminal palette. Monospaced, dense.
+   Import this file before any dashboard stylesheet.
+   ============================================================ */
+
+:root {
+  /* ---------- Surfaces (layered blacks) ---------- */
+  --bg-primary:    #000000;  /* page */
+  --bg-secondary:  #0a0a0a;  /* panels, sidebar, topbar */
+  --bg-tertiary:   #141414;  /* hovered rows, inputs, progress track */
+  --border:        #333333;  /* 1px hairline dividers */
+  --border-subtle: #1a1a1a;  /* chart grid lines, row dividers */
+
+  /* ---------- Text ---------- */
+  --text-primary:  #ff9900;  /* headlines, active nav, brand */
+  --text-secondary:#aaaaaa;  /* body copy, default cell values */
+  --text-muted:    #666666;  /* labels, timestamps, footnotes */
+  --text-inverse:  #000000;  /* on orange fills */
+
+  /* ---------- Accents (semantic) ---------- */
+  --orange: #ff9900;  /* brand / highlight / active */
+  --green:  #00ff00;  /* gains, PASS, approved, online */
+  --red:    #ff0000;  /* losses, FAIL, errors, stops */
+  --blue:   #3399ff;  /* benchmark / testing / info */
+  --yellow: #ffcc00;  /* warnings, alerts, caution */
+
+  /* ---------- Transparent tints ---------- */
+  --orange-a05: rgba(255,153,0,0.05);
+  --orange-a15: rgba(255,153,0,0.15);
+  --orange-a20: rgba(255,153,0,0.20);
+  --green-a10:  rgba(0,255,0,0.10);
+  --green-a20:  rgba(0,255,0,0.20);
+  --red-a10:    rgba(255,0,0,0.10);
+  --red-a20:    rgba(255,0,0,0.20);
+  --blue-a10:   rgba(51,153,255,0.10);
+  --blue-a20:   rgba(51,153,255,0.20);
+  --yellow-a05: rgba(255,204,0,0.05);
+  --yellow-a30: rgba(255,204,0,0.30);
+
+  /* ---------- Typography ---------- */
+  --font:      "Consolas","Monaco","Courier New",monospace;
+  --font-mono: var(--font);
+
+  --fs-micro: 9px;   /* badges, footnotes, box labels */
+  --fs-tiny:  10px;  /* section titles, sidebar meta, status bar */
+  --fs-small: 11px;  /* table cells, body copy, chart legends */
+  --fs-body:  12px;  /* base */
+  --fs-lg:    13px;  /* ticker values */
+  --fs-xl:    14px;  /* topbar brand */
+  --fs-stat:  16px;  /* big KPI values */
+
+  --lh-tight: 1.2;
+  --lh-body:  1.6;   /* chat messages, docs */
+  --tracking-caps: 1px;  /* uppercase section titles */
+
+  /* ---------- Spacing (4pt grid) ---------- */
+  --space-1:  2px;
+  --space-2:  4px;
+  --space-3:  6px;
+  --space-4:  8px;   /* dominant gutter */
+  --space-5:  10px;
+  --space-6:  12px;  /* panel padding */
+  --space-8:  16px;
+  --space-10: 24px;
+
+  /* ---------- Radii (near-zero — terminal aesthetic) ---------- */
+  --radius-0:    0;
+  --radius-1:    2px;   /* brand tag, small badges */
+  --radius-2:    3px;   /* badges */
+  --radius-3:    6px;   /* scrollbar thumb */
+  --radius-pill: 50%;   /* status dot */
+
+  /* ---------- Borders ---------- */
+  --stroke:        1px solid var(--border);
+  --stroke-active: 2px solid var(--orange);
+  --stroke-chart:  1px solid var(--border-subtle);
+
+  /* ---------- Elevation (none — terminal uses layered blacks) ---------- */
+  --shadow-none: none;
+
+  /* ---------- Motion ---------- */
+  --dur-fast: 0.2s;
+  --dur-med:  0.3s;
+  --ease:     ease;
+  --pulse:    pulse 2s infinite;
+}
+
+/* ============================================================
+   Utility classes (use in any dashboard page)
+   ============================================================ */
+
+.ta-brand {
+  color: var(--orange);
+  font-family: var(--font);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+}
+
+.ta-brand-tag {
+  background: var(--orange);
+  color: var(--text-inverse);
+  padding: 2px 6px;
+  border-radius: var(--radius-1);
+  font-size: var(--fs-tiny);
+  font-weight: 700;
+}
+
+.ta-section-title {
+  color: var(--orange);
+  font-size: var(--fs-small);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+.ta-label {
+  color: var(--text-muted);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+.ta-kpi-value {
+  color: var(--text-primary);
+  font-size: var(--fs-stat);
+  font-weight: 700;
+}
+
+.ta-ticker-value {
+  color: var(--text-primary);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.ta-body  { color: var(--text-secondary); font-size: var(--fs-body); }
+.ta-small { color: var(--text-secondary); font-size: var(--fs-small); }
+.ta-muted { color: var(--text-muted);     font-size: var(--fs-tiny); }
+
+/* Semantic colour classes */
+.ta-positive { color: var(--green);  }
+.ta-negative { color: var(--red);    }
+.ta-neutral  { color: var(--orange); }
+.ta-info     { color: var(--blue);   }
+.ta-warn     { color: var(--yellow); }
+
+/* Badge flavours */
+.badge-approved { background: var(--green-a10);  color: var(--green);  border: 1px solid var(--green-a20);  }
+.badge-testing  { background: var(--blue-a10);   color: var(--blue);   border: 1px solid var(--blue-a20);   }
+.badge-failed   { background: var(--red-a10);    color: var(--red);    border: 1px solid var(--red-a20);    }
+.badge-idle     { background: var(--bg-tertiary); color: var(--text-muted); border: var(--stroke); }
+.badge-warn     { background: var(--yellow-a05); color: var(--yellow); border: 1px solid var(--yellow-a30); }
+
+/* Alert bar flavours */
+.alert-ok   { background: var(--green-a10);  border: 1px solid var(--green-a20);  color: #00cc44; }
+.alert-warn { background: var(--yellow-a05); border: 1px solid var(--yellow-a30); color: var(--yellow); }
+.alert-err  { background: var(--red-a10);    border: 1px solid var(--red-a20);    color: var(--red); }
+
+/* Global opt-in root */
+.ta-root, .ta-root * { box-sizing: border-box; font-family: var(--font); }
+.ta-root { background: var(--bg-primary); color: var(--text-secondary); font-size: var(--fs-body); }
+
+/* Shared keyframe */
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }

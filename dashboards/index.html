@@ -6,14 +6,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Trading Agent | Overview</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root {
-            --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414;
-            --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa;
-            --text-muted: #666666; --orange: #ff9900; --green: #00ff00;
-            --red: #ff0000; --blue: #3399ff; --yellow: #ffcc00;
-            --font: "Consolas","Monaco","Courier New",monospace;
-        }
         * { margin:0; padding:0; box-sizing:border-box; }
         html,body { background:var(--bg-primary); color:var(--text-secondary); font-family:var(--font); font-size:12px; height:100%; overflow:hidden; }
         .terminal { display:grid; grid-template-columns:190px 1fr; grid-template-rows:40px 1fr 24px; height:100vh; transition:grid-template-columns 0.3s ease; }
@@ -36,7 +30,7 @@
         .sidebar-item:hover { background:var(--bg-tertiary); }
         .sidebar-item.active { color:var(--orange); background:var(--bg-tertiary); border-left:2px solid var(--orange); }
         .sidebar-item .badge { margin-left:auto; background:var(--bg-tertiary); color:var(--text-muted); padding:1px 5px; border-radius:2px; font-size:9px; }
-        .sidebar-item.active .badge { background:rgba(255,153,0,0.15); color:var(--orange); }
+        .sidebar-item.active .badge { background:var(--orange-a15); color:var(--orange); }
         .status-indicator { margin-top:auto; padding:8px 12px; border-top:1px solid var(--border); display:flex; align-items:center; gap:6px; font-size:10px; white-space:nowrap; transition:all 0.2s; }
         .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
         .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
@@ -72,14 +66,14 @@
         td { padding:5px 8px; border-bottom:1px solid var(--bg-tertiary); }
         tr:hover { background:var(--bg-tertiary); }
         .badge { padding:1px 6px; border-radius:3px; font-size:9px; }
-        .badge-approved { background:rgba(0,255,0,0.1); color:var(--green); border:1px solid rgba(0,255,0,0.2); }
-        .badge-testing { background:rgba(51,153,255,0.1); color:var(--blue); border:1px solid rgba(51,153,255,0.2); }
-        .badge-failed { background:rgba(255,0,0,0.1); color:var(--red); border:1px solid rgba(255,0,0,0.2); }
+        .badge-approved { background:var(--green-a10); color:var(--green); border:1px solid var(--green-a20); }
+        .badge-testing { background:var(--blue-a10); color:var(--blue); border:1px solid var(--blue-a20); }
+        .badge-failed { background:var(--red-a10); color:var(--red); border:1px solid var(--red-a20); }
         .full-row { grid-column:1/-1; }
         .half-row { grid-column:span 2; }
         .bottombar { grid-column:1/-1; background:var(--bg-secondary); border-top:1px solid var(--border); display:flex; align-items:center; padding:0 12px; font-size:10px; color:var(--text-muted); justify-content:space-between; }
         .mini-spark { width:60px; height:20px; display:inline-block; vertical-align:middle; margin-left:4px; }
-        .alert-bar { grid-column:1/-1; background:rgba(255,204,0,0.05); border:1px solid rgba(255,204,0,0.3); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
+        .alert-bar { grid-column:1/-1; background:var(--yellow-a05); border:1px solid var(--yellow-a30); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
         .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
         .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
         .resizable-section{transition:all 0.3s ease;position:relative;}
@@ -185,7 +179,7 @@
                 <!-- Populated dynamically by updateTicker() -->
             </div>
 
-            <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);padding:8px 12px;margin-bottom:8px;">
+            <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:var(--yellow-a05);border:1px solid var(--yellow-a30);padding:8px 12px;margin-bottom:8px;">
                 <div style="color:var(--orange);font-size:10px;margin-bottom:6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;">
                     <span>PORTFOLIO ALLOCATION</span>
                     <button class="resize-btn" onclick="toggleResize('allocation')" title="Minimize/Expand">⊟</button>
@@ -202,11 +196,6 @@
             <div class="chart-section half-row resizable-section" data-section="equity-chart">
                 <div class="chart-section-title">
                     <span>PORTFOLIO RETURN %</span>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                    <div class="chart-tabs">
-                        <button class="chart-tab active" onclick="setChartPeriod('1D',this)">1D</button>
-                        <button class="chart-tab" onclick="setChartPeriod('1W',this)">1W</button>
-                        <button class="chart-tab" onclick="setChartPeriod('1M',this)">1M</button>
                     <div style="display:flex;gap:4px;align-items:center;">
                         <div class="chart-tabs">
                             <button class="chart-tab" onclick="setChartPeriod('5m',this)">5m</button>
@@ -219,14 +208,11 @@
                         </div>
                         <button class="resize-btn" onclick="toggleResize('equity-chart')" title="Minimize/Expand">⊟</button>
                     </div>
-                    <button class="resize-btn" onclick="toggleResize('equity-chart')" title="Minimize/Expand">⊟</button>
-                    </div>
                 </div>
                 <div class="chart-container"><canvas id="equityChart"></canvas></div>
             </div>
 
             <div class="chart-section half-row resizable-section" data-section="dd-chart">
-                <div class="chart-section-title"><span>PORTFOLIO DRAWDOWN %</span><button class="resize-btn" onclick="toggleResize('dd-chart')" title="Minimize/Expand">⊟</button></div>
                 <div class="chart-section-title">
                     <span>PORTFOLIO DRAWDOWN %</span>
                     <button class="resize-btn" onclick="toggleResize('dd-chart')" title="Minimize/Expand">⊟</button>
@@ -236,18 +222,15 @@
 
             <div class="table-section full-row resizable-section" data-section="strategy-table">
                 <div class="table-title">
-                    <span>STRATEGY ALLOCATION & PERFORMANCE</span>
-                    <span style="color:var(--text-muted);font-size:10px;">4 active strategies | Total capital: $41,000</span><button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
+                    <span>STRATEGY ALLOCATION &amp; PERFORMANCE</span>
                     <div style="display:flex;gap:8px;align-items:center;">
-                        <span style="color:var(--text-muted);font-size:10px;"><!-- Populated dynamically --></span>
+                        <span id="strategyTableMeta" style="color:var(--text-muted);font-size:10px;"></span>
                         <button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
                     </div>
                 </div>
                 <table>
                     <thead><tr><th>Strategy</th><th>Type</th><th>Capital Allocated</th><th>% Portfolio</th><th>Return</th><th>Win Rate</th><th>Sharpe</th><th>Max DD</th><th>Trades</th><th>Status</th></tr></thead>
-                    <tbody>
-                        <!-- Populated dynamically by updateStrategyTable() -->
-                    </tbody>
+                    <tbody id="strategyTableBody"></tbody>
                 </table>
             </div>
 
@@ -263,7 +246,8 @@
 </div>
 
 <script>
-// Portfolio Data Structure - Single source of truth
+'use strict';
+// ── Data ────────────────────────────────────────────────────────────────────
 const portfolioData = {
     totalCapital: 41000,
     portfolioValue: 41519,
@@ -514,102 +498,63 @@ function loadResizeStates() {
     });
 }
 
-function toggleSidebar() {
-    const terminal = document.querySelector('.terminal');
-    const isCollapsed = terminal.classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed', isCollapsed);
-// Dynamic data population functions
-function formatCurrency(value) {
-    return '$' + value.toLocaleString();
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function formatCurrency(v) { return '$' + Number(v).toLocaleString(); }
+function formatPercent(v, d = 2) { const s = v > 0 ? '+' : ''; return s + Number(v).toFixed(d) + '%'; }
+function getColorClass(v) { return v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'; }
 
-function formatPercent(value, decimals = 2) {
-    const sign = value > 0 ? '+' : '';
-    return sign + value.toFixed(decimals) + '%';
-}
-
-function getColorClass(value) {
-    if (value > 0) return 'positive';
-    if (value < 0) return 'negative';
-    return 'neutral';
-}
-
+// ── UI updaters ───────────────────────────────────────────────────────────────
 function updateAlertBar() {
     const alertBar = document.querySelector('.alert-bar');
     const worstStrategy = portfolioData.strategies
         .filter(s => s.status === 'ACTIVE' && s.sharpe !== null)
         .sort((a, b) => a.sharpe - b.sharpe)[0];
-
     if (portfolioData.totalReturn > 0) {
-        alertBar.style.background = 'rgba(0,255,0,0.04)';
-        alertBar.style.borderColor = 'rgba(0,255,0,0.2)';
-        alertBar.style.color = '#00cc44';
-        alertBar.innerHTML = `
-            <span>&#10003;</span>
-            <strong>Sistema operativo:</strong> Portfolio in utile (${formatPercent(portfolioData.totalReturn)}). Max Drawdown: ${portfolioData.maxDrawdown}% — soglia: ${portfolioData.maxDrawdownLimit}%. ${worstStrategy && worstStrategy.sharpe < 0 ? worstStrategy.name + ' in monitoraggio (' + formatPercent(worstStrategy.returnPercent) + ').' : ''}
-        `;
+        alertBar.style.cssText = 'background:var(--green-a10);border-color:var(--green-a20);color:#00cc44;';
+        alertBar.innerHTML = `<span>&#10003;</span> <strong>Sistema operativo:</strong> Portfolio in utile (${formatPercent(portfolioData.totalReturn)}). Max DD: ${portfolioData.maxDrawdown}% — soglia: ${portfolioData.maxDrawdownLimit}%.${worstStrategy && worstStrategy.sharpe < 0 ? ' ' + worstStrategy.name + ' in monitoraggio.' : ''}`;
     } else if (worstStrategy && worstStrategy.sharpe < 0) {
-        alertBar.style.background = 'rgba(255,204,0,0.05)';
-        alertBar.style.borderColor = 'rgba(255,204,0,0.3)';
-        alertBar.style.color = 'var(--yellow)';
-        alertBar.innerHTML = `
-            <span>&#9888;</span>
-            <strong>Attenzione:</strong> Sharpe ratio negativo (${worstStrategy.sharpe}) su ${worstStrategy.name}. Modello in revisione. Max Drawdown: ${worstStrategy.maxDD}% — soglia: 15%.
-        `;
+        alertBar.style.cssText = 'background:var(--yellow-a05);border-color:var(--yellow-a30);color:var(--yellow);';
+        alertBar.innerHTML = `<span>&#9888;</span> <strong>Attenzione:</strong> Sharpe negativo (${worstStrategy.sharpe}) su ${worstStrategy.name}. Max DD: ${worstStrategy.maxDD}% — soglia: 15%.`;
     }
 }
 
 function updateTicker() {
     const ticker = document.querySelector('[data-section="ticker"]');
-    const totalReturnClass = getColorClass(portfolioData.totalReturn);
-    const dailyPnlClass = getColorClass(portfolioData.dailyPnlPercent);
-    const sharpeClass = getColorClass(portfolioData.portfolioSharpe - 1);
-    const sortinoClass = getColorClass(portfolioData.portfolioSortino - 1);
-    const activeStrategies = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
-
+    const active = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
     ticker.innerHTML = `
         <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
         <div class="ticker-group">
             <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value">${formatCurrency(portfolioData.portfolioValue)}</span></div>
             <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value">${formatCurrency(portfolioData.totalCapital)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value ${totalReturnClass}">${formatPercent(portfolioData.totalReturn)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value ${dailyPnlClass}">${formatPercent(portfolioData.dailyPnlPercent)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value ${getColorClass(portfolioData.totalReturn)}">${formatPercent(portfolioData.totalReturn)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value ${getColorClass(portfolioData.dailyPnlPercent)}">${formatPercent(portfolioData.dailyPnlPercent)}</span></div>
         </div>
         <div class="ticker-group">
-            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value ${sharpeClass}">${portfolioData.portfolioSharpe.toFixed(2)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value ${sortinoClass}">${portfolioData.portfolioSortino.toFixed(2)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value ${getColorClass(portfolioData.portfolioSharpe - 1)}">${portfolioData.portfolioSharpe.toFixed(2)}</span></div>
+            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value ${getColorClass(portfolioData.portfolioSortino - 1)}">${portfolioData.portfolioSortino.toFixed(2)}</span></div>
             <div class="ticker-item"><span class="ticker-label">MAX DD</span><span class="ticker-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</span></div>
-            <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value">${activeStrategies}/${portfolioData.strategies.length}</span></div>
-        </div>
-    `;
+            <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value">${active}/${portfolioData.strategies.length}</span></div>
+        </div>`;
 }
 
 function updatePortfolioAllocation() {
-    const allocationContainer = document.querySelector('[data-section="allocation"] > div:last-child');
-    allocationContainer.innerHTML = '';
-
-    portfolioData.strategies
+    const container = document.querySelector('[data-section="allocation"] > div:last-child');
+    container.innerHTML = portfolioData.strategies
         .filter(s => s.status === 'ACTIVE')
-        .forEach(strategy => {
-            const pct = ((strategy.capital / portfolioData.totalCapital) * 100).toFixed(1);
-            const returnClass = getColorClass(strategy.returnPercent);
-            const card = document.createElement('div');
-            card.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border);padding:8px;';
-            card.innerHTML = `
-                <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">${strategy.name}</div>
-                <div style="color:var(--text-muted);font-size:9px;">Capital: ${formatCurrency(strategy.capital)} (${pct}%)</div>
-                <div class="${returnClass}" style="font-size:11px;margin-top:2px;">Return: ${formatPercent(strategy.returnPercent)}</div>
-            `;
-            allocationContainer.appendChild(card);
-        });
+        .map(s => {
+            const pct = ((s.capital / portfolioData.totalCapital) * 100).toFixed(1);
+            return `<div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
+                <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">${s.name}</div>
+                <div style="color:var(--text-muted);font-size:9px;">Capital: ${formatCurrency(s.capital)} (${pct}%)</div>
+                <div class="${getColorClass(s.returnPercent)}" style="font-size:11px;margin-top:2px;">Return: ${formatPercent(s.returnPercent)}</div>
+            </div>`;
+        }).join('');
 }
 
 function updateStatsRow() {
     const statsRow = document.querySelector('[data-section="stats"]');
     const totalPnlDollar = Math.round((portfolioData.totalCapital * portfolioData.totalReturn) / 100);
-
     statsRow.innerHTML = `
-        <button class="resize-btn" onclick="toggleResize('stats')" title="Minimize/Expand" style="grid-column:1;padding:4px 8px;">⊟</button>
         <div class="stat-box"><div class="stat-box-label">Portfolio Return</div><div class="stat-box-value ${getColorClass(portfolioData.totalReturn)}">${formatPercent(portfolioData.totalReturn)}</div><div class="stat-box-sub">${formatCurrency(totalPnlDollar)} total</div></div>
         <div class="stat-box"><div class="stat-box-label">Daily Return</div><div class="stat-box-value ${getColorClass(portfolioData.dailyPnlPercent)}">${formatPercent(portfolioData.dailyPnlPercent)}</div><div class="stat-box-sub">${formatCurrency(portfolioData.dailyPnlDollar)} today</div></div>
         <div class="stat-box"><div class="stat-box-label">Avg Win Rate</div><div class="stat-box-value neutral">${portfolioData.avgWinRate.toFixed(1)}%</div><div class="stat-box-sub">across strategies</div></div>
@@ -617,53 +562,35 @@ function updateStatsRow() {
         <div class="stat-box"><div class="stat-box-label">Portfolio Sortino</div><div class="stat-box-value ${getColorClass(portfolioData.portfolioSortino - 1)}">${portfolioData.portfolioSortino.toFixed(2)}</div><div class="stat-box-sub">weighted avg</div></div>
         <div class="stat-box"><div class="stat-box-label">Max DD (Portfolio)</div><div class="stat-box-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</div><div class="stat-box-sub">limit: ${portfolioData.maxDrawdownLimit}%</div></div>
         <div class="stat-box"><div class="stat-box-label">Correlation</div><div class="stat-box-value neutral">${portfolioData.correlation.toFixed(2)}</div><div class="stat-box-sub">avg pairwise</div></div>
-        <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">${portfolioData.diversification.toFixed(2)}</div><div class="stat-box-sub">ratio (σ_p / weighted σ)</div></div>
-        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
-    `;
+        <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">${portfolioData.diversification.toFixed(2)}</div><div class="stat-box-sub">ratio σ_p / weighted σ</div></div>`;
 }
 
 function updateStrategyTable() {
-    const tbody = document.querySelector('[data-section="strategy-table"] tbody');
-    tbody.innerHTML = '';
-
-    portfolioData.strategies.forEach(strategy => {
-        const row = document.createElement('tr');
-
-        if (strategy.status === 'ACTIVE') {
-            const pct = ((strategy.capital / portfolioData.totalCapital) * 100).toFixed(1);
-            row.innerHTML = `
-                <td style="color:var(--text-primary)">${strategy.name}</td>
-                <td>${strategy.type}</td>
-                <td style="color:var(--orange)">${formatCurrency(strategy.capital)}</td>
+    const tbody = document.getElementById('strategyTableBody');
+    tbody.innerHTML = portfolioData.strategies.map(s => {
+        if (s.status === 'ACTIVE') {
+            const pct = ((s.capital / portfolioData.totalCapital) * 100).toFixed(1);
+            return `<tr>
+                <td style="color:var(--text-primary)">${s.name}</td>
+                <td>${s.type}</td>
+                <td style="color:var(--orange)">${formatCurrency(s.capital)}</td>
                 <td>${pct}%</td>
-                <td class="${getColorClass(strategy.returnPercent)}">${formatPercent(strategy.returnPercent)}</td>
-                <td class="${getColorClass(strategy.winRate - 50)}">${strategy.winRate.toFixed(1)}%</td>
-                <td class="${getColorClass(strategy.sharpe)}">${strategy.sharpe.toFixed(2)}</td>
-                <td class="${strategy.maxDD > 2 ? 'negative' : ''}">${strategy.maxDD.toFixed(1)}%</td>
-                <td>${strategy.trades}</td>
-                <td><span class="badge badge-approved">${strategy.status}</span></td>
-            `;
-        } else {
-            row.innerHTML = `
-                <td style="color:var(--text-primary)">${strategy.name}</td>
-                <td>${strategy.type}</td>
-                <td style="color:var(--text-muted)">—</td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-                <td>—</td>
-                <td><span class="badge badge-testing">${strategy.status}</span></td>
-            `;
+                <td class="${getColorClass(s.returnPercent)}">${formatPercent(s.returnPercent)}</td>
+                <td class="${getColorClass(s.winRate - 50)}">${s.winRate.toFixed(1)}%</td>
+                <td class="${getColorClass(s.sharpe)}">${s.sharpe.toFixed(2)}</td>
+                <td class="${s.maxDD > 2 ? 'negative' : ''}">${s.maxDD.toFixed(1)}%</td>
+                <td>${s.trades}</td>
+                <td><span class="badge badge-approved">${s.status}</span></td></tr>`;
         }
-        tbody.appendChild(row);
-    });
-
-    // Update table title
+        return `<tr>
+            <td style="color:var(--text-primary)">${s.name}</td>
+            <td>${s.type}</td>
+            <td colspan="7" style="color:var(--text-muted)">— In testing —</td>
+            <td><span class="badge badge-testing">${s.status}</span></td></tr>`;
+    }).join('');
     const activeCount = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
-    document.querySelector('[data-section="strategy-table"] .table-title span:last-child').textContent =
-        `${activeCount} active strategies | Total capital: ${formatCurrency(portfolioData.totalCapital)}`;
+    const meta = document.getElementById('strategyTableMeta');
+    if (meta) meta.textContent = `${activeCount} active | Total capital: ${formatCurrency(portfolioData.totalCapital)}`;
 }
 
 function updateBottombar() {
@@ -672,99 +599,63 @@ function updateBottombar() {
         <span>CONN: <span style="color:var(--green)">CONNECTED</span></span>
         <span>MODE: <span style="color:var(--orange)">PAPER</span></span>
         <span>POSITIONS: <span style="color:var(--text-secondary)">${portfolioData.openPositions} open</span></span>
-        <span>RESEARCH: <span style="color:var(--blue)">${portfolioData.papersIndexed} papers indexed</span></span>
-    `;
+        <span>RESEARCH: <span style="color:var(--blue)">${portfolioData.papersIndexed} papers indexed</span></span>`;
 }
 
-function initDashboard() {
-    updateAlertBar();
-    updateTicker();
-    updatePortfolioAllocation();
-    updateStatsRow();
-    updateStrategyTable();
-    updateBottombar();
+// ── Sidebar & resize ──────────────────────────────────────────────────────────
+function toggleSidebar() {
+    const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', isCollapsed);
 }
 
 function toggleResize(sectionId) {
     const section = document.querySelector(`[data-section="${sectionId}"]`);
-    const btn = section.querySelector('.resize-btn');
     if (!section) return;
-
+    const btn = section.querySelector('.resize-btn');
     const states = ['normal', 'minimized', 'expanded'];
-    let currentState = section.dataset.resizeState || 'normal';
-    let nextIndex = (states.indexOf(currentState) + 1) % states.length;
-    let nextState = states[nextIndex];
-
-    // Remove all state classes
+    const next = states[(states.indexOf(section.dataset.resizeState || 'normal') + 1) % states.length];
     section.classList.remove('minimized', 'expanded');
-
-    // Apply new state
-    if (nextState === 'minimized') {
-        section.classList.add('minimized');
-        btn.textContent = '⊞';
-        btn.title = 'Expand';
-    } else if (nextState === 'expanded') {
-        section.classList.add('expanded');
-        btn.textContent = '⊟';
-        btn.title = 'Minimize';
-        // Rebuild charts if expanded
-        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
-        if (sectionId === 'dd-chart') buildDDChart();
-    } else {
-        btn.textContent = '⊟';
-        btn.title = 'Minimize';
-        // Rebuild charts if back to normal
+    if (next === 'minimized') { section.classList.add('minimized'); if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; } }
+    else if (next === 'expanded') { section.classList.add('expanded'); if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; } }
+    else { if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; } }
+    if (next !== 'minimized') {
         if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
         if (sectionId === 'dd-chart') buildDDChart();
     }
-
-    section.dataset.resizeState = nextState;
-
-    // Save to localStorage
-    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
-    resizeStates[sectionId] = nextState;
-    localStorage.setItem('resizeStates', JSON.stringify(resizeStates));
+    section.dataset.resizeState = next;
+    const states_ = JSON.parse(localStorage.getItem('resizeStates') || '{}');
+    states_[sectionId] = next;
+    localStorage.setItem('resizeStates', JSON.stringify(states_));
 }
 
-// Load resize states from localStorage
 function loadResizeStates() {
-    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
-    Object.entries(resizeStates).forEach(([sectionId, state]) => {
-        const section = document.querySelector(`[data-section="${sectionId}"]`);
+    const saved = JSON.parse(localStorage.getItem('resizeStates') || '{}');
+    Object.entries(saved).forEach(([id, state]) => {
+        const section = document.querySelector(`[data-section="${id}"]`);
         const btn = section?.querySelector('.resize-btn');
         if (!section) return;
-
         section.dataset.resizeState = state;
-        if (state === 'minimized') {
-            section.classList.add('minimized');
-            if (btn) {
-                btn.textContent = '⊞';
-                btn.title = 'Expand';
-            }
-        } else if (state === 'expanded') {
-            section.classList.add('expanded');
-            if (btn) {
-                btn.textContent = '⊟';
-                btn.title = 'Minimize';
-            }
-        }
+        if (state === 'minimized') { section.classList.add('minimized'); if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; } }
+        else if (state === 'expanded') { section.classList.add('expanded'); }
     });
 }
 
-// Initialize dashboard
-initDashboard();
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    document.querySelector('.terminal').classList.add('sidebar-collapsed');
+}
+
+updateAlertBar();
+updateTicker();
+updatePortfolioAllocation();
+updateStatsRow();
+updateStrategyTable();
+updateBottombar();
 buildEquityChart('1D');
 buildDDChart();
 setInterval(updateTime, 1000);
 updateTime();
 loadResizeStates();
-        function toggleSidebar() {
-            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        }
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.querySelector('.terminal').classList.add('sidebar-collapsed');
-        }
 </script>
 </body>
 </html>

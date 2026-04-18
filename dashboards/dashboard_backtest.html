@@ -6,8 +6,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Backtest | Trading Agent</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
         .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns 0.3s ease;}
@@ -53,24 +53,24 @@
         td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
         tr:hover{background:var(--bg-tertiary);}
         .badge{padding:1px 6px;border-radius:3px;font-size:9px;}
-        .badge-pass{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
-        .badge-fail{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
-        .badge-warn{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.2);}
+        .badge-pass{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+        .badge-fail{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+        .badge-warn{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid var(--yellow-a30);}
         .badge-approved{background:rgba(0,255,0,0.15);color:var(--green);padding:3px 8px;font-size:10px;font-weight:bold;}
         .badge-rejected{background:rgba(255,0,0,0.15);color:var(--red);padding:3px 8px;font-size:10px;font-weight:bold;}
         .test-matrix{display:grid;gap:8px;}
         .test-row{display:grid;grid-template-columns:200px repeat(6,1fr);gap:8px;align-items:center;}
         .test-name{font-weight:bold;color:var(--orange);font-size:10px;}
         .test-cell{text-align:center;padding:4px;border:1px solid var(--border);border-radius:2px;font-size:10px;}
-        .test-cell.pass{background:rgba(0,255,0,0.1);color:var(--green);}
-        .test-cell.fail{background:rgba(255,0,0,0.1);color:var(--red);}
+        .test-cell.pass{background:var(--green-a10);color:var(--green);}
+        .test-cell.fail{background:var(--red-a10);color:var(--red);}
         .test-cell.warn{background:rgba(255,204,0,0.1);color:var(--yellow);}
         .chart-container{height:180px;position:relative;margin-bottom:12px;}
         .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0;}
         .metric-item{background:var(--bg-tertiary);border:1px solid var(--border);padding:8px;border-radius:2px;}
         .metric-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;}
         .metric-value{font-size:14px;font-weight:bold;margin-top:2px;}
-        .anomaly{background:rgba(255,0,0,0.05);border-left:3px solid var(--red);padding:8px;margin:4px 0;}
+        .anomaly{background:var(--red-a10);border-left:3px solid var(--red);padding:8px;margin:4px 0;}
         .anomaly-type{color:var(--red);font-weight:bold;font-size:10px;}
         .anomaly-severity{font-size:9px;color:var(--text-muted);}
         .anomaly-desc{font-size:10px;margin-top:2px;}
