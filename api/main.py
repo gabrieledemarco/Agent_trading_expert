@@ -1,9 +1,13 @@
 """Simple API server for Trading Agents."""
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
+
+from configs.paths import Paths
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,6 +17,15 @@ app = FastAPI(
     description="API for the multi-agent trading system",
     version="0.1.0",
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/dashboards", StaticFiles(directory=str(Paths.DASHBOARDS_DIR), html=True), name="dashboards")
 
 
 class TradeRequest(BaseModel):
@@ -245,6 +258,24 @@ async def list_strategies():
     except Exception as e:
         logger.error(f"Error listing strategies: {e}", exc_info=True)
         return {"strategies": []}
+
+
+@app.get("/api/price")
+async def get_price(symbol: str):
+    """Get real-time stock price via yfinance."""
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        data = ticker.history(period="1d", interval="1m")
+        if data.empty:
+            raise HTTPException(status_code=404, detail=f"No price data for {symbol}")
+        price = float(data["Close"].iloc[-1])
+        return {"symbol": symbol, "price": price}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching price for {symbol}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

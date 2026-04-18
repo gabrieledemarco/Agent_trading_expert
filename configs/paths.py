@@ -40,6 +40,9 @@ class Paths:
     # Execution Engine
     EXECUTION_DIR   = ROOT / "execution_engine"
 
+    # Dashboards (static files served by API)
+    DASHBOARDS_DIR  = ROOT / "dashboards"
+
     @classmethod
     def ensure_dirs(cls):
         """Create all required directories if they don't exist."""
