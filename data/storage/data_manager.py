@@ -1,4 +1,4 @@
-"""Data Storage Manager - Unified data storage for all agents."""
+"""Data Storage Manager - Supports both SQLite and PostgreSQL."""
 
 import os
 import json
@@ -8,11 +8,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, asdict
+from urllib.parse import urlparse
 
 from configs.paths import Paths
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Lazy import per PostgreSQL (opzionale)
+try:
+    import psycopg2
+    import psycopg2.extras
+    HAS_POSTGRES = True
+except ImportError:
+    HAS_POSTGRES = False
 
 
 @dataclass
@@ -38,7 +47,7 @@ class SpecData:
     source_paper_id: str
     model_type: str
     created_date: str
-    status: str  # pending, implemented, validated, trading
+    status: str
 
 
 @dataclass
@@ -49,8 +58,8 @@ class ModelData:
     spec_id: int
     model_type: str
     created_date: str
-    status: str  # implemented, validated, active, retired
-    metrics: str  # JSON string
+    status: str
+    metrics: str
 
 
 @dataclass
@@ -59,11 +68,11 @@ class ValidationData:
     id: int
     model_id: int
     validation_date: str
-    status: str  # approved, rejected
+    status: str
     risk_score: str
     sharpe_ratio: float
     robustness_score: str
-    anomalies: str  # JSON string
+    anomalies: str
 
 
 @dataclass
@@ -77,7 +86,7 @@ class TradeData:
     price: float
     value: float
     model_name: str
-    status: str  # pending, executed, failed
+    status: str
 
 
 @dataclass
@@ -95,20 +104,49 @@ class PerformanceData:
 
 
 class DataStorageManager:
-    """Unified data storage manager for all agents."""
+    """Unified data storage manager — SQLite or PostgreSQL."""
 
-    def __init__(self, db_path: str = str(Paths.DB_PATH)):
-        self.db_path = db_path
-        self.db_dir = Path(db_path).parent
-        self.db_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, db_url: Optional[str] = None):
+        # Rileva il backend dalla URL
+        db_url = db_url or os.getenv("DATABASE_URL")
+
+        if db_url and db_url.startswith("postgresql://"):
+            if not HAS_POSTGRES:
+                raise RuntimeError("PostgreSQL URL provided but psycopg2 not installed")
+            self.backend = "postgres"
+            self.db_url = db_url
+            self.db_path = None
+        else:
+            self.backend = "sqlite"
+            self.db_path = db_url or str(Paths.DB_PATH)
+            self.db_url = None
+            db_dir = Path(self.db_path).parent
+            db_dir.mkdir(parents=True, exist_ok=True)
+
         self._init_database()
+        logger.info(f"Database initialized ({self.backend})")
+
+    def _get_connection(self):
+        """Get connection based on backend."""
+        if self.backend == "postgres":
+            return psycopg2.connect(self.db_url)
+        else:  # sqlite
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            conn.execute("PRAGMA journal_mode=WAL")
+            return conn
 
     def _init_database(self):
         """Initialize database schema."""
+        if self.backend == "postgres":
+            self._init_postgres()
+        else:
+            self._init_sqlite()
+
+    def _init_sqlite(self):
+        """Initialize SQLite schema."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Research table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS research (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,7 +162,6 @@ class DataStorageManager:
             )
         """)
 
-        # Specs table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS specs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -136,7 +173,6 @@ class DataStorageManager:
             )
         """)
 
-        # Models table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS models (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,7 +186,6 @@ class DataStorageManager:
             )
         """)
 
-        # Validation table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS validation (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,7 +200,6 @@ class DataStorageManager:
             )
         """)
 
-        # Trades table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS trades (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -180,7 +214,6 @@ class DataStorageManager:
             )
         """)
 
-        # Performance table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS performance (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -195,7 +228,6 @@ class DataStorageManager:
             )
         """)
 
-        # Agent logs table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS agent_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -208,84 +240,211 @@ class DataStorageManager:
 
         conn.commit()
         conn.close()
-        logger.info(f"Database initialized: {self.db_path}")
 
-    def _get_connection(self):
-        """Get database connection with WAL mode for concurrent read/write safety."""
-        conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        conn.execute("PRAGMA journal_mode=WAL")
-        return conn
+    def _init_postgres(self):
+        """Initialize PostgreSQL schema."""
+        conn = psycopg2.connect(self.db_url)
+        conn.autocommit = True
+        cursor = conn.cursor()
 
-    # Research methods
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS research (
+                id SERIAL PRIMARY KEY,
+                paper_id TEXT UNIQUE,
+                title TEXT,
+                authors TEXT,
+                published TEXT,
+                categories TEXT,
+                abstract TEXT,
+                pdf_url TEXT,
+                found_date TEXT,
+                relevance_score REAL DEFAULT 0
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS specs (
+                id SERIAL PRIMARY KEY,
+                model_name TEXT UNIQUE,
+                source_paper_id TEXT,
+                model_type TEXT,
+                created_date TEXT,
+                status TEXT DEFAULT 'pending'
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS models (
+                id SERIAL PRIMARY KEY,
+                model_name TEXT UNIQUE,
+                spec_id INTEGER,
+                model_type TEXT,
+                created_date TEXT,
+                status TEXT DEFAULT 'implemented',
+                metrics TEXT,
+                FOREIGN KEY (spec_id) REFERENCES specs(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS validation (
+                id SERIAL PRIMARY KEY,
+                model_id INTEGER,
+                validation_date TEXT,
+                status TEXT,
+                risk_score TEXT,
+                sharpe_ratio REAL,
+                robustness_score TEXT,
+                anomalies TEXT,
+                FOREIGN KEY (model_id) REFERENCES models(id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS trades (
+                id SERIAL PRIMARY KEY,
+                timestamp TEXT,
+                symbol TEXT,
+                action TEXT,
+                quantity REAL,
+                price REAL,
+                value REAL,
+                model_name TEXT,
+                status TEXT DEFAULT 'executed'
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS performance (
+                id SERIAL PRIMARY KEY,
+                timestamp TEXT,
+                model_name TEXT,
+                equity REAL,
+                total_return REAL,
+                sharpe_ratio REAL,
+                max_drawdown REAL,
+                win_rate REAL,
+                num_trades INTEGER
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS agent_logs (
+                id SERIAL PRIMARY KEY,
+                agent_name TEXT,
+                timestamp TEXT,
+                status TEXT,
+                message TEXT
+            )
+        """)
+
+        cursor.close()
+        conn.close()
+
+    # ── Research methods ──────────────────────────────────────────────────────
+
     def save_research(self, paper: dict) -> int:
         """Save research finding."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT OR REPLACE INTO research 
-            (paper_id, title, authors, published, categories, abstract, pdf_url, found_date, relevance_score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            paper.get("id"),
-            paper.get("title"),
-            paper.get("authors"),
-            paper.get("published"),
-            paper.get("categories"),
-            paper.get("abstract"),
-            paper.get("pdf_url"),
-            datetime.now().strftime("%Y-%m-%d"),
-            paper.get("relevance_score", 0),
-        ))
+        if self.backend == "postgres":
+            cursor.execute("""
+                INSERT INTO research
+                (paper_id, title, authors, published, categories, abstract, pdf_url, found_date, relevance_score)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (paper_id) DO UPDATE SET
+                title=EXCLUDED.title, authors=EXCLUDED.authors, published=EXCLUDED.published,
+                categories=EXCLUDED.categories, abstract=EXCLUDED.abstract, pdf_url=EXCLUDED.pdf_url,
+                relevance_score=EXCLUDED.relevance_score
+                RETURNING id
+            """, (
+                paper.get("id"), paper.get("title"), paper.get("authors"), paper.get("published"),
+                paper.get("categories"), paper.get("abstract"), paper.get("pdf_url"),
+                datetime.now().strftime("%Y-%m-%d"), paper.get("relevance_score", 0),
+            ))
+            research_id = cursor.fetchone()[0]
+        else:  # sqlite
+            cursor.execute("""
+                INSERT OR REPLACE INTO research
+                (paper_id, title, authors, published, categories, abstract, pdf_url, found_date, relevance_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                paper.get("id"), paper.get("title"), paper.get("authors"), paper.get("published"),
+                paper.get("categories"), paper.get("abstract"), paper.get("pdf_url"),
+                datetime.now().strftime("%Y-%m-%d"), paper.get("relevance_score", 0),
+            ))
+            research_id = cursor.lastrowid
 
         conn.commit()
-        research_id = cursor.lastrowid
         conn.close()
         return research_id
 
     def get_research(self, limit: int = 100) -> list[dict]:
         """Get all research findings."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM research ORDER BY found_date DESC LIMIT ?", (limit,))
+        cursor.execute("SELECT * FROM research ORDER BY found_date DESC LIMIT %s" if self.backend == "postgres" else
+                      "SELECT * FROM research ORDER BY found_date DESC LIMIT ?", (limit,))
         rows = cursor.fetchall()
         conn.close()
 
         return [dict(row) for row in rows]
 
-    # Spec methods
+    # ── Spec methods ──────────────────────────────────────────────────────────
+
     def save_spec(self, spec: dict) -> int:
         """Save specification."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT OR REPLACE INTO specs 
-            (model_name, source_paper_id, model_type, created_date, status)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            spec.get("model_name"),
-            spec.get("source_paper_id"),
-            spec.get("model_type"),
-            datetime.now().strftime("%Y-%m-%d"),
-            spec.get("status", "pending"),
-        ))
+        if self.backend == "postgres":
+            cursor.execute("""
+                INSERT INTO specs
+                (model_name, source_paper_id, model_type, created_date, status)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (model_name) DO UPDATE SET
+                source_paper_id=EXCLUDED.source_paper_id, model_type=EXCLUDED.model_type, status=EXCLUDED.status
+                RETURNING id
+            """, (
+                spec.get("model_name"), spec.get("source_paper_id"), spec.get("model_type"),
+                datetime.now().strftime("%Y-%m-%d"), spec.get("status", "pending"),
+            ))
+            spec_id = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                INSERT OR REPLACE INTO specs
+                (model_name, source_paper_id, model_type, created_date, status)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                spec.get("model_name"), spec.get("source_paper_id"), spec.get("model_type"),
+                datetime.now().strftime("%Y-%m-%d"), spec.get("status", "pending"),
+            ))
+            spec_id = cursor.lastrowid
 
         conn.commit()
-        spec_id = cursor.lastrowid
         conn.close()
         return spec_id
 
     def get_specs(self, status: Optional[str] = None) -> list[dict]:
         """Get specifications."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
         if status:
-            cursor.execute("SELECT * FROM specs WHERE status = ? ORDER BY created_date DESC", (status,))
+            if self.backend == "postgres":
+                cursor.execute("SELECT * FROM specs WHERE status = %s ORDER BY created_date DESC", (status,))
+            else:
+                cursor.execute("SELECT * FROM specs WHERE status = ? ORDER BY created_date DESC", (status,))
         else:
             cursor.execute("SELECT * FROM specs ORDER BY created_date DESC")
 
@@ -293,38 +452,57 @@ class DataStorageManager:
         conn.close()
         return [dict(row) for row in rows]
 
-    # Model methods
+    # ── Model methods ─────────────────────────────────────────────────────────
+
     def save_model(self, model: dict) -> int:
         """Save model."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT OR REPLACE INTO models 
-            (model_name, spec_id, model_type, created_date, status, metrics)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            model.get("model_name"),
-            model.get("spec_id"),
-            model.get("model_type"),
-            datetime.now().strftime("%Y-%m-%d"),
-            model.get("status", "implemented"),
-            json.dumps(model.get("metrics", {})),
-        ))
+        if self.backend == "postgres":
+            cursor.execute("""
+                INSERT INTO models
+                (model_name, spec_id, model_type, created_date, status, metrics)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (model_name) DO UPDATE SET
+                spec_id=EXCLUDED.spec_id, model_type=EXCLUDED.model_type, status=EXCLUDED.status, metrics=EXCLUDED.metrics
+                RETURNING id
+            """, (
+                model.get("model_name"), model.get("spec_id"), model.get("model_type"),
+                datetime.now().strftime("%Y-%m-%d"), model.get("status", "implemented"),
+                json.dumps(model.get("metrics", {})),
+            ))
+            model_id = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                INSERT OR REPLACE INTO models
+                (model_name, spec_id, model_type, created_date, status, metrics)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                model.get("model_name"), model.get("spec_id"), model.get("model_type"),
+                datetime.now().strftime("%Y-%m-%d"), model.get("status", "implemented"),
+                json.dumps(model.get("metrics", {})),
+            ))
+            model_id = cursor.lastrowid
 
         conn.commit()
-        model_id = cursor.lastrowid
         conn.close()
         return model_id
 
     def get_models(self, status: Optional[str] = None) -> list[dict]:
         """Get models."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
         if status:
-            cursor.execute("SELECT * FROM models WHERE status = ? ORDER BY created_date DESC", (status,))
+            if self.backend == "postgres":
+                cursor.execute("SELECT * FROM models WHERE status = %s ORDER BY created_date DESC", (status,))
+            else:
+                cursor.execute("SELECT * FROM models WHERE status = ? ORDER BY created_date DESC", (status,))
         else:
             cursor.execute("SELECT * FROM models ORDER BY created_date DESC")
 
@@ -332,39 +510,55 @@ class DataStorageManager:
         conn.close()
         return [dict(row) for row in rows]
 
-    # Validation methods
+    # ── Validation methods ────────────────────────────────────────────────────
+
     def save_validation(self, validation: dict) -> int:
         """Save validation result."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT INTO validation 
-            (model_id, validation_date, status, risk_score, sharpe_ratio, robustness_score, anomalies)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            validation.get("model_id"),
-            datetime.now().strftime("%Y-%m-%d"),
-            validation.get("status"),
-            validation.get("risk_score"),
-            validation.get("sharpe_ratio", 0),
-            validation.get("robustness_score"),
-            json.dumps(validation.get("anomalies", [])),
-        ))
+        if self.backend == "postgres":
+            cursor.execute("""
+                INSERT INTO validation
+                (model_id, validation_date, status, risk_score, sharpe_ratio, robustness_score, anomalies)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                validation.get("model_id"), datetime.now().strftime("%Y-%m-%d"), validation.get("status"),
+                validation.get("risk_score"), validation.get("sharpe_ratio", 0),
+                validation.get("robustness_score"), json.dumps(validation.get("anomalies", [])),
+            ))
+            validation_id = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                INSERT INTO validation
+                (model_id, validation_date, status, risk_score, sharpe_ratio, robustness_score, anomalies)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                validation.get("model_id"), datetime.now().strftime("%Y-%m-%d"), validation.get("status"),
+                validation.get("risk_score"), validation.get("sharpe_ratio", 0),
+                validation.get("robustness_score"), json.dumps(validation.get("anomalies", [])),
+            ))
+            validation_id = cursor.lastrowid
 
         conn.commit()
-        validation_id = cursor.lastrowid
         conn.close()
         return validation_id
 
     def get_validations(self, status: Optional[str] = None) -> list[dict]:
         """Get validations."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
         if status:
-            cursor.execute("SELECT * FROM validation WHERE status = ? ORDER BY validation_date DESC", (status,))
+            if self.backend == "postgres":
+                cursor.execute("SELECT * FROM validation WHERE status = %s ORDER BY validation_date DESC", (status,))
+            else:
+                cursor.execute("SELECT * FROM validation WHERE status = ? ORDER BY validation_date DESC", (status,))
         else:
             cursor.execute("SELECT * FROM validation ORDER BY validation_date DESC")
 
@@ -372,113 +566,165 @@ class DataStorageManager:
         conn.close()
         return [dict(row) for row in rows]
 
-    # Trade methods
+    # ── Trade methods ─────────────────────────────────────────────────────────
+
     def save_trade(self, trade: dict) -> int:
         """Save trade."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT INTO trades 
-            (timestamp, symbol, action, quantity, price, value, model_name, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            trade.get("timestamp"),
-            trade.get("symbol"),
-            trade.get("action"),
-            trade.get("quantity"),
-            trade.get("price"),
-            trade.get("value"),
-            trade.get("model_name"),
-            trade.get("status", "executed"),
-        ))
+        if self.backend == "postgres":
+            cursor.execute("""
+                INSERT INTO trades
+                (timestamp, symbol, action, quantity, price, value, model_name, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                trade.get("timestamp"), trade.get("symbol"), trade.get("action"),
+                trade.get("quantity"), trade.get("price"), trade.get("value"),
+                trade.get("model_name"), trade.get("status", "executed"),
+            ))
+            trade_id = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                INSERT INTO trades
+                (timestamp, symbol, action, quantity, price, value, model_name, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                trade.get("timestamp"), trade.get("symbol"), trade.get("action"),
+                trade.get("quantity"), trade.get("price"), trade.get("value"),
+                trade.get("model_name"), trade.get("status", "executed"),
+            ))
+            trade_id = cursor.lastrowid
 
         conn.commit()
-        trade_id = cursor.lastrowid
         conn.close()
         return trade_id
 
     def get_trades(self, model_name: Optional[str] = None, limit: int = 100) -> list[dict]:
         """Get trades."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
         if model_name:
-            cursor.execute("SELECT * FROM trades WHERE model_name = ? ORDER BY timestamp DESC LIMIT ?", 
-                         (model_name, limit))
+            if self.backend == "postgres":
+                cursor.execute("SELECT * FROM trades WHERE model_name = %s ORDER BY timestamp DESC LIMIT %s",
+                             (model_name, limit))
+            else:
+                cursor.execute("SELECT * FROM trades WHERE model_name = ? ORDER BY timestamp DESC LIMIT ?",
+                             (model_name, limit))
         else:
-            cursor.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT ?", (limit,))
+            if self.backend == "postgres":
+                cursor.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT %s", (limit,))
+            else:
+                cursor.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT ?", (limit,))
 
         rows = cursor.fetchall()
         conn.close()
         return [dict(row) for row in rows]
 
-    # Performance methods
+    # ── Performance methods ───────────────────────────────────────────────────
+
     def save_performance(self, performance: dict) -> int:
         """Save performance snapshot."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT INTO performance 
-            (timestamp, model_name, equity, total_return, sharpe_ratio, max_drawdown, win_rate, num_trades)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            performance.get("timestamp"),
-            performance.get("model_name"),
-            performance.get("equity"),
-            performance.get("total_return"),
-            performance.get("sharpe_ratio"),
-            performance.get("max_drawdown"),
-            performance.get("win_rate"),
-            performance.get("num_trades"),
-        ))
+        if self.backend == "postgres":
+            cursor.execute("""
+                INSERT INTO performance
+                (timestamp, model_name, equity, total_return, sharpe_ratio, max_drawdown, win_rate, num_trades)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                performance.get("timestamp"), performance.get("model_name"), performance.get("equity"),
+                performance.get("total_return"), performance.get("sharpe_ratio"),
+                performance.get("max_drawdown"), performance.get("win_rate"), performance.get("num_trades"),
+            ))
+            perf_id = cursor.fetchone()[0]
+        else:
+            cursor.execute("""
+                INSERT INTO performance
+                (timestamp, model_name, equity, total_return, sharpe_ratio, max_drawdown, win_rate, num_trades)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                performance.get("timestamp"), performance.get("model_name"), performance.get("equity"),
+                performance.get("total_return"), performance.get("sharpe_ratio"),
+                performance.get("max_drawdown"), performance.get("win_rate"), performance.get("num_trades"),
+            ))
+            perf_id = cursor.lastrowid
 
         conn.commit()
-        performance_id = cursor.lastrowid
         conn.close()
-        return performance_id
+        return perf_id
 
     def get_performance(self, model_name: Optional[str] = None, days: int = 30) -> list[dict]:
         """Get performance history."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
         if model_name:
-            cursor.execute("""
-                SELECT * FROM performance 
-                WHERE model_name = ? 
-                ORDER BY timestamp DESC 
-                LIMIT ?
-            """, (model_name, days))
+            if self.backend == "postgres":
+                cursor.execute("""
+                    SELECT * FROM performance
+                    WHERE model_name = %s
+                    ORDER BY timestamp DESC
+                    LIMIT %s
+                """, (model_name, days))
+            else:
+                cursor.execute("""
+                    SELECT * FROM performance
+                    WHERE model_name = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (model_name, days))
         else:
-            cursor.execute("""
-                SELECT * FROM performance 
-                ORDER BY timestamp DESC 
-                LIMIT ?
-            """, (days,))
+            if self.backend == "postgres":
+                cursor.execute("""
+                    SELECT * FROM performance
+                    ORDER BY timestamp DESC
+                    LIMIT %s
+                """, (days,))
+            else:
+                cursor.execute("""
+                    SELECT * FROM performance
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (days,))
 
         rows = cursor.fetchall()
         conn.close()
         return [dict(row) for row in rows]
 
-    # Agent logs
+    # ── Agent logs ────────────────────────────────────────────────────────────
+
     def log_agent_activity(self, agent_name: str, status: str, message: str):
         """Log agent activity."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("""
-            INSERT INTO agent_logs (agent_name, timestamp, status, message)
-            VALUES (?, ?, ?, ?)
-        """, (
-            agent_name,
-            datetime.now().isoformat(),
-            status,
-            message,
-        ))
+        if self.backend == "postgres":
+            cursor.execute("""
+                INSERT INTO agent_logs (agent_name, timestamp, status, message)
+                VALUES (%s, %s, %s, %s)
+            """, (
+                agent_name, datetime.now().isoformat(), status, message,
+            ))
+        else:
+            cursor.execute("""
+                INSERT INTO agent_logs (agent_name, timestamp, status, message)
+                VALUES (?, ?, ?, ?)
+            """, (
+                agent_name, datetime.now().isoformat(), status, message,
+            ))
 
         conn.commit()
         conn.close()
@@ -486,48 +732,86 @@ class DataStorageManager:
     def get_agent_logs(self, agent_name: Optional[str] = None, limit: int = 100) -> list[dict]:
         """Get agent logs."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
         if agent_name:
-            cursor.execute("""
-                SELECT * FROM agent_logs 
-                WHERE agent_name = ? 
-                ORDER BY timestamp DESC 
-                LIMIT ?
-            """, (agent_name, limit))
+            if self.backend == "postgres":
+                cursor.execute("""
+                    SELECT * FROM agent_logs
+                    WHERE agent_name = %s
+                    ORDER BY timestamp DESC
+                    LIMIT %s
+                """, (agent_name, limit))
+            else:
+                cursor.execute("""
+                    SELECT * FROM agent_logs
+                    WHERE agent_name = ?
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """, (agent_name, limit))
         else:
-            cursor.execute("SELECT * FROM agent_logs ORDER BY timestamp DESC LIMIT ?", (limit,))
+            if self.backend == "postgres":
+                cursor.execute("SELECT * FROM agent_logs ORDER BY timestamp DESC LIMIT %s", (limit,))
+            else:
+                cursor.execute("SELECT * FROM agent_logs ORDER BY timestamp DESC LIMIT ?", (limit,))
 
         rows = cursor.fetchall()
         conn.close()
         return [dict(row) for row in rows]
 
-    # Dashboard data methods
+    # ── Dashboard data methods ────────────────────────────────────────────────
+
     def get_dashboard_summary(self) -> dict:
         """Get dashboard summary data."""
         conn = self._get_connection()
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        if self.backend == "postgres":
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
         # Get counts
-        cursor.execute("SELECT COUNT(*) as count FROM research")
-        research_count = cursor.fetchone()["count"]
+        if self.backend == "postgres":
+            cursor.execute("SELECT COUNT(*) as count FROM research")
+            research_count = cursor.fetchone()["count"]
 
-        cursor.execute("SELECT COUNT(*) as count FROM specs")
-        specs_count = cursor.fetchone()["count"]
+            cursor.execute("SELECT COUNT(*) as count FROM specs")
+            specs_count = cursor.fetchone()["count"]
 
-        cursor.execute("SELECT COUNT(*) as count FROM models")
-        models_count = cursor.fetchone()["count"]
+            cursor.execute("SELECT COUNT(*) as count FROM models")
+            models_count = cursor.fetchone()["count"]
 
-        cursor.execute("SELECT COUNT(*) as count FROM validation WHERE status = 'approved'")
-        validated_count = cursor.fetchone()["count"]
+            cursor.execute("SELECT COUNT(*) as count FROM validation WHERE status = 'approved'")
+            validated_count = cursor.fetchone()["count"]
 
-        cursor.execute("SELECT COUNT(*) as count FROM trades")
-        trades_count = cursor.fetchone()["count"]
+            cursor.execute("SELECT COUNT(*) as count FROM trades")
+            trades_count = cursor.fetchone()["count"]
 
-        cursor.execute("SELECT equity, total_return, sharpe_ratio FROM performance ORDER BY timestamp DESC LIMIT 1")
-        latest_perf = cursor.fetchone()
+            cursor.execute("SELECT equity, total_return, sharpe_ratio FROM performance ORDER BY timestamp DESC LIMIT 1")
+            latest_perf = cursor.fetchone()
+        else:
+            cursor.execute("SELECT COUNT(*) as count FROM research")
+            research_count = cursor.fetchone()["count"]
+
+            cursor.execute("SELECT COUNT(*) as count FROM specs")
+            specs_count = cursor.fetchone()["count"]
+
+            cursor.execute("SELECT COUNT(*) as count FROM models")
+            models_count = cursor.fetchone()["count"]
+
+            cursor.execute("SELECT COUNT(*) as count FROM validation WHERE status = 'approved'")
+            validated_count = cursor.fetchone()["count"]
+
+            cursor.execute("SELECT COUNT(*) as count FROM trades")
+            trades_count = cursor.fetchone()["count"]
+
+            cursor.execute("SELECT equity, total_return, sharpe_ratio FROM performance ORDER BY timestamp DESC LIMIT 1")
+            latest_perf = cursor.fetchone()
+
         latest_perf = dict(latest_perf) if latest_perf else {}
 
         conn.close()
@@ -547,10 +831,6 @@ class DataStorageManager:
 if __name__ == "__main__":
     db = DataStorageManager()
     print("Database initialized")
-
-    # Test insert
     db.log_agent_activity("ResearchAgent", "RUNNING", "Starting weekly research")
-    db.log_agent_activity("ResearchAgent", "COMPLETED", "Found 5 relevant papers")
-
     summary = db.get_dashboard_summary()
     print(f"Summary: {summary}")
