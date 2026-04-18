@@ -685,7 +685,17 @@ async function hydrateBacktestFromApi() {
         }
     } catch (err) {
         console.log('Using fallback backtest data:', err.message);
+        showDbError('Errore connessione backtest database: ' + err.message);
     }
+}
+
+function showDbError(message) {
+    console.error('🔴 ' + message);
+    const errorDiv = document.getElementById('dbError') || document.createElement('div');
+    errorDiv.id = 'dbError';
+    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#220000;border:2px solid #ff4444;padding:20px;border-radius:8px;color:#ff6666;font-family:Consolas,monospace;z-index:9999;';
+    errorDiv.innerHTML = '<h3>🔴 DATABASE ERROR</h3><p>' + message + '</p><p style="font-size:12px;color:#888;">Verifica che DATABASE_URL sia configurato in Render</p>';
+    document.body.appendChild(errorDiv);
 }
 </script>
 </body>

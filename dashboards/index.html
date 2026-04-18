@@ -418,7 +418,11 @@ async function hydrateChartDataFromApi() {
                         chartData[period].equity = equity.slice(-12);
                         chartData[period].benchmark = equity.slice(-12).map(v => v * 0.6); // Approximate benchmark
                     }
+                } else if (data.message && data.message.includes('No performance data')) {
+                    showDbError('Nessun dato di performance disponibile in Neon. Configura DATABASE_URL.');
                 }
+            } else {
+                showDbError('Database non configurato. Imposta DATABASE_URL per leggere da Neon.');
             }
         }
         
@@ -427,14 +431,30 @@ async function hydrateChartDataFromApi() {
         if (strategiesResponse.ok) {
             const strategiesData = await strategiesResponse.json();
             const strategies = strategiesData.strategies || [];
+            if (strategies.length === 0) {
+                showDbError('Nessuna strategia trovata in Neon. Esegui il seed per popolare il database.');
+            }
             updateStrategyTable(strategies);
+        } else {
+            showDbError('Impossibile leggere strategie da Neon. DATABASE_URL non configurato.');
         }
         
         // Rebuild chart with new data
         buildEquityChart(currentPeriod);
     } catch (err) {
-        console.log('Using fallback chart data:', err.message);
+        console.error('Database error:', err.message);
+        showDbError('Errore connessione database Neon: ' + err.message);
     }
+}
+
+function showDbError(message) {
+    // Show error in the console and as a visible alert
+    console.error('🔴 ' + message);
+    const errorDiv = document.getElementById('dbError') || document.createElement('div');
+    errorDiv.id = 'dbError';
+    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#220000;border:2px solid #ff4444;padding:20px;border-radius:8px;color:#ff6666;font-family:Consolas,monospace;z-index:9999;';
+    errorDiv.innerHTML = '<h3>🔴 DATABASE ERROR</h3><p>' + message + '</p><p style="font-size:12px;color:#888;">Verifica che DATABASE_URL sia configurato in Render</p>';
+    document.body.appendChild(errorDiv);
 }
 
 function updateStrategyTable(strategies) {
