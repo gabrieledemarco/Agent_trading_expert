@@ -1,0 +1,2 @@
+{"timestamp": "2026-04-16T15:50:00", "model_name": "model_highfrequency_statistical_arbitrage", "current_equity": 10649.5, "total_return": 0.065, "sharpe_ratio": 0.785, "max_drawdown": 0.0399, "win_rate": 0.5635, "num_trades": 42, "risk_profile": "LOW"}
+{"timestamp": "2026-04-16T16:00:00", "model_name": "model_highfrequency_statistical_arbitrage", "current_equity": 10660.2, "total_return": 0.066, "sharpe_ratio": 0.789, "max_drawdown": 0.0399, "win_rate": 0.5640, "num_trades": 43, "risk_profile": "LOW"}

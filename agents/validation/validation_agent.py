@@ -12,6 +12,9 @@ import yaml
 import numpy as np
 import pandas as pd
 
+from configs.paths import Paths
+from execution_engine.computation_service import ComputationService
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -21,14 +24,15 @@ class ValidationAgent:
 
     def __init__(
         self,
-        models_dir: str = "models",
-        specs_dir: str = "specs",
-        output_dir: str = "models/validated",
+        models_dir: str = str(Paths.MODELS_DIR),
+        specs_dir: str = str(Paths.SPECS_DIR),
+        output_dir: str = str(Paths.VALIDATED_DIR),
     ):
         self.models_dir = Path(models_dir)
         self.specs_dir = Path(specs_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self._computation = ComputationService()
 
     def load_specs(self) -> list[dict]:
         """Load all specification files."""
@@ -161,100 +165,12 @@ class ValidationAgent:
         return discrepancies
 
     def analyze_risk_return_profile(self, model_name: str) -> dict:
-        """Analyze risk/return profile of the model."""
-        # Generate synthetic backtest data for analysis
-        np.random.seed(hash(model_name) % 2**32)
-        n_days = 252  # 1 year
-
-        # Simulate returns based on model name hash — always positive to reflect approved models
-        base_return = (hash(model_name) % 100 + 5) / 2000  # 0.25% to 5.25% annual
-        volatility = 0.02 + (hash(model_name + "v") % 100) / 2000  # 2% to 7%
-
-        returns = np.random.normal(base_return / 252, volatility / np.sqrt(252), n_days)
-        equity = (1 + returns).cumprod() * 10000
-
-        # Calculate metrics
-        total_return = (equity[-1] / 10000) - 1
-        annual_return = (1 + total_return) ** (252 / n_days) - 1
-        annual_vol = returns.std() * np.sqrt(252)
-        sharpe = (annual_return - 0.02) / annual_vol if annual_vol > 0 else 0
-
-        # Drawdown
-        peak = np.maximum.accumulate(equity)
-        drawdown = (peak - equity) / peak
-        max_drawdown = np.max(drawdown)
-
-        # Win rate
-        win_rate = (returns > 0).mean()
-
-        return {
-            "expected_return": annual_return,
-            "volatility": annual_vol,
-            "sharpe_ratio": sharpe,
-            "max_drawdown": max_drawdown,
-            "win_rate": win_rate,
-            "risk_score": self._calculate_risk_score(max_drawdown, sharpe, annual_vol),
-            "return_score": self._calculate_return_score(annual_return, sharpe),
-            "risk_return_ratio": abs(annual_return / annual_vol) if annual_vol > 0 else 0,
-        }
-
-    def _calculate_risk_score(self, max_drawdown: float, sharpe: float, vol: float) -> str:
-        """Calculate risk level."""
-        if max_drawdown > 0.3 or vol > 0.3:
-            return "HIGH"
-        elif max_drawdown > 0.15 or vol > 0.15:
-            return "MEDIUM"
-        return "LOW"
-
-    def _calculate_return_score(self, annual_return: float, sharpe: float) -> str:
-        """Calculate return level."""
-        if annual_return > 0.15 and sharpe > 1.5:
-            return "EXCELLENT"
-        elif annual_return > 0.08 and sharpe > 1.0:
-            return "GOOD"
-        elif annual_return > 0.03:
-            return "MODERATE"
-        return "POOR"
+        """Delegate to ComputationService."""
+        return self._computation.analyze_risk_return_profile(model_name)
 
     def evaluate_statistical_robustness(self, model_name: str) -> dict:
-        """Evaluate statistical robustness of model performance."""
-        # Monte Carlo simulation for robustness
-        np.random.seed(hash(model_name + "robust") % 2**32)
-        n_simulations = 100
-
-        # Simulate different market conditions
-        scenarios = []
-        for _ in range(n_simulations):
-            market_bias = np.random.choice([-0.001, 0, 0.001])
-            vol_multiplier = np.random.uniform(0.5, 2.0)
-
-            returns = np.random.normal(market_bias, 0.02 * vol_multiplier, 252)
-            scenario_return = returns.sum()
-            scenarios.append(scenario_return)
-
-        scenarios = np.array(scenarios)
-
-        return {
-            "mean_return": float(scenarios.mean()),
-            "std_return": float(scenarios.std()),
-            "percentile_5": float(np.percentile(scenarios, 5)),
-            "percentile_95": float(np.percentile(scenarios, 95)),
-            "prob_positive_return": float((scenarios > 0).mean()),
-            "prob_negative_10": float((scenarios < -0.10).mean()),
-            "coefficient_of_variation": float(abs(scenarios.mean() / scenarios.std())) if scenarios.std() > 0 else 0,
-            "robustness_score": self._calculate_robustness_score(scenarios),
-        }
-
-    def _calculate_robustness_score(self, scenarios: np.ndarray) -> str:
-        """Calculate robustness level."""
-        cv = abs(scenarios.mean() / scenarios.std()) if scenarios.std() > 0 else 0
-        prob_pos = (scenarios > 0).mean()
-
-        if cv > 1.5 and prob_pos > 0.7:
-            return "HIGH"
-        elif cv > 0.8 and prob_pos > 0.5:
-            return "MEDIUM"
-        return "LOW"
+        """Delegate to ComputationService."""
+        return self._computation.evaluate_statistical_robustness(model_name)
 
     def generate_scientific_documentation(self, model_name: str, spec: dict) -> str:
         """Generate detailed scientific documentation."""
@@ -471,6 +387,7 @@ The model generates trading signals based on:
         validation_status = "REJECTED" if critical_issues > 0 else "APPROVED"
 
         result = {
+            "schema_version": "1.0",
             "model_name": model_name,
             "validation_status": validation_status,
             "validation_timestamp": datetime.now().isoformat(),

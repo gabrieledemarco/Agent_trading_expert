@@ -1,0 +1,2 @@
+{"timestamp": "2026-04-16T09:31:00", "symbol": "AAPL", "action": "buy", "quantity": 10.0, "price": 175.20, "value": 1752.0, "signal": "buy", "model_name": "model_highfrequency_statistical_arbitrage"}
+{"timestamp": "2026-04-16T14:45:00", "symbol": "AAPL", "action": "sell", "quantity": 10.0, "price": 177.80, "value": 1778.0, "signal": "sell", "model_name": "model_highfrequency_statistical_arbitrage"}

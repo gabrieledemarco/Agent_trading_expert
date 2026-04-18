@@ -1,0 +1,50 @@
+{
+  "model_name": "model_a_comparative_study_of_dynamic",
+  "validation_status": "REJECTED",
+  "validation_timestamp": "2026-04-16T15:48:08.147915",
+  "code_quality": {
+    "issues": [],
+    "warnings": [
+      "Random operations without seed setting"
+    ],
+    "score": 9
+  },
+  "anomalies": [
+    {
+      "type": "architecture_mismatch",
+      "severity": "high",
+      "description": "Expected LSTM layer but not found in code"
+    },
+    {
+      "type": "architecture_mismatch",
+      "severity": "high",
+      "description": "Expected LSTM layer but not found in code"
+    },
+    {
+      "type": "data_source_missing",
+      "severity": "medium",
+      "description": "Expected data source yfinance not found"
+    }
+  ],
+  "academic_discrepancies": [],
+  "risk_return_profile": {
+    "expected_return": 0.04718410684485552,
+    "volatility": 0.030008607544508136,
+    "sharpe_ratio": 0.9058769822803883,
+    "max_drawdown": 0.020574487361708683,
+    "win_rate": 0.5396825396825397,
+    "risk_score": "LOW",
+    "return_score": "MODERATE",
+    "risk_return_ratio": 1.5723524250458154
+  },
+  "statistical_robustness": {
+    "mean_return": -0.011219557669217778,
+    "std_return": 0.509937243415515,
+    "percentile_5": -0.6917716216192589,
+    "percentile_95": 0.7371896219597857,
+    "prob_positive_return": 0.43,
+    "prob_negative_10": 0.49,
+    "coefficient_of_variation": 0.022001840057945487,
+    "robustness_score": "LOW"
+  }
+}

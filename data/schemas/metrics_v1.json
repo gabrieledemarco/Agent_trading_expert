@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "metrics_v1",
+  "title": "PerformanceRecord",
+  "description": "One line of trading_logs/metrics_{date}.jsonl — v1.0",
+  "type": "object",
+  "required": [
+    "schema_version", "timestamp", "model_name", "current_equity",
+    "total_return", "sharpe_ratio", "max_drawdown", "win_rate",
+    "num_trades", "risk_profile"
+  ],
+  "properties": {
+    "schema_version":  { "type": "string", "const": "1.0" },
+    "timestamp":       { "type": "string" },
+    "model_name":      { "type": "string" },
+    "current_equity":  { "type": "number", "exclusiveMinimum": 0 },
+    "total_return":    { "type": "number" },
+    "sharpe_ratio":    { "type": "number" },
+    "max_drawdown":    { "type": "number", "minimum": 0 },
+    "win_rate":        { "type": "number", "minimum": 0, "maximum": 1 },
+    "num_trades":      { "type": "integer", "minimum": 0 },
+    "risk_profile":    { "type": "string" }
+  }
+}

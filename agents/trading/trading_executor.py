@@ -11,6 +11,8 @@ from typing import Optional
 from dataclasses import dataclass, asdict
 import numpy as np
 
+from configs.paths import Paths
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -60,9 +62,9 @@ class TradingExecutorAgent:
 
     def __init__(
         self,
-        model_path: str = "models/versions",
-        validated_dir: str = "models/validated",
-        trading_log_dir: str = "trading_logs",
+        model_path: str = str(Paths.MODELS_VERSIONS),
+        validated_dir: str = str(Paths.VALIDATED_DIR),
+        trading_log_dir: str = str(Paths.TRADING_LOGS),
         initial_capital: float = 10000,
         paper_trading: bool = True,
     ):
@@ -93,6 +95,13 @@ class TradingExecutorAgent:
             try:
                 with open(validation_file) as f:
                     validation = json.load(f)
+
+                if validation.get("schema_version") != "1.0":
+                    logger.warning(
+                        "validation file %s missing schema_version=1.0 (got %r)",
+                        validation_file.name,
+                        validation.get("schema_version"),
+                    )
 
                 if validation.get("validation_status") == "APPROVED":
                     risk_profile = validation.get("risk_return_profile", {})

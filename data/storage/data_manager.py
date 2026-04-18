@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, asdict
 
+from configs.paths import Paths
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,7 @@ class PerformanceData:
 class DataStorageManager:
     """Unified data storage manager for all agents."""
 
-    def __init__(self, db_path: str = "data/storage/trading_agents.db"):
+    def __init__(self, db_path: str = str(Paths.DB_PATH)):
         self.db_path = db_path
         self.db_dir = Path(db_path).parent
         self.db_dir.mkdir(parents=True, exist_ok=True)
