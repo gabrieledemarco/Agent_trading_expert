@@ -386,6 +386,45 @@ buildStaticCharts();
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.querySelector('.terminal').classList.add('sidebar-collapsed');
         }
+        
+        // Hydrate with real data from API
+        hydratePerformanceFromApi();
+        
+        async function hydratePerformanceFromApi() {
+    try {
+        // Fetch equity curve data
+        const response = await fetch((window.TRADING_API_BASE||'') + '/api/equity-curve?period=30d');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.labels && data.values && data.labels.length > 0) {
+                // Update eqData with real data
+                eqData['1W'] = {
+                    labels: data.labels.slice(-10),
+                    eq: data.values.slice(-10),
+                    bm: data.values.slice(-10).map(v => v * 0.9)
+                };
+                // Rebuild charts
+                changePeriod('1W');
+            } else if (data.message) {
+                showDbError('Nessun dato di performance in Neon. DATABASE_URL non configurato.');
+            }
+        } else {
+            showDbError('Database non configurato. Imposta DATABASE_URL per leggere da Neon.');
+        }
+    } catch (err) {
+        console.error('Database error:', err.message);
+        showDbError('Errore connessione database: ' + err.message);
+    }
+}
+
+function showDbError(message) {
+    console.error('🔴 ' + message);
+    const errorDiv = document.getElementById('dbError') || document.createElement('div');
+    errorDiv.id = 'dbError';
+    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#220000;border:2px solid #ff4444;padding:20px;border-radius:8px;color:#ff6666;font-family:Consolas,monospace;z-index:9999;';
+    errorDiv.innerHTML = '<h3>🔴 DATABASE ERROR</h3><p>' + message + '</p><p style="font-size:12px;color:#888;">Verifica che DATABASE_URL sia configurato in Render</p>';
+    document.body.appendChild(errorDiv);
+}
 </script>
 </body>
 </html>

@@ -336,6 +336,47 @@ new Chart(document.getElementById('stressChart').getContext('2d'),{type:'bar',da
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.querySelector('.terminal').classList.add('sidebar-collapsed');
         }
+        
+        // Hydrate with real data from API
+        hydrateRiskFromApi();
+        
+        async function hydrateRiskFromApi() {
+            try {
+                const response = await fetch((window.TRADING_API_BASE||'') + '/api/risk/summary');
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update VaR/CVaR stat boxes
+                    const varEl = document.querySelector('.stat-box:nth-child(1) .stat-value');
+                    const cvarEl = document.querySelector('.stat-box:nth-child(2) .stat-value');
+                    
+                    if (varEl && data.var_95 !== null) {
+                        const equity = 10000; // Assume base equity
+                        const varDollar = Math.abs(data.var_95) * equity;
+                        varEl.textContent = '$' + Math.round(varDollar);
+                        varEl.nextElementSibling.textContent = (data.var_95 * 100).toFixed(2) + '% of equity';
+                    }
+                    
+                    if (cvarEl && data.cvar_95 !== null) {
+                        const equity = 10000;
+                        const cvarDollar = Math.abs(data.cvar_95) * equity;
+                        cvarEl.textContent = '$' + Math.round(cvarDollar);
+                    }
+                }
+            } catch (err) {
+                console.log('Using fallback risk data:', err.message);
+                showDbError('Errore connessione risk database: ' + err.message);
+            }
+        }
+        
+        function showDbError(message) {
+            console.error('🔴 ' + message);
+            const errorDiv = document.getElementById('dbError') || document.createElement('div');
+            errorDiv.id = 'dbError';
+            errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#220000;border:2px solid #ff4444;padding:20px;border-radius:8px;color:#ff6666;font-family:Consolas,monospace;z-index:9999;';
+            errorDiv.innerHTML = '<h3>🔴 DATABASE ERROR</h3><p>' + message + '</p><p style="font-size:12px;color:#888;">Verifica che DATABASE_URL sia configurato in Render</p>';
+            document.body.appendChild(errorDiv);
+        }
 </script>
 </body>
 </html>
