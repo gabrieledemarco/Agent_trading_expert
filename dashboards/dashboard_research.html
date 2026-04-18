@@ -6,8 +6,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Research | Trading Agent</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
         .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns 0.3s ease;}
@@ -34,7 +34,7 @@
         .sidebar-item:hover{background:var(--bg-tertiary);}
         .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
         .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
-        .sidebar-item.active .badge{background:rgba(255,153,0,0.15);color:var(--orange);}
+        .sidebar-item.active .badge{background:var(--orange-a15);color:var(--orange);}
         .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;transition:all 0.2s;}
         .sidebar-collapsed .status-indicator{padding:8px 0;justify-content:center;overflow:hidden;}
         .sidebar-collapsed .status-indicator span:not(.status-dot){display:none;}
@@ -64,8 +64,8 @@
         .relevance-bar-sm{flex:1;height:2px;background:var(--bg-tertiary);border-radius:2px;}
         .relevance-fill-sm{height:2px;border-radius:2px;background:var(--blue);}
         .paper-status{font-size:9px;padding:1px 6px;}
-        .status-deployed{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
-        .status-validation{background:rgba(51,153,255,0.1);color:var(--blue);border:1px solid rgba(51,153,255,0.2);}
+        .status-deployed{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+        .status-validation{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
         .status-pending{background:rgba(102,102,102,0.2);color:var(--text-muted);}
         .tags-sm{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;}
         .tag-sm{background:rgba(51,153,255,0.08);border:1px solid rgba(51,153,255,0.15);color:var(--blue);padding:1px 5px;font-size:9px;}

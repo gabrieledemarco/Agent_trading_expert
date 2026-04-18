@@ -6,14 +6,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Trading Agent | Overview</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root {
-            --bg-primary: #000000; --bg-secondary: #0a0a0a; --bg-tertiary: #141414;
-            --border: #333333; --text-primary: #ff9900; --text-secondary: #aaaaaa;
-            --text-muted: #666666; --orange: #ff9900; --green: #00ff00;
-            --red: #ff0000; --blue: #3399ff; --yellow: #ffcc00;
-            --font: "Consolas","Monaco","Courier New",monospace;
-        }
         * { margin:0; padding:0; box-sizing:border-box; }
         html,body { background:var(--bg-primary); color:var(--text-secondary); font-family:var(--font); font-size:12px; height:100%; overflow:hidden; }
         .terminal { display:grid; grid-template-columns:190px 1fr; grid-template-rows:40px 1fr 24px; height:100vh; transition:grid-template-columns 0.3s ease; }
@@ -36,7 +30,7 @@
         .sidebar-item:hover { background:var(--bg-tertiary); }
         .sidebar-item.active { color:var(--orange); background:var(--bg-tertiary); border-left:2px solid var(--orange); }
         .sidebar-item .badge { margin-left:auto; background:var(--bg-tertiary); color:var(--text-muted); padding:1px 5px; border-radius:2px; font-size:9px; }
-        .sidebar-item.active .badge { background:rgba(255,153,0,0.15); color:var(--orange); }
+        .sidebar-item.active .badge { background:var(--orange-a15); color:var(--orange); }
         .status-indicator { margin-top:auto; padding:8px 12px; border-top:1px solid var(--border); display:flex; align-items:center; gap:6px; font-size:10px; white-space:nowrap; transition:all 0.2s; }
         .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
         .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
@@ -72,14 +66,14 @@
         td { padding:5px 8px; border-bottom:1px solid var(--bg-tertiary); }
         tr:hover { background:var(--bg-tertiary); }
         .badge { padding:1px 6px; border-radius:3px; font-size:9px; }
-        .badge-approved { background:rgba(0,255,0,0.1); color:var(--green); border:1px solid rgba(0,255,0,0.2); }
-        .badge-testing { background:rgba(51,153,255,0.1); color:var(--blue); border:1px solid rgba(51,153,255,0.2); }
-        .badge-failed { background:rgba(255,0,0,0.1); color:var(--red); border:1px solid rgba(255,0,0,0.2); }
+        .badge-approved { background:var(--green-a10); color:var(--green); border:1px solid var(--green-a20); }
+        .badge-testing { background:var(--blue-a10); color:var(--blue); border:1px solid var(--blue-a20); }
+        .badge-failed { background:var(--red-a10); color:var(--red); border:1px solid var(--red-a20); }
         .full-row { grid-column:1/-1; }
         .half-row { grid-column:span 2; }
         .bottombar { grid-column:1/-1; background:var(--bg-secondary); border-top:1px solid var(--border); display:flex; align-items:center; padding:0 12px; font-size:10px; color:var(--text-muted); justify-content:space-between; }
         .mini-spark { width:60px; height:20px; display:inline-block; vertical-align:middle; margin-left:4px; }
-        .alert-bar { grid-column:1/-1; background:rgba(255,204,0,0.05); border:1px solid rgba(255,204,0,0.3); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
+        .alert-bar { grid-column:1/-1; background:var(--yellow-a05); border:1px solid var(--yellow-a30); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
         .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
         .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
         .resizable-section{transition:all 0.3s ease;position:relative;}
@@ -185,7 +179,7 @@
                 <!-- Populated dynamically by updateTicker() -->
             </div>
 
-            <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);padding:8px 12px;margin-bottom:8px;">
+            <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:var(--yellow-a05);border:1px solid var(--yellow-a30);padding:8px 12px;margin-bottom:8px;">
                 <div style="color:var(--orange);font-size:10px;margin-bottom:6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;">
                     <span>PORTFOLIO ALLOCATION</span>
                     <button class="resize-btn" onclick="toggleResize('allocation')" title="Minimize/Expand">⊟</button>
@@ -516,10 +510,10 @@ function updateAlertBar() {
         .filter(s => s.status === 'ACTIVE' && s.sharpe !== null)
         .sort((a, b) => a.sharpe - b.sharpe)[0];
     if (portfolioData.totalReturn > 0) {
-        alertBar.style.cssText = 'background:rgba(0,255,0,0.04);border-color:rgba(0,255,0,0.2);color:#00cc44;';
+        alertBar.style.cssText = 'background:var(--green-a10);border-color:var(--green-a20);color:#00cc44;';
         alertBar.innerHTML = `<span>&#10003;</span> <strong>Sistema operativo:</strong> Portfolio in utile (${formatPercent(portfolioData.totalReturn)}). Max DD: ${portfolioData.maxDrawdown}% — soglia: ${portfolioData.maxDrawdownLimit}%.${worstStrategy && worstStrategy.sharpe < 0 ? ' ' + worstStrategy.name + ' in monitoraggio.' : ''}`;
     } else if (worstStrategy && worstStrategy.sharpe < 0) {
-        alertBar.style.cssText = 'background:rgba(255,204,0,0.05);border-color:rgba(255,204,0,0.3);color:var(--yellow);';
+        alertBar.style.cssText = 'background:var(--yellow-a05);border-color:var(--yellow-a30);color:var(--yellow);';
         alertBar.innerHTML = `<span>&#9888;</span> <strong>Attenzione:</strong> Sharpe negativo (${worstStrategy.sharpe}) su ${worstStrategy.name}. Max DD: ${worstStrategy.maxDD}% — soglia: 15%.`;
     }
 }

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Agent Monitor | Trading Agent</title>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
         .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns 0.3s ease;}
@@ -47,15 +47,15 @@
         .agent-type{color:var(--text-muted);font-size:9px;margin-bottom:8px;}
         .status-badge{font-size:9px;padding:2px 8px;border-radius:3px;}
         .status-idle{background:var(--bg-tertiary);color:var(--text-muted);}
-        .status-running{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
-        .status-completed{background:rgba(51,153,255,0.1);color:var(--blue);border:1px solid rgba(51,153,255,0.2);}
-        .status-error{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
+        .status-running{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+        .status-completed{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
+        .status-error{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
         .agent-metrics{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;margin-bottom:8px;}
         .metric-lbl{color:var(--text-muted);}
         .agent-actions{display:flex;gap:4px;margin-top:6px;}
         .agent-btn{flex:1;padding:5px;font-size:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-secondary);cursor:pointer;font-family:var(--font);text-align:center;}
         .agent-btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
-        .agent-btn.stop{background:rgba(255,0,0,0.1);border-color:var(--red);color:var(--red);}
+        .agent-btn.stop{background:var(--red-a10);border-color:var(--red);color:var(--red);}
         .agent-btn.stop:hover{background:var(--red);color:#000;}
         .progress-bar{height:2px;background:var(--bg-tertiary);border-radius:2px;margin-top:6px;}
         .progress-fill{height:2px;border-radius:2px;transition:width 0.5s ease;}
@@ -175,7 +175,7 @@
                     <div style="color:var(--text-muted);font-size:8px;">Cross-strategy</div>
                 </div>
             </div>
-            <div style="margin-top:8px;padding:8px;background:rgba(255,204,0,0.05);border:1px solid rgba(255,204,0,0.2);font-size:10px;color:var(--text-secondary);">
+            <div style="margin-top:8px;padding:8px;background:var(--yellow-a05);border:1px solid var(--yellow-a30);font-size:10px;color:var(--text-secondary);">
                 <span style="color:var(--yellow);">&#9888;</span> <strong>Risk Framework Active:</strong> Tutti gli agenti considerano position sizing (Kelly), stop loss (ATR-based), risk per trade (1% NAV), max drawdown limits (15%), leverage controls (none), R:R ratios (min 1:2), volatility adjustments, e correlation checks tra strategie prima di ogni decisione di trading.
             </div>
         </div>

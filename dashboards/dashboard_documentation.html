@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <title>Documentation | Trading Agent</title>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
         .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns 0.3s ease;}
@@ -50,7 +50,7 @@
         .paper-title{color:var(--text-primary);font-size:12px;font-weight:bold;margin-bottom:6px;}
         .paper-abstract{color:var(--text-secondary);font-size:11px;line-height:1.6;margin-bottom:8px;}
         .paper-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;}
-        .tag{background:rgba(51,153,255,0.1);border:1px solid rgba(51,153,255,0.2);color:var(--blue);padding:1px 6px;font-size:9px;}
+        .tag{background:var(--blue-a10);border:1px solid var(--blue-a20);color:var(--blue);padding:1px 6px;font-size:9px;}
         .paper-meta{display:flex;gap:12px;font-size:10px;color:var(--text-muted);}
         .paper-meta .good{color:var(--green);}
         .relevance-bar{height:3px;background:var(--bg-tertiary);border-radius:2px;margin-top:6px;}
@@ -59,7 +59,7 @@
         .model-doc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
         .model-doc-name{color:var(--text-primary);font-size:13px;font-weight:bold;}
         .model-doc-type{color:var(--text-muted);font-size:10px;}
-        .badge-approved{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);padding:2px 8px;font-size:10px;}
+        .badge-approved{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);padding:2px 8px;font-size:10px;}
         table{width:100%;border-collapse:collapse;font-size:11px;}
         th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:normal;font-size:10px;text-transform:uppercase;}
         td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}

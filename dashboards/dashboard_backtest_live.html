@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Backtest Live | Trading Agent</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="colors_and_type.css">
     <style>
-        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
         .container{padding:20px;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);}
@@ -18,9 +18,9 @@
         .control-group button:hover{background:#ffb030;}
         .control-group button:disabled{background:var(--text-muted);cursor:not-allowed;}
         .status{padding:10px;border-radius:2px;margin-top:10px;font-size:11px;}
-        .status.loading{background:rgba(51,153,255,0.1);color:var(--blue);}
-        .status.success{background:rgba(0,255,0,0.1);color:var(--green);}
-        .status.error{background:rgba(255,0,0,0.1);color:var(--red);}
+        .status.loading{background:var(--blue-a10);color:var(--blue);}
+        .status.success{background:var(--green-a10);color:var(--green);}
+        .status.error{background:var(--red-a10);color:var(--red);}
         .card{background:var(--bg-secondary);border:1px solid var(--border);padding:15px;margin-bottom:15px;border-radius:4px;}
         .card-title{color:var(--orange);font-size:12px;margin-bottom:10px;font-weight:bold;}
         table{width:100%;border-collapse:collapse;font-size:11px;}
