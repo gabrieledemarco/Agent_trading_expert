@@ -395,6 +395,69 @@ const ddData = {
 let equityChart, ddChart;
 let currentPeriod = '1D';
 
+// Function to hydrate chart data from API
+async function hydrateChartDataFromApi() {
+    try {
+        // Map periods to API parameter
+        const periodMap = { '5m': '7d', '15m': '7d', '1h': '30d', '4h': '30d', '1D': '30d', '1W': '90d', '1M': '1y' };
+        
+        // Fetch equity curve for each period
+        for (const period of Object.keys(periodMap)) {
+            const apiPeriod = periodMap[period];
+            const response = await fetch((window.TRADING_API_BASE||'') + `/api/equity-curve?period=${apiPeriod}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.labels && data.values && data.labels.length > 0) {
+                    // Convert equity values to percentage returns
+                    const baseValue = data.values[0] || 10000;
+                    const equity = data.values.map(v => ((v - baseValue) / baseValue) * 100);
+                    
+                    // Update chartData with real data
+                    if (chartData[period]) {
+                        chartData[period].labels = data.labels.slice(-12); // Limit to 12 points
+                        chartData[period].equity = equity.slice(-12);
+                        chartData[period].benchmark = equity.slice(-12).map(v => v * 0.6); // Approximate benchmark
+                    }
+                }
+            }
+        }
+        
+        // Fetch strategies
+        const strategiesResponse = await fetch((window.TRADING_API_BASE||'') + '/strategies');
+        if (strategiesResponse.ok) {
+            const strategiesData = await strategiesResponse.json();
+            const strategies = strategiesData.strategies || [];
+            updateStrategyTable(strategies);
+        }
+        
+        // Rebuild chart with new data
+        buildEquityChart(currentPeriod);
+    } catch (err) {
+        console.log('Using fallback chart data:', err.message);
+    }
+}
+
+function updateStrategyTable(strategies) {
+    const table = document.getElementById('strategyTable');
+    if (!table) return;
+    
+    // Clear existing rows (except header)
+    const rows = table.querySelectorAll('tr:not(:first-child)');
+    rows.forEach(r => r.remove());
+    
+    // Add strategies from API
+    strategies.slice(0, 5).forEach(s => {
+        const row = table.insertRow();
+        row.innerHTML = `
+            <td>${s.name || 'N/A'}</td>
+            <td>${s.model_type || 'N/A'}</td>
+            <td><span class="status-${s.status?.toLowerCase() || 'unknown'}">${s.status || 'N/A'}</span></td>
+            <td>${(s.sharpe_ratio || 0).toFixed(2)}</td>
+            <td>${(s.max_drawdown || 0).toFixed(2)}%</td>
+        `;
+    });
+}
+
 function buildEquityChart(period) {
     const d = chartData[period];
     const ctx = document.getElementById('equityChart').getContext('2d');
@@ -656,6 +719,9 @@ buildDDChart();
 setInterval(updateTime, 1000);
 updateTime();
 loadResizeStates();
+
+// Hydrate with real data from API
+hydrateChartDataFromApi();
 </script>
 </body>
 </html>

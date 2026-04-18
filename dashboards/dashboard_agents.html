@@ -561,6 +561,24 @@ function loadResizeStates() {
 
 async function hydrateAgentActivityFromApi() {
     try {
+        // Fetch agent status from API
+        const statusResponse = await fetch((window.TRADING_API_BASE||'') + '/api/agent-status');
+        if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            const agents = statusData.agents || [];
+            
+            // Update AGENTS with real status from API
+            agents.forEach(agent => {
+                const id = agent.agent_name.toLowerCase().replace(/agent/, '').trim();
+                if (AGENTS[id]) {
+                    AGENTS[id].status = agent.status === 'active' ? 'running' : 'idle';
+                    AGENTS[id].lastRun = agent.timestamp || 'unknown';
+                }
+            });
+            renderAgents();
+        }
+        
+        // Also fetch activity logs
         const response = await fetch((window.TRADING_API_BASE||'') + '/dashboard/agent-activity?limit=20');
         if (!response.ok) return;
         const payload = await response.json();

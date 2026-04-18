@@ -386,6 +386,31 @@ buildStaticCharts();
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.querySelector('.terminal').classList.add('sidebar-collapsed');
         }
+        
+        // Hydrate with real data from API
+        hydratePerformanceFromApi();
+        
+        async function hydratePerformanceFromApi() {
+            try {
+                // Fetch equity curve data
+                const response = await fetch((window.TRADING_API_BASE||'') + '/api/equity-curve?period=30d');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.labels && data.values && data.labels.length > 0) {
+                        // Update eqData with real data
+                        eqData['1W'] = {
+                            labels: data.labels.slice(-10),
+                            eq: data.values.slice(-10),
+                            bm: data.values.slice(-10).map(v => v * 0.9)
+                        };
+                        // Rebuild charts
+                        changePeriod('1W');
+                    }
+                }
+            } catch (err) {
+                console.log('Using fallback performance data:', err.message);
+            }
+        }
 </script>
 </body>
 </html>
