@@ -1,0 +1,22 @@
+services:
+  # Main Trading API — FastAPI on port 8000
+  - type: web
+    name: agent-trading-expert
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # Set manually in Render dashboard → Neon connection string
+      - key: ANTHROPIC_API_KEY
+        sync: false          # Set manually in Render dashboard
+      - key: USE_TRADING_AGENTS
+        value: "false"
+      - key: ENABLE_QUEUE_WORKER
+        value: "false"
+      - key: EXECUTION_ENGINE_URL
+        value: ""            # Leave empty to use local ComputationService fallback
+      - key: PYTHONUNBUFFERED
+        value: "1"

@@ -249,10 +249,10 @@ function buildLiveChart() {
 }
 
 function updateLivePrices() {
-    // Simulate small price movements
-    const aaplDelta = (Math.random() - 0.48) * 0.5;
-    const msftDelta = (Math.random() - 0.52) * 0.4;
-    const googDelta = (Math.random() - 0.48) * 0.3;
+    // Deterministic price simulation (tick-based, reproducible)
+    const aaplDelta = Math.sin(tick * 0.3) * 0.4 + Math.cos(tick * 0.7) * 0.2;
+    const msftDelta = Math.cos(tick * 0.4) * 0.35 - Math.sin(tick * 0.2) * 0.15;
+    const googDelta = Math.sin(tick * 0.5 + 1) * 0.25 + Math.cos(tick * 0.8) * 0.1;
 
     const aaplMark = aaplBase + aaplDelta + (tick * 0.02);
     const msftMark = msftBase + msftDelta - (tick * 0.01);
@@ -284,9 +284,11 @@ function tick_() {
     document.getElementById('lastUpdate').textContent = t;
     document.getElementById('tickCount').textContent = tick;
 
-    // Equity simulation: small random walk
-    const delta = (Math.random() - 0.51) * 15;
-    equity = Math.max(9500, Math.min(10500, equity + delta));
+    // Equity simulation: deterministic walk with upward bias
+    const tickBias = 0.08;
+    const volatility = 12;
+    const drift = tickBias - (volatility / 2) + (Math.sin(tick * 0.5) * 3);
+    equity = Math.max(9500, Math.min(10500, equity + drift));
     equityData.push(Math.round(equity));
     equityLabels.push(t);
     if (equityData.length > 60) { equityData.shift(); equityLabels.shift(); }

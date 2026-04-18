@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "validation_v1",
+  "title": "ValidationResult",
+  "description": "Output schema for ValidationAgent.validate_model() — v1.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "model_name",
+    "validation_status",
+    "validation_timestamp",
+    "code_quality",
+    "anomalies",
+    "academic_discrepancies",
+    "risk_return_profile",
+    "statistical_robustness"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "model_name": { "type": "string" },
+    "validation_status": { "type": "string", "enum": ["APPROVED", "REJECTED"] },
+    "validation_timestamp": { "type": "string" },
+    "code_quality": {
+      "type": "object",
+      "required": ["issues", "warnings", "score"],
+      "properties": {
+        "issues":   { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "score":    { "type": "number", "minimum": 0, "maximum": 10 }
+      }
+    },
+    "anomalies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "severity", "description"],
+        "properties": {
+          "type":        { "type": "string" },
+          "severity":    { "type": "string", "enum": ["high", "medium", "low"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "academic_discrepancies": { "type": "array" },
+    "risk_return_profile": {
+      "type": "object",
+      "required": [
+        "expected_return", "volatility", "sharpe_ratio",
+        "max_drawdown", "win_rate", "risk_score", "return_score", "risk_return_ratio"
+      ],
+      "properties": {
+        "expected_return":   { "type": "number" },
+        "volatility":        { "type": "number", "minimum": 0 },
+        "sharpe_ratio":      { "type": "number" },
+        "max_drawdown":      { "type": "number", "minimum": 0 },
+        "win_rate":          { "type": "number", "minimum": 0, "maximum": 1 },
+        "risk_score":        { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "return_score":      { "type": "string", "enum": ["POOR", "MODERATE", "GOOD", "EXCELLENT"] },
+        "risk_return_ratio": { "type": "number" }
+      }
+    },
+    "statistical_robustness": {
+      "type": "object",
+      "required": [
+        "mean_return", "std_return", "percentile_5", "percentile_95",
+        "prob_positive_return", "prob_negative_10", "coefficient_of_variation", "robustness_score"
+      ],
+      "properties": {
+        "mean_return":             { "type": "number" },
+        "std_return":              { "type": "number", "minimum": 0 },
+        "percentile_5":            { "type": "number" },
+        "percentile_95":           { "type": "number" },
+        "prob_positive_return":    { "type": "number", "minimum": 0, "maximum": 1 },
+        "prob_negative_10":        { "type": "number", "minimum": 0, "maximum": 1 },
+        "coefficient_of_variation":{ "type": "number" },
+        "robustness_score":        { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] }
+      }
+    }
+  }
+}

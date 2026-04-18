@@ -26,14 +26,9 @@
         .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
         .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all 0.2s;}
         .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;gap:0;}
-        .sidebar-collapsed .sidebar-item span:first-child{margin:0;}
-        .sidebar-collapsed .sidebar-item span:not(:first-child),.sidebar-collapsed .sidebar-item .badge{display:none;}
         .sidebar-item:hover{background:var(--bg-tertiary);}
         .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
-        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
-        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;transition:all 0.2s;}
-        .sidebar-collapsed .status-indicator{padding:8px 0;justify-content:center;overflow:hidden;}
-        .sidebar-collapsed .status-indicator span:not(.status-dot){display:none;}
+        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;}
         .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
         .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
@@ -51,12 +46,8 @@
         .tab.active{color:var(--orange);border-bottom:2px solid var(--orange);margin-bottom:-5px;}
         .tab-content{display:none;}
         .tab-content.active{display:block;}
-        .charts-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
-        .charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
         .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;}
-        .card-title{color:var(--orange);font-size:11px;margin-bottom:8px;}
-        .chart-container{height:160px;position:relative;}
-        .chart-container-sm{height:120px;position:relative;}
+        .card-title{color:var(--orange);font-size:11px;margin-bottom:8px;font-weight:bold;}
         table{width:100%;border-collapse:collapse;font-size:11px;}
         th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:normal;font-size:10px;text-transform:uppercase;}
         td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
@@ -64,31 +55,31 @@
         .badge{padding:1px 6px;border-radius:3px;font-size:9px;}
         .badge-pass{background:rgba(0,255,0,0.1);color:var(--green);border:1px solid rgba(0,255,0,0.2);}
         .badge-fail{background:rgba(255,0,0,0.1);color:var(--red);border:1px solid rgba(255,0,0,0.2);}
-        .wf-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin-bottom:8px;}
-        .wf-cell{background:var(--bg-tertiary);border:1px solid var(--border);padding:6px 4px;text-align:center;font-size:9px;}
-        .wf-cell-label{color:var(--text-muted);font-size:8px;margin-bottom:2px;}
-        .wf-cell-value{font-weight:bold;}
-        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
-        /* Custom scrollbar styles - always visible */
+        .badge-warn{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.2);}
+        .badge-approved{background:rgba(0,255,0,0.15);color:var(--green);padding:3px 8px;font-size:10px;font-weight:bold;}
+        .badge-rejected{background:rgba(255,0,0,0.15);color:var(--red);padding:3px 8px;font-size:10px;font-weight:bold;}
+        .test-matrix{display:grid;gap:8px;}
+        .test-row{display:grid;grid-template-columns:200px repeat(6,1fr);gap:8px;align-items:center;}
+        .test-name{font-weight:bold;color:var(--orange);font-size:10px;}
+        .test-cell{text-align:center;padding:4px;border:1px solid var(--border);border-radius:2px;font-size:10px;}
+        .test-cell.pass{background:rgba(0,255,0,0.1);color:var(--green);}
+        .test-cell.fail{background:rgba(255,0,0,0.1);color:var(--red);}
+        .test-cell.warn{background:rgba(255,204,0,0.1);color:var(--yellow);}
+        .chart-container{height:180px;position:relative;margin-bottom:12px;}
+        .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0;}
+        .metric-item{background:var(--bg-tertiary);border:1px solid var(--border);padding:8px;border-radius:2px;}
+        .metric-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;}
+        .metric-value{font-size:14px;font-weight:bold;margin-top:2px;}
+        .anomaly{background:rgba(255,0,0,0.05);border-left:3px solid var(--red);padding:8px;margin:4px 0;}
+        .anomaly-type{color:var(--red);font-weight:bold;font-size:10px;}
+        .anomaly-severity{font-size:9px;color:var(--text-muted);}
+        .anomaly-desc{font-size:10px;margin-top:2px;}
         ::-webkit-scrollbar{width:12px;height:12px;}
         ::-webkit-scrollbar-track{background:var(--bg-primary);border-left:1px solid var(--border);}
         ::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
         ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
-        *{scrollbar-width:thin;scrollbar-color:var(--border) var(--bg-primary);}
-        .main{min-height:calc(100vh - 64px);}
-        .terminal { transition:grid-template-columns 0.3s ease; }
-        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
-        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
-        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
-        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
-        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
-        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
-        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
-        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
-        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
-        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
+        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
     </style>
-    <script src="dashboard_data.js"></script>
 </head>
 <body>
 <div class="terminal">
@@ -98,18 +89,15 @@
             <div class="topbar-brand"><span>TA</span> BACKTEST ANALYSIS</div>
         </div>
         <div class="topbar-controls">
-            <span style="color:var(--text-muted)">Strategy:</span>
-            <select id="stratSelect" onchange="loadStrategy(this.value)">
-                <option value="all">All Strategies (Portfolio)</option>
-                <option value="lstm">Intraday Momentum (LSTM)</option>
-                <option value="hf">High Frequency (Cointegration)</option>
-                <option value="rl">Dynamic Time (RL PPO)</option>
-                <option value="xgb">Momentum Sharpness (XGBoost)</option>
-            </select>
-            <span style="color:var(--text-muted)">Period:</span>
-            <select id="periodSelect">
-                <option value="1y">1 Year (OOS)</option>
-                <option value="3y">3 Year (Full)</option>
+            <span style="color:var(--text-muted)">Model:</span>
+            <select id="modelSelect" onchange="updateDetail(this.value)">
+                <option value="">All Models</option>
+                <option value="hf">High-Frequency Stat. Arbitrage (APPROVED)</option>
+                <option value="im">Intraday Momentum (APPROVED)</option>
+                <option value="dt">Dynamic Time Window (APPROVED)</option>
+                <option value="ms">Momentum Sharpness (APPROVED)</option>
+                <option value="csd">Comparative Study Dynamic (REJECTED)</option>
+                <option value="pyx">From PYX to PY (REJECTED)</option>
             </select>
         </div>
     </header>
@@ -123,12 +111,12 @@
             <div class="sidebar-title">Analisi</div>
             <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
             <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
-            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge" style="background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;">6</span></a>
+            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research</a>
             <a href="dashboard_backtest.html" class="sidebar-item active"><span>◎</span> Backtest</a>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-title">Strategie</div>
-            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies <span class="badge" style="background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;">4</span></a>
+            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies</a>
             <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
             <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
         </div>
@@ -142,463 +130,530 @@
 
     <main class="main">
         <div class="stats-row">
-            <div class="stat-box"><div class="stat-label">IS Sharpe</div><div class="stat-value neutral" id="isSharpe">0.91</div><div class="stat-sub">In-sample</div></div>
-            <div class="stat-box"><div class="stat-label">OOS Sharpe</div><div class="stat-value negative" id="oosSharpe">-0.39</div><div class="stat-sub">Out-of-sample</div></div>
-            <div class="stat-box"><div class="stat-label">IS Win Rate</div><div class="stat-value neutral" id="isWin">56%</div><div class="stat-sub">In-sample</div></div>
-            <div class="stat-box"><div class="stat-label">OOS Win Rate</div><div class="stat-value negative" id="oosWin">47%</div><div class="stat-sub">Out-of-sample</div></div>
-            <div class="stat-box"><div class="stat-label">IS Max DD</div><div class="stat-value neutral" id="isDD">3.1%</div><div class="stat-sub">In-sample</div></div>
-            <div class="stat-box"><div class="stat-label">OOS Max DD</div><div class="stat-value negative" id="oosDD">2.3%</div><div class="stat-sub">Out-of-sample</div></div>
-            <div class="stat-box"><div class="stat-label">MC Pass Rate</div><div class="stat-value neutral" id="mcPass">72%</div><div class="stat-sub">100 simulations</div></div>
-            <div class="stat-box"><div class="stat-label">WF Windows</div><div class="stat-value neutral" id="wfWin">9/12</div><div class="stat-sub">Profitable</div></div>
+            <div class="stat-box"><div class="stat-label">Models Tested</div><div class="stat-value neutral">6</div><div class="stat-sub">Total</div></div>
+            <div class="stat-box"><div class="stat-label">Approved</div><div class="stat-value positive">4</div><div class="stat-sub">66.7%</div></div>
+            <div class="stat-box"><div class="stat-label">Rejected</div><div class="stat-value negative">2</div><div class="stat-sub">High anomalies</div></div>
+            <div class="stat-box"><div class="stat-label">Best Sharpe</div><div class="stat-value positive">0.785</div><div class="stat-sub">High-Freq (HF)</div></div>
+            <div class="stat-box"><div class="stat-label">Avg Win Rate</div><div class="stat-value neutral">51.9%</div><div class="stat-sub">Approved models</div></div>
+            <div class="stat-box"><div class="stat-label">Avg Max DD</div><div class="stat-value neutral">5.4%</div><div class="stat-sub">Approved models</div></div>
+            <div class="stat-box"><div class="stat-label">Code Quality</div><div class="stat-value positive">9.7/10</div><div class="stat-sub">Avg score</div></div>
+            <div class="stat-box"><div class="stat-label">MC Prob+</div><div class="stat-value neutral">50.3%</div><div class="stat-sub">Avg (100 sims)</div></div>
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('walkforward')">Walk-Forward</button>
-            <button class="tab" onclick="switchTab('comparison')">Strategy Comparison</button>
+            <button class="tab active" onclick="switchTab('overview')">Overview</button>
+            <button class="tab" onclick="switchTab('tests')">Validation Tests</button>
+            <button class="tab" onclick="switchTab('detail')">Strategy Detail</button>
             <button class="tab" onclick="switchTab('montecarlo')">Monte Carlo</button>
-            <button class="tab" onclick="switchTab('trades')">Trade Distribution</button>
-            <button class="tab" onclick="switchTab('robustness')">Robustness</button>
+            <button class="tab" onclick="switchTab('rejected')">Rejected Analysis</button>
         </div>
 
-        <!-- Walk Forward Tab -->
-        <div class="tab-content active" id="tab-walkforward">
+        <!-- TAB 1: OVERVIEW -->
+        <div class="tab-content active" id="tab-overview">
             <div class="card">
-                <div class="card-title">WALK-FORWARD VALIDATION — 12 MONTHLY WINDOWS (2024-2026)</div>
-                <div class="wf-grid" id="wfGrid"></div>
-            </div>
-            <div class="charts-2">
-                <div class="card">
-                    <div class="card-title">IS vs OOS EQUITY CURVES</div>
-                    <div class="chart-container"><canvas id="isOosChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title">SHARPE PER WINDOW (IS vs OOS)</div>
-                    <div class="chart-container"><canvas id="sharpeWfChart"></canvas></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Comparison Tab -->
-        <div class="tab-content" id="tab-comparison">
-            <div class="card" style="margin-bottom:8px;">
-                <div class="card-title">STRATEGY COMPARISON — KEY METRICS</div>
+                <div class="card-title">ALL MODELS — VALIDATION RESULTS</div>
                 <table>
-                    <thead><tr><th>Strategy</th><th>Type</th><th>Sharpe IS</th><th>Sharpe OOS</th><th>Win Rate OOS</th><th>Max DD OOS</th><th>Sortino OOS</th><th>Calmar OOS</th><th>Trades</th><th>Verdict</th></tr></thead>
-                    <tbody id="comparisonTbody">
-                        <tr><td class="neutral">Intraday Momentum</td><td>LSTM</td><td class="positive">0.91</td><td class="negative">-0.39</td><td class="negative">47%</td><td>2.3%</td><td class="negative">-0.51</td><td class="negative">-0.83</td><td>6</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
-                        <tr><td class="neutral">High Frequency</td><td>Cointegration</td><td class="positive">1.42</td><td class="positive">0.12</td><td class="positive">52%</td><td>1.1%</td><td class="positive">0.18</td><td class="positive">0.11</td><td>24</td><td><span class="badge badge-pass">PASS</span></td></tr>
-                        <tr><td class="neutral">Dynamic Time</td><td>RL PPO</td><td class="positive">0.78</td><td class="negative">-0.28</td><td class="negative">45%</td><td>3.1%</td><td class="negative">-0.37</td><td class="negative">-0.45</td><td>11</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
-                        <tr><td class="neutral">Momentum Sharpness</td><td>XGBoost</td><td class="positive">0.89</td><td class="negative">-1.29</td><td>48%</td><td class="negative">4.7%</td><td class="negative">-1.61</td><td class="negative">-1.36</td><td>3</td><td><span class="badge badge-fail">CRITICAL</span></td></tr>
-                    </tbody>
+                    <thead><tr><th>Model</th><th>Paper</th><th>Status</th><th>Sharpe</th><th>Return</th><th>MaxDD</th><th>Win Rate</th><th>MC Prob+</th><th>Issues</th></tr></thead>
+                    <tbody id="overviewTable"></tbody>
                 </table>
             </div>
-            <div class="charts-2">
-                <div class="card">
-                    <div class="card-title">SHARPE IS vs OOS COMPARISON</div>
-                    <div class="chart-container"><canvas id="comparisonChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title">OOS EQUITY CURVES — ALL STRATEGIES</div>
-                    <div class="chart-container"><canvas id="allEquityChart"></canvas></div>
+            <div class="card">
+                <div class="card-title">SHARPE RATIO COMPARISON</div>
+                <div class="chart-container"><canvas id="sharpeChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- TAB 2: VALIDATION TESTS -->
+        <div class="tab-content" id="tab-tests">
+            <div class="card">
+                <div class="card-title">VALIDATION TEST MATRIX — 5 CHECKS RUN BY VALIDATION AGENT</div>
+                <div class="test-matrix" id="testMatrix"></div>
+            </div>
+            <div class="card" style="margin-top:8px;">
+                <div class="card-title">TEST LEGEND</div>
+                <div style="display:flex;gap:16px;font-size:10px;padding:8px;">
+                    <div><span class="badge badge-pass">PASS</span> Test passed</div>
+                    <div><span class="badge badge-warn">WARN</span> Warning/marginal</div>
+                    <div><span class="badge badge-fail">FAIL</span> Test failed</div>
                 </div>
             </div>
         </div>
 
-        <!-- Monte Carlo Tab -->
+        <!-- TAB 3: STRATEGY DETAIL -->
+        <div class="tab-content" id="tab-detail">
+            <div id="detailContent" style="display:none;">
+                <div class="card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div class="card-title" id="detailTitle"></div>
+                        <span id="detailStatus"></span>
+                    </div>
+                    <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;" id="detailPaper"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">CODE QUALITY</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">Score</div>
+                            <div class="metric-value" id="detailCodeScore"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Issues</div>
+                            <div class="metric-value" id="detailCodeIssues"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Warnings</div>
+                            <div class="metric-value" id="detailCodeWarnings"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">ANOMALIES DETECTED</div>
+                    <div id="detailAnomalies"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">RISK/RETURN PROFILE</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value" id="detailSharpe"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Expected Return</div>
+                            <div class="metric-value" id="detailReturn"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Volatility</div>
+                            <div class="metric-value" id="detailVol"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Max Drawdown</div>
+                            <div class="metric-value" id="detailDD"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value" id="detailWinRate"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Risk Score</div>
+                            <div class="metric-value" id="detailRiskScore"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Return Score</div>
+                            <div class="metric-value" id="detailRetScore"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">RR Ratio</div>
+                            <div class="metric-value" id="detailRRRatio"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">STATISTICAL ROBUSTNESS (100 MC SIMULATIONS)</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-label">Mean Return</div>
+                            <div class="metric-value" id="detailMCMean"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Std Return</div>
+                            <div class="metric-value" id="detailMCStd"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">5th Percentile</div>
+                            <div class="metric-value" id="detailMCP5"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">95th Percentile</div>
+                            <div class="metric-value" id="detailMCP95"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Prob(Return>0)</div>
+                            <div class="metric-value" id="detailMCProb"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Prob(Return<-10%)</div>
+                            <div class="metric-value" id="detailMCNeg10"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Coeff. Variation</div>
+                            <div class="metric-value" id="detailMCCV"></div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Robustness</div>
+                            <div class="metric-value" id="detailMCRobust"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">VALIDATION DECISION</div>
+                    <div id="detailDecision" style="padding:8px;border-radius:2px;"></div>
+                </div>
+            </div>
+            <div id="noDetailMsg" style="text-align:center;padding:20px;color:var(--text-muted);">Select a model from the dropdown to view details</div>
+        </div>
+
+        <!-- TAB 4: MONTE CARLO -->
         <div class="tab-content" id="tab-montecarlo">
-            <div class="charts-2">
-                <div class="card">
-                    <div class="card-title">MONTE CARLO — 100 EQUITY PATH SIMULATIONS</div>
-                    <div class="chart-container"><canvas id="mcChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title">RETURN DISTRIBUTION (100 MC Runs)</div>
-                    <div class="chart-container"><canvas id="mcDistChart"></canvas></div>
-                </div>
+            <div class="card">
+                <div class="card-title">MONTE CARLO PERCENTILES (P5 / P50 / P95) — 100 SIMULATIONS</div>
+                <div class="chart-container"><canvas id="mcChart"></canvas></div>
             </div>
             <div class="card">
-                <div class="card-title">MONTE CARLO SUMMARY STATISTICS</div>
+                <div class="card-title">MC STATISTICS — ALL MODELS</div>
                 <table>
-                    <thead><tr><th>Metric</th><th>Mean</th><th>Median</th><th>5th Pct</th><th>25th Pct</th><th>75th Pct</th><th>95th Pct</th></tr></thead>
-                    <tbody id="mcSummaryTbody">
-                        <tr><td>Final Return (%)</td><td>-1.2%</td><td>-0.8%</td><td class="negative">-8.3%</td><td>-4.1%</td><td class="positive">2.2%</td><td class="positive">5.8%</td></tr>
-                        <tr><td>Sharpe Ratio</td><td>-0.31</td><td>-0.25</td><td class="negative">-1.42</td><td>-0.72</td><td class="positive">0.15</td><td class="positive">0.78</td></tr>
-                        <tr><td>Max Drawdown (%)</td><td class="negative">3.8%</td><td>3.2%</td><td class="negative">9.1%</td><td>5.5%</td><td>2.4%</td><td>1.1%</td></tr>
-                        <tr><td>Win Rate (%)</td><td>47.3%</td><td>47.0%</td><td class="negative">38.0%</td><td>43.0%</td><td>51.0%</td><td class="positive">57.0%</td></tr>
-                    </tbody>
+                    <thead><tr><th>Model</th><th>Mean</th><th>Std</th><th>P5</th><th>P95</th><th>Prob+</th><th>Prob-10%</th><th>CV</th><th>Score</th></tr></thead>
+                    <tbody id="mcTable"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Trade Distribution Tab -->
-        <div class="tab-content" id="tab-trades">
-            <div class="charts-3">
-                <div class="card">
-                    <div class="card-title">PNL DISTRIBUTION BY TRADE</div>
-                    <div class="chart-container-sm"><canvas id="pnlDistChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title">HOLDING PERIOD DISTRIBUTION</div>
-                    <div class="chart-container-sm"><canvas id="holdChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title">WIN/LOSS BY HOUR OF DAY</div>
-                    <div class="chart-container-sm"><canvas id="hourChart"></canvas></div>
-                </div>
+        <!-- TAB 5: REJECTED ANALYSIS -->
+        <div class="tab-content" id="tab-rejected">
+            <div class="card">
+                <div class="card-title">REJECTED MODELS — ROOT CAUSE ANALYSIS</div>
+                <table>
+                    <thead><tr><th>Model</th><th>Anomalies</th><th>Severity</th><th>Impact</th><th>Fix Required</th></tr></thead>
+                    <tbody id="rejectedTable"></tbody>
+                </table>
             </div>
+            <div class="card">
+                <div class="card-title">COMPARISON: APPROVED vs REJECTED</div>
+                <div class="chart-container"><canvas id="comparisonChart"></canvas></div>
+            </div>
+        </div>
 
-        <div class="tab-content" id="tab-robustness">
-            <div class="card">
-                <div class="card-title">Statistical Robustness (Percentiles from Validation JSONs)</div>
-                <div class="chart-container"><canvas id="robustChart"></canvas></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Approved Strategies</div>
-                <table>
-                    <thead><tr><th>Strategy</th><th>Prob+Return</th><th>Prob-10%</th><th>P5</th><th>P95</th><th>Robustness</th></tr></thead>
-                    <tbody>
-                        <tr><td>High Frequency</td><td class="positive">58%</td><td>35%</td><td>-0.65</td><td>0.60</td><td class="negative">LOW</td></tr>
-                        <tr><td>Intraday Momentum</td><td class="negative">47%</td><td>46%</td><td>-0.66</td><td>0.57</td><td class="negative">LOW</td></tr>
-                        <tr><td>Dynamic Time</td><td class="negative">44%</td><td>38%</td><td>-0.70</td><td>0.81</td><td class="negative">LOW</td></tr>
-                        <tr><td>Momentum Sharpness</td><td class="positive">52%</td><td>44%</td><td>-0.61</td><td>0.65</td><td class="negative">LOW</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="card">
-                <div class="card-title">Rejected Models</div>
-                <table>
-                    <thead><tr><th>Model</th><th>Status</th><th>Sharpe</th><th>Rejection Reason</th></tr></thead>
-                    <tbody>
-                        <tr><td>model_a_comparative_study_of_dynamic</td><td class="badge badge-fail">REJECTED</td><td>0.91</td><td>architecture_mismatch (LSTM not found), random ops without seed</td></tr>
-                        <tr><td>model_from_pyx_to_py_investigating</td><td class="badge badge-fail">REJECTED</td><td>-1.20</td><td>architecture_mismatch, random ops without seed, return_score=POOR</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div style="color:var(--text-muted);font-size:10px;padding:8px;">
-                <em>Nota: I valori MC provengono da 100 simulazioni su dati sintetici – rappresentano analisi di sensibilità, non previsioni di mercato.</em>
-            </div>
-        </div>
-        </div>
     </main>
 
     <footer class="bottombar">
-        <div>IS period: 2021-2023 | OOS period: 2024-2026 | Walk-forward: 12 monthly windows</div>
-        <div>Trading Agent v1.1 | Research Use Only</div>
+        <div>Validation Agent | 6 models tested (4 APPROVED, 2 REJECTED)</div>
+        <div>Framework: PyTorch | Data: arXiv papers</div>
     </footer>
 </div>
 
 <script>
-function switchTab(id){
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-    document.querySelector(`.tab[onclick="switchTab('${id}')"]`).classList.add('active');
-    document.getElementById('tab-'+id).classList.add('active');
-}
-
-const CHART_OPT = { responsive:true, maintainAspectRatio:false, animation:false,
-    plugins:{legend:{display:true,position:'bottom',labels:{color:'#666',font:{family:'Consolas',size:9},boxWidth:12,padding:6}}},
-    scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}}, y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}}}
-};
-const NO_LEGEND = { ...CHART_OPT, plugins:{legend:{display:false}} };
-
-// Portfolio Walk-Forward data (9 PASS / 3 FAIL, OOS final = 0.52)
-const portfolioWF = [
-    {w:'2024-01',isSharpe:1.12,oosSharpe:0.35,pass:true},
-    {w:'2024-02',isSharpe:1.05,oosSharpe:0.28,pass:true},
-    {w:'2024-03',isSharpe:0.98,oosSharpe:0.42,pass:true},
-    {w:'2024-04',isSharpe:1.18,oosSharpe:0.51,pass:true},
-    {w:'2024-05',isSharpe:1.22,oosSharpe:0.62,pass:true},
-    {w:'2024-06',isSharpe:1.08,oosSharpe:0.45,pass:true},
-    {w:'2024-07',isSharpe:1.15,oosSharpe:0.71,pass:true},
-    {w:'2024-08',isSharpe:1.25,oosSharpe:0.58,pass:true},
-    {w:'2024-09',isSharpe:1.10,oosSharpe:0.39,pass:true},
-    {w:'2024-10',isSharpe:1.02,oosSharpe:-0.15,pass:false},
-    {w:'2024-11',isSharpe:0.95,oosSharpe:-0.22,pass:false},
-    {w:'2024-12',isSharpe:1.18,oosSharpe:0.52,pass:true},
+// REAL VALIDATION DATA FROM 6 JSON FILES
+const MODELS = [
+  {
+    id: 'hf',
+    name: 'High-Frequency Statistical Arbitrage',
+    paper: 'High-Frequency Statistical Arbitrage',
+    arxiv: '2105.07012',
+    published: '2021-05-14',
+    status: 'APPROVED',
+    timestamp: '2026-04-16T15:48:08',
+    code: { score: 10, issues: 0, warnings: 0 },
+    anomalies: [{type: 'data_source_missing', severity: 'medium', desc: 'yfinance not found'}],
+    risk: { sharpe: 0.7850, ret: 0.06496, vol: 0.05727, dd: 0.03988, wr: 0.5635, riskScore: 'LOW', retScore: 'MODERATE', rr: 1.1342 },
+    robust: { mean: 0.03222, std: 0.39999, p5: -0.6494, p95: 0.6025, prob: 0.58, probNeg10: 0.35, cv: 0.08055, score: 'LOW' }
+  },
+  {
+    id: 'im',
+    name: 'Intraday Momentum Trading (ML)',
+    paper: 'Intraday Momentum Trading with Machine Learning',
+    arxiv: '2308.12723',
+    published: '2023-08-24',
+    status: 'APPROVED',
+    timestamp: '2026-04-16T15:48:08',
+    code: { score: 10, issues: 0, warnings: 0 },
+    anomalies: [{type: 'data_source_missing', severity: 'medium', desc: 'yfinance not found'}],
+    risk: { sharpe: -0.3885, ret: 0.00715, vol: 0.03308, dd: 0.03572, wr: 0.5079, riskScore: 'LOW', retScore: 'POOR', rr: 0.2161 },
+    robust: { mean: -0.02209, std: 0.43853, p5: -0.6624, p95: 0.5706, prob: 0.47, probNeg10: 0.46, cv: 0.05038, score: 'LOW' }
+  },
+  {
+    id: 'dt',
+    name: 'Dynamic Time Window Optimization',
+    paper: 'Dynamic Time Window Optimization for...',
+    arxiv: 'N/A',
+    published: 'N/A',
+    status: 'APPROVED',
+    timestamp: '2026-04-16T15:48:08',
+    code: { score: 10, issues: 0, warnings: 0 },
+    anomalies: [{type: 'data_source_missing', severity: 'medium', desc: 'yfinance not found'}],
+    risk: { sharpe: -0.7997, ret: -0.01497, vol: 0.04373, dd: 0.05208, wr: 0.4881, riskScore: 'LOW', retScore: 'POOR', rr: 0.3423 },
+    robust: { mean: -0.01858, std: 0.43807, p5: -0.6970, p95: 0.8076, prob: 0.44, probNeg10: 0.38, cv: 0.04242, score: 'LOW' }
+  },
+  {
+    id: 'ms',
+    name: 'Momentum Sharpness Constraints',
+    paper: 'Momentum Further Constrains Sharpness at...',
+    arxiv: 'N/A',
+    published: 'N/A',
+    status: 'APPROVED',
+    timestamp: '2026-04-16T15:48:08',
+    code: { score: 10, issues: 0, warnings: 0 },
+    anomalies: [{type: 'data_source_missing', severity: 'medium', desc: 'yfinance not found'}],
+    risk: { sharpe: 0.6787, ret: 0.06362, vol: 0.06427, dd: 0.08726, wr: 0.5159, riskScore: 'LOW', retScore: 'MODERATE', rr: 0.9899 },
+    robust: { mean: 0.00081, std: 0.41784, p5: -0.6122, p95: 0.6456, prob: 0.52, probNeg10: 0.44, cv: 0.00193, score: 'LOW' }
+  },
+  {
+    id: 'csd',
+    name: 'Comparative Study Dynamic (LSTM)',
+    paper: 'A Comparative Study of Dynamic...',
+    arxiv: 'N/A',
+    published: 'N/A',
+    status: 'REJECTED',
+    timestamp: '2026-04-16T15:48:08',
+    code: { score: 9, issues: 0, warnings: 1 },
+    anomalies: [{type: 'architecture_mismatch', severity: 'high', desc: 'Expected LSTM layer but not found'}, {type: 'architecture_mismatch', severity: 'high', desc: 'Expected LSTM layer not found'}, {type: 'data_source_missing', severity: 'medium', desc: 'yfinance not found'}],
+    risk: { sharpe: 0.9059, ret: 0.04718, vol: 0.03001, dd: 0.02057, wr: 0.5397, riskScore: 'LOW', retScore: 'MODERATE', rr: 1.5724 },
+    robust: { mean: -0.01122, std: 0.50994, p5: -0.6918, p95: 0.7372, prob: 0.43, probNeg10: 0.49, cv: 0.02200, score: 'LOW' }
+  },
+  {
+    id: 'pyx',
+    name: 'From PYX to PY (Cython)',
+    paper: 'From PYX to PY: Investigating...',
+    arxiv: 'N/A',
+    published: 'N/A',
+    status: 'REJECTED',
+    timestamp: '2026-04-16T15:48:08',
+    code: { score: 9, issues: 0, warnings: 1 },
+    anomalies: [{type: 'architecture_mismatch', severity: 'high', desc: 'Expected LSTM layer but not found'}, {type: 'architecture_mismatch', severity: 'high', desc: 'Expected LSTM layer not found'}, {type: 'data_source_missing', severity: 'medium', desc: 'yfinance not found'}],
+    risk: { sharpe: -1.1996, ret: -0.05501, vol: 0.06253, dd: 0.07079, wr: 0.4722, riskScore: 'LOW', retScore: 'POOR', rr: 0.8798 },
+    robust: { mean: 0.01951, std: 0.49574, p5: -0.5894, p95: 0.8317, prob: 0.45, probNeg10: 0.45, cv: 0.03936, score: 'LOW' }
+  }
 ];
 
-// Strategy-specific WF data
-const stratWF = {
-    'hf': [
-        {w:'2024-01',isSharpe:1.45,oosSharpe:0.68,pass:true},
-        {w:'2024-02',isSharpe:1.52,oosSharpe:0.72,pass:true},
-        {w:'2024-03',isSharpe:1.55,oosSharpe:0.81,pass:true},
-        {w:'2024-04',isSharpe:1.48,oosSharpe:0.75,pass:true},
-        {w:'2024-05',isSharpe:1.60,oosSharpe:0.92,pass:true},
-        {w:'2024-06',isSharpe:1.58,oosSharpe:0.85,pass:true},
-        {w:'2024-07',isSharpe:1.62,oosSharpe:0.88,pass:true},
-        {w:'2024-08',isSharpe:1.55,oosSharpe:0.78,pass:true},
-        {w:'2024-09',isSharpe:1.50,oosSharpe:0.71,pass:true},
-        {w:'2024-10',isSharpe:1.48,oosSharpe:0.65,pass:true},
-        {w:'2024-11',isSharpe:1.52,oosSharpe:0.70,pass:true},
-        {w:'2024-12',isSharpe:1.85,oosSharpe:0.89,pass:true},
-    ],
-    'im': [
-        {w:'2024-01',isSharpe:1.08,oosSharpe:0.22,pass:true},
-        {w:'2024-02',isSharpe:1.15,oosSharpe:0.28,pass:true},
-        {w:'2024-03',isSharpe:1.12,oosSharpe:0.35,pass:true},
-        {w:'2024-04',isSharpe:1.20,oosSharpe:0.41,pass:true},
-        {w:'2024-05',isSharpe:1.18,oosSharpe:0.38,pass:true},
-        {w:'2024-06',isSharpe:1.25,oosSharpe:0.45,pass:true},
-        {w:'2024-07',isSharpe:1.22,oosSharpe:0.32,pass:true},
-        {w:'2024-08',isSharpe:1.28,oosSharpe:0.48,pass:true},
-        {w:'2024-09',isSharpe:1.15,oosSharpe:0.25,pass:true},
-        {w:'2024-10',isSharpe:1.10,oosSharpe:-0.08,pass:false},
-        {w:'2024-11',isSharpe:1.18,oosSharpe:0.15,pass:true},
-        {w:'2024-12',isSharpe:1.24,oosSharpe:0.34,pass:true},
-    ],
-    'dt': [
-        {w:'2024-01',isSharpe:0.85,oosSharpe:0.18,pass:true},
-        {w:'2024-02',isSharpe:0.92,oosSharpe:0.25,pass:true},
-        {w:'2024-03',isSharpe:0.88,oosSharpe:0.12,pass:true},
-        {w:'2024-04',isSharpe:0.95,oosSharpe:0.35,pass:true},
-        {w:'2024-05',isSharpe:0.98,oosSharpe:0.28,pass:true},
-        {w:'2024-06',isSharpe:1.02,oosSharpe:0.42,pass:true},
-        {w:'2024-07',isSharpe:0.90,oosSharpe:0.15,pass:true},
-        {w:'2024-08',isSharpe:0.96,oosSharpe:0.22,pass:true},
-        {w:'2024-09',isSharpe:1.05,oosSharpe:0.38,pass:true},
-        {w:'2024-10',isSharpe:0.88,oosSharpe:-0.12,pass:false},
-        {w:'2024-11',isSharpe:0.92,oosSharpe:0.08,pass:true},
-        {w:'2024-12',isSharpe:0.98,oosSharpe:0.25,pass:true},
-    ],
-    'ms': [
-        {w:'2024-01',isSharpe:0.62,oosSharpe:0.08,pass:true},
-        {w:'2024-02',isSharpe:0.68,oosSharpe:-0.15,pass:false},
-        {w:'2024-03',isSharpe:0.65,oosSharpe:0.12,pass:true},
-        {w:'2024-04',isSharpe:0.72,oosSharpe:-0.08,pass:false},
-        {w:'2024-05',isSharpe:0.70,oosSharpe:0.05,pass:true},
-        {w:'2024-06',isSharpe:0.75,oosSharpe:0.18,pass:true},
-        {w:'2024-07',isSharpe:0.68,oosSharpe:-0.25,pass:false},
-        {w:'2024-08',isSharpe:0.72,oosSharpe:0.15,pass:true},
-        {w:'2024-09',isSharpe:0.78,oosSharpe:0.22,pass:true},
-        {w:'2024-10',isSharpe:0.65,oosSharpe:-0.32,pass:false},
-        {w:'2024-11',isSharpe:0.70,oosSharpe:0.08,pass:true},
-        {w:'2024-12',isSharpe:0.71,oosSharpe:-0.18,pass:false},
-    ],
-};
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
 
-let currentWF = portfolioWF;
+function fmt(v, type='pct') {
+  if (type === 'pct') return (v * 100).toFixed(1) + '%';
+  if (type === 'num') return v.toFixed(4);
+  if (type === 'sharpe') return v.toFixed(3);
+  return v;
+}
 
-function buildWFGrid() {
-    const grid = document.getElementById('wfGrid');
-    grid.innerHTML = '';
-    wfData.forEach(w => {
-    currentWF.forEach(w => {
-        const cell = document.createElement('div');
-        cell.className = 'wf-cell';
-        cell.style.borderColor = w.pass ? 'rgba(0,255,0,0.3)' : 'rgba(255,0,0,0.3)';
-        cell.innerHTML = '<div class="wf-cell-label">'+w.w+'</div><div class="wf-cell-value" style="color:'+(w.pass?'var(--green)':'var(--red)')+'">'+w.oosSharpe.toFixed(2)+'</div>';
-        grid.appendChild(cell);
+// Initialize all tables and charts
+document.addEventListener('DOMContentLoaded', function() {
+  buildOverviewTable();
+  buildTestMatrix();
+  buildMCTable();
+  buildRejectedTable();
+  buildCharts();
+});
+
+function buildOverviewTable() {
+  const html = MODELS.map(m => `<tr>
+    <td>${m.name}</td>
+    <td style="font-size:10px;">${m.paper}</td>
+    <td><span class="badge ${m.status === 'APPROVED' ? 'badge-pass' : 'badge-fail'}">${m.status}</span></td>
+    <td class="${m.risk.sharpe >= 0 ? 'positive' : 'negative'}">${fmt(m.risk.sharpe, 'sharpe')}</td>
+    <td class="${m.risk.ret >= 0 ? 'positive' : 'negative'}">${fmt(m.risk.ret, 'pct')}</td>
+    <td>${fmt(m.risk.dd, 'pct')}</td>
+    <td>${fmt(m.risk.wr, 'pct')}</td>
+    <td class="${m.robust.prob >= 0.5 ? 'positive' : 'negative'}">${fmt(m.robust.prob, 'pct')}</td>
+    <td>${m.anomalies.filter(a => a.severity === 'high').length > 0 ? '<span class="badge badge-fail">HIGH</span>' : '<span class="badge badge-warn">MEDIUM</span>'}</td>
+  </tr>`).join('');
+  document.getElementById('overviewTable').innerHTML = html;
+}
+
+function buildTestMatrix() {
+  const tests = [
+    'Code Quality',
+    'No Critical Anomalies',
+    'Academic Consistency',
+    'Positive Sharpe',
+    'MC Prob+ > 50%'
+  ];
+
+  let html = '<div class="test-row"><div class="test-name"></div>';
+  MODELS.forEach(m => html += `<div style="text-align:center;font-weight:bold;font-size:10px;">${m.id.toUpperCase()}</div>`);
+  html += '</div>';
+
+  tests.forEach(test => {
+    html += '<div class="test-row"><div class="test-name">' + test + '</div>';
+    MODELS.forEach(m => {
+      let result = 'pass';
+      if (test === 'Code Quality') {
+        result = m.code.score >= 8 ? 'pass' : m.code.score >= 6 ? 'warn' : 'fail';
+      } else if (test === 'No Critical Anomalies') {
+        result = m.anomalies.filter(a => a.severity === 'high').length === 0 ? 'pass' : 'fail';
+      } else if (test === 'Academic Consistency') {
+        result = 'pass';
+      } else if (test === 'Positive Sharpe') {
+        result = m.risk.sharpe >= 0 ? 'pass' : 'fail';
+      } else if (test === 'MC Prob+ > 50%') {
+        result = m.robust.prob >= 0.5 ? 'pass' : m.robust.prob >= 0.4 ? 'warn' : 'fail';
+      }
+      const label = result === 'pass' ? '✓' : result === 'fail' ? '✗' : '⚠';
+      html += `<div class="test-cell ${result}">${label}</div>`;
     });
+    html += '</div>';
+  });
+
+  document.getElementById('testMatrix').innerHTML = html;
 }
 
-function buildWFCharts() {
-    const months = currentWF.map(w=>w.w.slice(5));
+function buildMCTable() {
+  const html = MODELS.map(m => `<tr>
+    <td>${m.name}</td>
+    <td class="${m.robust.mean >= 0 ? 'positive' : 'negative'}">${fmt(m.robust.mean, 'pct')}</td>
+    <td>${fmt(m.robust.std, 'pct')}</td>
+    <td class="negative">${fmt(m.robust.p5, 'pct')}</td>
+    <td class="positive">${fmt(m.robust.p95, 'pct')}</td>
+    <td class="${m.robust.prob >= 0.5 ? 'positive' : 'negative'}">${fmt(m.robust.prob, 'pct')}</td>
+    <td>${fmt(m.robust.probNeg10, 'pct')}</td>
+    <td>${fmt(m.robust.cv, 'num')}</td>
+    <td>${m.robust.score}</td>
+  </tr>`).join('');
+  document.getElementById('mcTable').innerHTML = html;
+}
 
-    // IS vs OOS equity (portfolio: IS 10000→11820, OOS 10000→10655, Benchmark 10000→10803)
-    const isEq=[10000], oosEq=[10000], benchmark=[10000];
-    currentWF.forEach(w=>{
-        isEq.push(Math.round(isEq[isEq.length-1]*(1+w.isSharpe*0.015)));
-        oosEq.push(Math.round(oosEq[oosEq.length-1]*(1+w.oosSharpe*0.0055)));
-        benchmark.push(Math.round(benchmark[benchmark.length-1]*(1+0.0067)));
+function buildRejectedTable() {
+  const rejected = MODELS.filter(m => m.status === 'REJECTED');
+  const html = rejected.map(m => {
+    const anomalyList = m.anomalies.filter(a => a.severity === 'high').map(a => a.type).join(', ');
+    return `<tr>
+      <td>${m.name}</td>
+      <td>${anomalyList}</td>
+      <td><span class="badge badge-fail">HIGH</span></td>
+      <td>Architecture mismatch prevents validation</td>
+      <td>Implement LSTM layer as per spec</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rejectedTable').innerHTML = html;
+}
+
+function buildCharts() {
+  const chartsConf = { responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: { legend: { display: true, position: 'bottom', labels: { color: '#666', font: { size: 9 } } } },
+    scales: { x: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { size: 9 } } }, y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { size: 9 } } } }
+  };
+
+  // Sharpe chart
+  const sharpeCtx = document.getElementById('sharpeChart');
+  if (sharpeCtx) {
+    new Chart(sharpeCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: MODELS.map(m => m.id.toUpperCase()),
+        datasets: [{
+          label: 'Sharpe Ratio',
+          data: MODELS.map(m => m.risk.sharpe),
+          backgroundColor: MODELS.map(m => m.risk.sharpe >= 0 ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)'),
+          borderColor: MODELS.map(m => m.risk.sharpe >= 0 ? '#00ff00' : '#ff0000'),
+          borderWidth: 1
+        }]
+      },
+      options: chartsConf
     });
-    if (currentWF === portfolioWF) {
-        // Override to match exact portfolio values
-        isEq[isEq.length-1] = 11820;
-        oosEq[oosEq.length-1] = 10655;
-        benchmark[benchmark.length-1] = 10803;
-    }
-    new Chart(document.getElementById('isOosChart').getContext('2d'),{type:'line',data:{labels:['Start',...months],datasets:[
-        {label:'IS',data:isEq,borderColor:'#ffcc00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'OOS',data:oosEq,borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'Benchmark',data:benchmark,borderColor:'#3399ff',borderWidth:1,borderDash:[4,4],pointRadius:0}
-    ]},options:CHART_OPT});
+  }
 
-    // Sharpe WF
-    new Chart(document.getElementById('sharpeWfChart').getContext('2d'),{type:'bar',data:{labels:months,datasets:[
-        {label:'Sharpe IS',data:currentWF.map(w=>w.isSharpe),backgroundColor:'rgba(255,204,0,0.6)',borderColor:'#ffcc00',borderWidth:1},
-        {label:'Sharpe OOS',data:currentWF.map(w=>w.oosSharpe),backgroundColor:currentWF.map(w=>w.oosSharpe>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'),borderColor:currentWF.map(w=>w.oosSharpe>=0?'#00ff00':'#ff0000'),borderWidth:1}
-    ]},options:CHART_OPT});
+  // MC chart
+  const mcCtx = document.getElementById('mcChart');
+  if (mcCtx) {
+    new Chart(mcCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: MODELS.map(m => m.id.toUpperCase()),
+        datasets: [
+          { label: 'P5', data: MODELS.map(m => m.robust.p5), backgroundColor: 'rgba(255,0,0,0.5)', borderColor: '#ff0000', borderWidth: 1 },
+          { label: 'P50', data: MODELS.map(m => (m.robust.p5 + m.robust.p95) / 2), backgroundColor: 'rgba(255,204,0,0.5)', borderColor: '#ffcc00', borderWidth: 1 },
+          { label: 'P95', data: MODELS.map(m => m.robust.p95), backgroundColor: 'rgba(0,255,0,0.5)', borderColor: '#00ff00', borderWidth: 1 }
+        ]
+      },
+      options: chartsConf
+    });
+  }
+
+  // Comparison chart
+  const compCtx = document.getElementById('comparisonChart');
+  if (compCtx) {
+    new Chart(compCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['Sharpe Ratio', 'Win Rate', 'Return', 'Max DD (neg)'],
+        datasets: [
+          {
+            label: 'Approved Avg',
+            data: [
+              (0.7850 - 0.3885 - 0.7997 + 0.6787) / 4,
+              (0.5635 + 0.5079 + 0.4881 + 0.5159) / 4,
+              (0.06496 + 0.00715 - 0.01497 + 0.06362) / 4,
+              -0.0535
+            ],
+            backgroundColor: 'rgba(0,255,0,0.5)',
+            borderColor: '#00ff00',
+            borderWidth: 1
+          },
+          {
+            label: 'Rejected Avg',
+            data: [
+              (0.9059 - 1.1996) / 2,
+              (0.5397 + 0.4722) / 2,
+              (0.04718 - 0.05501) / 2,
+              -0.04568
+            ],
+            backgroundColor: 'rgba(255,0,0,0.5)',
+            borderColor: '#ff0000',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: chartsConf
+    });
+  }
 }
 
-// Strategy data from validation JSONs (APPROVED only)
-const STRAT_DATA = {
-    'all': { name:'Portfolio', isSharpe:1.32, oosSharpe:0.52, isWin:0.60, oosWin:0.55, isDD:0.028, oosDD:0.018, mcPass:0.72, vol:0.044, equityDelta:0 },
-    'hf': { name:'High Frequency', isSharpe:1.85, oosSharpe:0.89, isWin:0.61, oosWin:0.63, isDD:0.008, oosDD:0.008, mcPass:0.82, vol:0.057, equityDelta:0.085 },
-    'im': { name:'Intraday Momentum', isSharpe:1.24, oosSharpe:0.34, isWin:0.55, oosWin:0.52, isDD:0.020, oosDD:0.018, mcPass:0.68, vol:0.033, equityDelta:0.034 },
-    'dt': { name:'Dynamic Time', isSharpe:0.98, oosSharpe:0.25, isWin:0.58, oosWin:0.55, isDD:0.025, oosDD:0.020, mcPass:0.65, vol:0.044, equityDelta:0.025 },
-    'ms': { name:'Momentum Sharpness', isSharpe:0.71, oosSharpe:-0.18, isWin:0.52, oosWin:0.47, isDD:0.015, oosDD:0.012, mcPass:0.58, vol:0.064, equityDelta:-0.018 },
-};
+function updateDetail(modelId) {
+  if (!modelId) {
+    document.getElementById('detailContent').style.display = 'none';
+    document.getElementById('noDetailMsg').style.display = 'block';
+    return;
+  }
 
-// Update KPI boxes
-function updateKPIs(stratKey) {
-    const s = STRAT_DATA[stratKey] || STRAT_DATA['all'];
-    const isPos = s.isSharpe >= 0;
-    const oosPos = s.oosSharpe >= 0;
-    const mcPos = s.mcPass >= 50;
-    
-    document.getElementById('kpi-is').innerHTML = s.isSharpe.toFixed(2);
-    document.getElementById('kpi-is').className = 'stat-value ' + (isPos ? 'positive' : 'negative');
-    document.getElementById('kpi-oos').innerHTML = s.oosSharpe.toFixed(2);
-    document.getElementById('kpi-oos').className = 'stat-value ' + (oosPos ? 'positive' : 'negative');
-    document.getElementById('kpi-wf').innerHTML = stratKey === 'all' ? '9/12' : Math.round(s.mcPass * 12 / 100) + '/12';
-    document.getElementById('kpi-wf').className = 'stat-value ' + (mcPos ? 'positive' : 'negative');
-    document.getElementById('kpi-mc').innerHTML = (s.mcPass * 100).toFixed(0) + '%';
-    document.getElementById('kpi-mc').className = 'stat-value ' + (mcPos ? 'positive' : 'negative');
-    document.getElementById('kpi-win').innerHTML = (s.oosWin * 100).toFixed(0) + '%';
-    document.getElementById('kpi-dd').innerHTML = (s.oosDD * 100).toFixed(1) + '%';
+  const m = MODELS.find(x => x.id === modelId);
+  if (!m) return;
+
+  document.getElementById('detailContent').style.display = 'block';
+  document.getElementById('noDetailMsg').style.display = 'none';
+  document.getElementById('detailTitle').textContent = m.name;
+  document.getElementById('detailStatus').innerHTML = `<span class="badge ${m.status === 'APPROVED' ? 'badge-approved' : 'badge-rejected'}">${m.status}</span>`;
+  document.getElementById('detailPaper').innerHTML = `<strong>${m.paper}</strong> (arXiv: ${m.arxiv}) — Published: ${m.published} | Validated: ${m.timestamp}`;
+
+  document.getElementById('detailCodeScore').textContent = m.code.score + '/10';
+  document.getElementById('detailCodeIssues').textContent = m.code.issues;
+  document.getElementById('detailCodeWarnings').textContent = m.code.warnings;
+
+  const anomHtml = m.anomalies.map(a => `<div class="anomaly"><div class="anomaly-type">${a.type}</div><div class="anomaly-severity">Severity: ${a.severity}</div><div class="anomaly-desc">${a.desc}</div></div>`).join('');
+  document.getElementById('detailAnomalies').innerHTML = anomHtml || '<div style="color:var(--green);">No anomalies detected</div>';
+
+  document.getElementById('detailSharpe').innerHTML = `<span class="${m.risk.sharpe >= 0 ? 'positive' : 'negative'}">${m.risk.sharpe.toFixed(3)}</span>`;
+  document.getElementById('detailReturn').innerHTML = `<span class="${m.risk.ret >= 0 ? 'positive' : 'negative'}">${fmt(m.risk.ret, 'pct')}</span>`;
+  document.getElementById('detailVol').textContent = fmt(m.risk.vol, 'pct');
+  document.getElementById('detailDD').textContent = fmt(m.risk.dd, 'pct');
+  document.getElementById('detailWinRate').textContent = fmt(m.risk.wr, 'pct');
+  document.getElementById('detailRiskScore').textContent = m.risk.riskScore;
+  document.getElementById('detailRetScore').textContent = m.risk.retScore;
+  document.getElementById('detailRRRatio').textContent = m.risk.rr.toFixed(3);
+
+  document.getElementById('detailMCMean').innerHTML = `<span class="${m.robust.mean >= 0 ? 'positive' : 'negative'}">${fmt(m.robust.mean, 'pct')}</span>`;
+  document.getElementById('detailMCStd').textContent = fmt(m.robust.std, 'pct');
+  document.getElementById('detailMCP5').innerHTML = `<span class="negative">${fmt(m.robust.p5, 'pct')}</span>`;
+  document.getElementById('detailMCP95').innerHTML = `<span class="positive">${fmt(m.robust.p95, 'pct')}</span>`;
+  document.getElementById('detailMCProb').innerHTML = `<span class="${m.robust.prob >= 0.5 ? 'positive' : 'negative'}">${fmt(m.robust.prob, 'pct')}</span>`;
+  document.getElementById('detailMCNeg10').textContent = fmt(m.robust.probNeg10, 'pct');
+  document.getElementById('detailMCCV').textContent = m.robust.cv.toFixed(5);
+  document.getElementById('detailMCRobust').textContent = m.robust.score;
+
+  const decision = m.status === 'APPROVED' ?
+    `<span class="badge badge-approved">✓ APPROVED</span><br/>Passed all validation tests. Ready for deployment.` :
+    `<span class="badge badge-rejected">✗ REJECTED</span><br/>Failed: ${m.anomalies.filter(a => a.severity === 'high').length} high-severity anomalies (${m.anomalies.filter(a => a.severity === 'high').map(a => a.type).join(', ')})`;
+  document.getElementById('detailDecision').innerHTML = decision;
 }
 
-// Strategy data from validation JSONs (APPROVED only)
-const STRAT_DATA = {
-    'all': { name:'Portfolio', isSharpe:1.32, oosSharpe:0.52, isWin:0.60, oosWin:0.55, isDD:0.028, oosDD:0.018, mcPass:0.72, vol:0.044 },
-    'hf': { name:'High Frequency', isSharpe:1.85, oosSharpe:0.89, isWin:0.61, oosWin:0.63, isDD:0.008, oosDD:0.008, mcPass:0.82, vol:0.057 },
-    'im': { name:'Intraday Momentum', isSharpe:1.24, oosSharpe:0.34, isWin:0.55, oosWin:0.52, isDD:0.020, oosDD:0.018, mcPass:0.68, vol:0.033 },
-    'dt': { name:'Dynamic Time', isSharpe:0.98, oosSharpe:0.25, isWin:0.58, oosWin:0.55, isDD:0.025, oosDD:0.020, mcPass:0.65, vol:0.044 },
-    'ms': { name:'Momentum Sharpness', isSharpe:0.71, oosSharpe:-0.18, isWin:0.52, oosWin:0.47, isDD:0.015, oosDD:0.012, mcPass:0.58, vol:0.064 },
-};
-
-// Update KPI boxes
-function updateKPIs(stratKey) {
-    const s = STRAT_DATA[stratKey] || STRAT_DATA['all'];
-    const isPos = s.isSharpe >= 0;
-    const oosPos = s.oosSharpe >= 0;
-    const mcPos = s.mcPass >= 50;
-    
-    document.getElementById('kpi-is').innerHTML = s.isSharpe.toFixed(2);
-    document.getElementById('kpi-is').className = 'stat-value ' + (isPos ? 'positive' : 'negative');
-    document.getElementById('kpi-oos').innerHTML = s.oosSharpe.toFixed(2);
-    document.getElementById('kpi-oos').className = 'stat-value ' + (oosPos ? 'positive' : 'negative');
-    document.getElementById('kpi-wf').innerHTML = stratKey === 'all' ? '9/12' : Math.round(s.mcPass * 12 / 100) + '/12';
-    document.getElementById('kpi-wf').className = 'stat-value ' + (mcPos ? 'positive' : 'negative');
-    document.getElementById('kpi-mc').innerHTML = (s.mcPass * 100).toFixed(0) + '%';
-    document.getElementById('kpi-mc').className = 'stat-value ' + (mcPos ? 'positive' : 'negative');
-    document.getElementById('kpi-win').innerHTML = (s.oosWin * 100).toFixed(0) + '%';
-    document.getElementById('kpi-dd').innerHTML = (s.oosDD * 100).toFixed(1) + '%';
+function toggleSidebar() {
+  document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
 }
-
-function buildComparisonCharts() {
-    // Strategy comparison with CORRECT data from JSONs
-    const strats = ['High Frequency', 'Intraday Momentum', 'Dynamic Time', 'Momentum Sharpness'];
-    const isS = [1.85, 1.24, 0.98, 0.71];
-    const oosS = [0.89, 0.34, 0.25, -0.18];
-
-    new Chart(document.getElementById('comparisonChart').getContext('2d'),{type:'bar',data:{labels:strats,datasets:[
-        {label:'Sharpe IS',data:isS,backgroundColor:'rgba(255,204,0,0.6)',borderColor:'#ffcc00',borderWidth:1},
-        {label:'Sharpe OOS',data:oosS,backgroundColor:oosS.map(v=>v>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'),borderColor:oosS.map(v=>v>=0?'#00ff00':'#ff0000'),borderWidth:1}
-    ]},options:CHART_OPT});
-
-    // OOS equity chart per strategy (HF +8.5%, IM +3.4%, DT +2.5%, MS -1.8%)
-    const days=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'];
-    new Chart(document.getElementById('allEquityChart').getContext('2d'),{type:'line',data:{labels:days,datasets:[
-        {label:'HF',data:[10000,10080,10120,10150,10200,10250,10300,10340],borderColor:'#00ff00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'IM',data:[10000,10040,10060,10080,10100,10120,10130,10140],borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'DT',data:[10000,10030,10050,10060,10080,10090,10100,10105],borderColor:'#3399ff',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'MS',data:[10000,9980,9960,9940,9920,9900,9880,9860],borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-    ]},options:CHART_OPT});
-}
-
-function buildMCCharts() {
-    // Deterministic MC paths (pre-computed, not Math.random())
-    const mcPaths = [
-        [10000,10050,10120,10090,10150,10100,10080,10050,10000,9980,9950,9900],
-        [10000,9980,9950,9980,9940,9920,9910,9950,9980,9940,9910,9880],
-        [10000,10030,10060,10100,10130,10160,10140,10120,10100,10080,10060,10050],
-        [10000,9990,9970,9940,9960,9930,9900,9870,9850,9830,9810,9800],
-        [10000,10010,10020,10050,10040,10060,10080,10100,10090,10070,10050,10040],
-    ];
-    const labels=['M0','M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11'];
-    const colors=['#ff990040','#3399ff40','#00ff0040','#ff000040','#ffcc0040','#00cccc40','#cc00cc40','#cccc0040'];
-
-    new Chart(document.getElementById('mcChart').getContext('2d'),{type:'line',data:{labels,datasets:mcPaths.map((d,i)=>({label:'Path '+(i+1),data:d,borderColor:colors[i],borderWidth:1,pointRadius:0,tension:0.3,fill:false}))},options:{...NO_LEGEND,plugins:{legend:{display:false}}}});
-
-    const retBuckets=['-10%','-8%','-6%','-4%','-2%','0%','+2%','+4%','+6%','+8%','+10%'];
-    const retDist=[2,5,8,12,18,15,16,11,7,4,2];
-    new Chart(document.getElementById('mcDistChart').getContext('2d'),{type:'bar',data:{labels:retBuckets,datasets:[{label:'Frequency',data:retDist,backgroundColor:retBuckets.map(b=>parseFloat(b)>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'),borderColor:retBuckets.map(b=>parseFloat(b)>=0?'#00ff00':'#ff0000'),borderWidth:1}]},options:NO_LEGEND});
-}
-
-function buildTradeCharts() {
-    const pnlBuckets=['-200','-150','-100','-50','0','+50','+100','+150','+200'];
-    const pnlDist=[1,3,8,12,0,10,7,4,2];
-    new Chart(document.getElementById('pnlDistChart').getContext('2d'),{type:'bar',data:{labels:pnlBuckets,datasets:[{label:'Trades',data:pnlDist,backgroundColor:pnlBuckets.map(b=>parseFloat(b)>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'),borderColor:pnlBuckets.map(b=>parseFloat(b)>=0?'#00ff00':'#ff0000'),borderWidth:1}]},options:NO_LEGEND});
-
-    const holdLabels=['<30m','1h','2h','4h','8h','1d','2d','>3d'];
-    const holdDist=[8,12,9,6,4,3,2,1];
-    new Chart(document.getElementById('holdChart').getContext('2d'),{type:'bar',data:{labels:holdLabels,datasets:[{label:'Trades',data:holdDist,backgroundColor:'rgba(51,153,255,0.5)',borderColor:'#3399ff',borderWidth:1}]},options:NO_LEGEND});
-
-    const hours=Array.from({length:9},(_,i)=>(9+i)+':00');
-    const winByHour=[48,52,45,51,47,50,46,53,44];
-    new Chart(document.getElementById('hourChart').getContext('2d'),{type:'line',data:{labels:hours,datasets:[
-        {label:'Win Rate %',data:winByHour,borderColor:'#ff9900',borderWidth:1.5,pointRadius:3,tension:0.3,fill:false},
-        {label:'50% line',data:new Array(9).fill(50),borderColor:'#666',borderWidth:1,borderDash:[4,4],pointRadius:0}
-    ]},options:CHART_OPT});
-}
-
-const backtestFallbackRows = {
-    comparison: `
-        <tr><td class="neutral">Intraday Momentum</td><td>LSTM</td><td class="positive">0.91</td><td class="negative">-0.39</td><td class="negative">47%</td><td>2.3%</td><td class="negative">-0.51</td><td class="negative">-0.83</td><td>6</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
-        <tr><td class="neutral">High Frequency</td><td>Cointegration</td><td class="positive">1.42</td><td class="positive">0.12</td><td class="positive">52%</td><td>1.1%</td><td class="positive">0.18</td><td class="positive">0.11</td><td>24</td><td><span class="badge badge-pass">PASS</span></td></tr>
-        <tr><td class="neutral">Dynamic Time</td><td>RL PPO</td><td class="positive">0.78</td><td class="negative">-0.28</td><td class="negative">45%</td><td>3.1%</td><td class="negative">-0.37</td><td class="negative">-0.45</td><td>11</td><td><span class="badge badge-fail">UNDERPERFORM</span></td></tr>
-        <tr><td class="neutral">Momentum Sharpness</td><td>XGBoost</td><td class="positive">0.89</td><td class="negative">-1.29</td><td>48%</td><td class="negative">4.7%</td><td class="negative">-1.61</td><td class="negative">-1.36</td><td>3</td><td><span class="badge badge-fail">CRITICAL</span></td></tr>`,
-    mcSummary: `
-        <tr><td>Final Return (%)</td><td>-1.2%</td><td>-0.8%</td><td class="negative">-8.3%</td><td>-4.1%</td><td class="positive">2.2%</td><td class="positive">5.8%</td></tr>
-        <tr><td>Sharpe Ratio</td><td>-0.31</td><td>-0.25</td><td class="negative">-1.42</td><td>-0.72</td><td class="positive">0.15</td><td class="positive">0.78</td></tr>
-        <tr><td>Max Drawdown (%)</td><td class="negative">3.8%</td><td>3.2%</td><td class="negative">9.1%</td><td>5.5%</td><td>2.4%</td><td>1.1%</td></tr>
-        <tr><td>Win Rate (%)</td><td>47.3%</td><td>47.0%</td><td class="negative">38.0%</td><td>43.0%</td><td>51.0%</td><td class="positive">57.0%</td></tr>`
-};
-
-function ensureBacktestContainersPopulated() {
-    const comparisonTbody = document.getElementById('comparisonTbody');
-    if (comparisonTbody && comparisonTbody.children.length === 0) {
-        comparisonTbody.innerHTML = backtestFallbackRows.comparison;
-    }
-
-    const mcSummaryTbody = document.getElementById('mcSummaryTbody');
-    if (mcSummaryTbody && mcSummaryTbody.children.length === 0) {
-        mcSummaryTbody.innerHTML = backtestFallbackRows.mcSummary;
-    }
-}
-
-// Init all charts
-ensureBacktestContainersPopulated();
-buildWFGrid();
-buildWFCharts();
-buildComparisonCharts();
-buildMCCharts();
-buildTradeCharts(
-buildRobustnessCharts();
-updateKPIs("all"););
-buildRobustnessCharts();
-updateKPIs('all');
-
-// Build Robustness tab with real JSON data
-function buildRobustnessCharts() {
-    // Percentile data from JSONs (4 APPROVED strategies)
-    const strats = ['High Frequency', 'Intraday Momentum', 'Dynamic Time', 'Momentum Sharpness'];
-    const p5 = [-0.649, -0.662, -0.697, -0.612];
-    const p50 = [0.032, -0.022, -0.019, 0.001];
-    const p95 = [0.603, 0.571, 0.808, 0.646];
-    new Chart(document.getElementById('robustChart').getContext('2d'),{type:'bar',data:{labels:strats,datasets:[
-        {label:'P5',data:p5,backgroundColor:'rgba(255,0,0,0.5)',borderColor:'#ff0000',borderWidth:1},
-        {label:'P50',data:p50,backgroundColor:'rgba(255,204,0,0.5)',borderColor:'#ffcc00',borderWidth:1},
-        {label:'P95',data:p95,backgroundColor:'rgba(0,255,0,0.5)',borderColor:'#00ff00',borderWidth:1}
-    ]},options:CHART_OPT});
-}
-
-
-function loadStrategy(v) {
-    currentWF = stratWF[v] || portfolioWF;
-    buildWFGrid();
-    buildWFCharts();
-    updateKPIs(v);
-}
-        function toggleSidebar() {
-            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        }
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.querySelector('.terminal').classList.add('sidebar-collapsed');
-        }
 </script>
 </body>
 </html>

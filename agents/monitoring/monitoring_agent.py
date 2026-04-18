@@ -13,6 +13,8 @@ from typing import Optional
 from dataclasses import dataclass, asdict
 import numpy as np
 
+from configs.paths import Paths
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -48,9 +50,9 @@ class MonitoringAgent:
 
     def __init__(
         self,
-        trading_log_dir: str = "trading_logs",
-        validated_dir: str = "models/validated",
-        monitoring_log_dir: str = "trading_logs/monitoring",
+        trading_log_dir: str = str(Paths.TRADING_LOGS),
+        validated_dir: str = str(Paths.VALIDATED_DIR),
+        monitoring_log_dir: str = str(Paths.MONITORING_DIR),
         alert_threshold: dict = None,
     ):
         self.trading_log_dir = Path(trading_log_dir)
@@ -117,6 +119,13 @@ class MonitoringAgent:
             try:
                 with open(validation_file) as f:
                     validation = json.load(f)
+
+                if validation.get("schema_version") != "1.0":
+                    logger.warning(
+                        "validation file %s missing schema_version=1.0 (got %r)",
+                        validation_file.name,
+                        validation.get("schema_version"),
+                    )
 
                 model_name = validation.get("model_name")
                 risk_profile = validation.get("risk_return_profile", {})

@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "execution_request_v1",
+  "title": "ExecutionRequest",
+  "description": "Request from agents to Execution Engine — v1.0",
+  "type": "object",
+  "required": ["strategy_id", "strategy_code", "parameters", "dataset", "backtest_config"],
+  "properties": {
+    "strategy_id":    { "type": "string" },
+    "strategy_code":  { "type": "string" },
+    "parameters":     { "type": "object" },
+    "dataset": {
+      "type": "object",
+      "required": ["symbols", "start", "end"],
+      "properties": {
+        "symbols":   { "type": "array", "items": { "type": "string" } },
+        "start":     { "type": "string" },
+        "end":       { "type": "string" },
+        "frequency": { "type": "string", "default": "1d" }
+      }
+    },
+    "backtest_config": {
+      "type": "object",
+      "properties": {
+        "initial_capital":       { "type": "number", "default": 10000 },
+        "transaction_cost":      { "type": "number", "default": 0.001 },
+        "walk_forward_windows":  { "type": "integer", "default": 12 },
+        "seed":                  { "type": "integer", "default": 42 }
+      }
+    }
+  }
+}

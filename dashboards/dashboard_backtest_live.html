@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backtest Live | Trading Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        :root{--bg-primary:#000;--bg-secondary:#0a0a0a;--bg-tertiary:#141414;--border:#333;--text-primary:#ff9900;--text-secondary:#aaa;--text-muted:#666;--orange:#ff9900;--green:#00ff00;--red:#ff0000;--blue:#3399ff;--yellow:#ffcc00;--font:"Consolas","Monaco",monospace;}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+        .container{padding:20px;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);}
+        .control-panel{background:var(--bg-secondary);border:1px solid var(--border);padding:15px;margin-bottom:20px;border-radius:4px;}
+        .control-group{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+        .control-group label{color:var(--text-muted);font-size:11px;min-width:120px;}
+        .control-group input{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:6px 10px;font-family:var(--font);font-size:11px;flex:1;max-width:400px;}
+        .control-group button{background:var(--orange);color:#000;border:none;padding:6px 15px;font-family:var(--font);font-size:11px;cursor:pointer;border-radius:2px;font-weight:bold;}
+        .control-group button:hover{background:#ffb030;}
+        .control-group button:disabled{background:var(--text-muted);cursor:not-allowed;}
+        .status{padding:10px;border-radius:2px;margin-top:10px;font-size:11px;}
+        .status.loading{background:rgba(51,153,255,0.1);color:var(--blue);}
+        .status.success{background:rgba(0,255,0,0.1);color:var(--green);}
+        .status.error{background:rgba(255,0,0,0.1);color:var(--red);}
+        .card{background:var(--bg-secondary);border:1px solid var(--border);padding:15px;margin-bottom:15px;border-radius:4px;}
+        .card-title{color:var(--orange);font-size:12px;margin-bottom:10px;font-weight:bold;}
+        table{width:100%;border-collapse:collapse;font-size:11px;}
+        th{text-align:left;padding:6px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:bold;font-size:10px;text-transform:uppercase;}
+        td{padding:6px 8px;border-bottom:1px solid var(--bg-tertiary);}
+        tr:hover{background:var(--bg-tertiary);}
+        .badge-approved{background:rgba(0,255,0,0.15);color:var(--green);padding:2px 6px;border-radius:2px;font-size:9px;font-weight:bold;}
+        .badge-rejected{background:rgba(255,0,0,0.15);color:var(--red);padding:2px 6px;border-radius:2px;font-size:9px;font-weight:bold;}
+        .chart-container{height:200px;position:relative;margin-top:10px;}
+        .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;}
+        .metric{background:var(--bg-tertiary);border:1px solid var(--border);padding:10px;border-radius:2px;}
+        .metric-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;}
+        .metric-value{font-size:14px;font-weight:bold;margin-top:4px;}
+        ::-webkit-scrollbar{width:10px;}
+        ::-webkit-scrollbar-track{background:var(--bg-primary);}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
+        ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
+    </style>
+  <script src="config.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var base = window.TRADING_API_BASE || '';
+      if (base) {
+        var input = document.getElementById('apiUrl');
+        if (input) input.value = base;
+      }
+    });
+  </script>
+</head>
+<body>
+<div class="container">
+    <h1 style="color:var(--orange);margin-bottom:20px;">🔗 BACKTEST LIVE — Connected to Server</h1>
+
+    <div class="control-panel">
+        <div class="control-group">
+            <label for="apiUrl">API Server URL:</label>
+            <input type="text" id="apiUrl" placeholder="http://localhost:8001 or https://your-server.com" value="http://localhost:8001">
+            <button onclick="testConnection()">Test Connection</button>
+        </div>
+        <div id="connectionStatus" class="status" style="display:none;"></div>
+
+        <div class="control-group">
+            <button onclick="loadStrategies()" style="flex:0;margin-top:10px;">Load Strategies</button>
+            <button onclick="loadDashboardSummary()" style="flex:0;">Load Summary</button>
+        </div>
+    </div>
+
+    <div id="content" style="display:none;">
+        <!-- DASHBOARD SUMMARY -->
+        <div class="card">
+            <div class="card-title">DASHBOARD SUMMARY</div>
+            <div class="metrics-grid" id="summaryMetrics"></div>
+        </div>
+
+        <!-- STRATEGIES TABLE -->
+        <div class="card">
+            <div class="card-title">VALIDATED STRATEGIES</div>
+            <table id="strategiesTable">
+                <thead>
+                    <tr>
+                        <th>Model Name</th>
+                        <th>Status</th>
+                        <th>Risk Score</th>
+                        <th>Sharpe Ratio</th>
+                        <th>Robustness</th>
+                    </tr>
+                </thead>
+                <tbody id="strategiesList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE_URL = () => document.getElementById('apiUrl').value;
+
+async function testConnection() {
+    const btn = event.target;
+    btn.disabled = true;
+    const status = document.getElementById('connectionStatus');
+    status.style.display = 'block';
+
+    try {
+        const url = `${API_BASE_URL()}/health`;
+        const resp = await fetch(url);
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        status.className = 'status success';
+        status.textContent = `✓ Connected! Server version: ${data.version}`;
+        document.getElementById('content').style.display = 'block';
+
+    } catch (err) {
+        status.className = 'status error';
+        status.textContent = `✗ Connection failed: ${err.message}. Make sure the API server is running at ${API_BASE_URL()}`;
+        document.getElementById('content').style.display = 'none';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function loadStrategies() {
+    const status = document.getElementById('connectionStatus');
+    status.style.display = 'block';
+    status.className = 'status loading';
+    status.textContent = '⟳ Loading strategies...';
+
+    try {
+        const url = `${API_BASE_URL()}/strategies`;
+        const resp = await fetch(url);
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        const tbody = document.getElementById('strategiesList');
+        tbody.innerHTML = '';
+
+        if (!data.strategies || data.strategies.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No strategies found</td></tr>';
+        } else {
+            data.strategies.forEach(s => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${s.model_name || 'N/A'}</strong></td>
+                    <td><span class="badge-${s.validation_status === 'APPROVED' ? 'approved' : 'rejected'}">${s.validation_status}</span></td>
+                    <td>${s.risk_score || 'N/A'}</td>
+                    <td>${s.sharpe_ratio ? s.sharpe_ratio.toFixed(2) : 'N/A'}</td>
+                    <td>${s.robustness_score || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        status.className = 'status success';
+        status.textContent = `✓ Loaded ${data.count} strategies`;
+
+    } catch (err) {
+        status.className = 'status error';
+        status.textContent = `✗ Failed to load strategies: ${err.message}`;
+    }
+}
+
+async function loadDashboardSummary() {
+    const status = document.getElementById('connectionStatus');
+    status.style.display = 'block';
+    status.className = 'status loading';
+    status.textContent = '⟳ Loading summary...';
+
+    try {
+        const url = `${API_BASE_URL()}/dashboard/summary`;
+        const resp = await fetch(url);
+
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        const metricsDiv = document.getElementById('summaryMetrics');
+        metricsDiv.innerHTML = `
+            <div class="metric">
+                <div class="metric-label">Research Papers</div>
+                <div class="metric-value" style="color:var(--blue);">${data.research_papers || 0}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Specs Created</div>
+                <div class="metric-value" style="color:var(--orange);">${data.specs_created || 0}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Models Implemented</div>
+                <div class="metric-value" style="color:var(--yellow);">${data.models_implemented || 0}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Models Validated</div>
+                <div class="metric-value" style="color:var(--green);">${data.models_validated || 0}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Total Trades</div>
+                <div class="metric-value" style="color:var(--blue);">${data.total_trades || 0}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Current Equity</div>
+                <div class="metric-value" style="color:var(--green);">$${(data.current_equity || 0).toFixed(2)}</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Total Return</div>
+                <div class="metric-value" style="color:${(data.total_return || 0) > 0 ? 'var(--green)' : 'var(--red)'};">${((data.total_return || 0) * 100).toFixed(2)}%</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Sharpe Ratio</div>
+                <div class="metric-value" style="color:var(--blue);">${(data.sharpe_ratio || 0).toFixed(2)}</div>
+            </div>
+        `;
+
+        status.className = 'status success';
+        status.textContent = `✓ Dashboard summary loaded`;
+
+    } catch (err) {
+        status.className = 'status error';
+        status.textContent = `✗ Failed to load summary: ${err.message}`;
+    }
+}
+
+// Auto-test connection on load
+window.addEventListener('load', () => {
+    setTimeout(testConnection, 500);
+});
+</script>
+</body>
+</html>
