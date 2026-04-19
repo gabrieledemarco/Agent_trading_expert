@@ -1,6 +1,6 @@
-# Deployment con Neon Database
+# Deployment — Render + Neon PostgreSQL
 
-**Architettura**: GitHub Pages + Render API + Neon PostgreSQL
+**Architettura**: Render (frontend + API) + Neon PostgreSQL  
 **Database**: Neon PostgreSQL Serverless (Free Tier)
 
 ---
@@ -11,13 +11,11 @@
 Utente (Browser)
        |
        v
-GitHub Pages (Frontend Statico)
-  URL: https://gabrieledemarco.github.io/Agent_trading_expert
-       |
-       | API Calls (CORS)
-       v
-Render Web Service (Backend API + Agenti)
+Render Web Service  (frontend HTML + API — stesso server)
   URL: https://agent-trading-expert.onrender.com
+  |
+  ├── /dashboards/   → HTML statici (FastAPI StaticFiles)
+  └── /api/*         → API endpoints (FastAPI)
        |
        | PostgreSQL Connection (SSL)
        v
@@ -26,6 +24,8 @@ Neon PostgreSQL Serverless
 ```
 
 **Costi**: $0/mese (tutto free tier)
+
+**Accesso dashboard**: https://agent-trading-expert.onrender.com/dashboards/
 
 ---
 
@@ -55,11 +55,13 @@ postgresql://[user]:[password]@ep-xxxxx-pooler.us-east-1.aws.neon.tech/neondb?ss
 ### 3. Verifica
 
 ```bash
-# Health check (verifica connessione DB)
+# Health check
 curl https://agent-trading-expert.onrender.com/health
-# Output: {"status":"healthy","database":"postgres"}
 
-# Dashboard summary
+# Dashboard principale
+open https://agent-trading-expert.onrender.com/dashboards/
+
+# API summary
 curl https://agent-trading-expert.onrender.com/dashboard/summary
 ```
 
@@ -72,22 +74,13 @@ SELECT COUNT(*) FROM agent_logs;
 
 ## Come Funziona
 
-Il `DataStorageManager` rileva automaticamente il backend:
-
-- Se `DATABASE_URL` e' impostato con prefisso `postgresql://` → usa PostgreSQL (Neon)
-- Se `DATABASE_URL` ha prefisso `postgres://` → normalizza automaticamente a `postgresql://`
-- Altrimenti → fallback a SQLite locale
-
+`DataStorageManager` richiede `DATABASE_URL` con prefisso `postgresql://` o `postgres://`.  
 Le 7 tabelle (research, specs, models, validation, trades, performance, agent_logs) vengono create automaticamente alla prima connessione.
 
----
-
-## Rollback
-
-Per tornare a SQLite:
-1. Render Dashboard > Environment
-2. Rimuovi `DATABASE_URL`
-3. Save Changes (auto-redeploy)
+Per popolare il DB con dati demo:
+```bash
+DATABASE_URL=postgresql://... python scripts/seed_neon.py
+```
 
 ---
 
@@ -97,4 +90,4 @@ Per tornare a SQLite:
 - 191.9h compute/mese
 - 3 GB data transfer/mese
 - Backup automatici (7 giorni)
-- Auto-pause dopo inattivita'
+- Auto-pause dopo inattività
