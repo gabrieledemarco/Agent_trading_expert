@@ -46,11 +46,17 @@ class DataStorageManager:
         return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     def _init_schema(self):
-        """Ensure all tables exist (idempotent)."""
+        """Ensure all tables exist (idempotent).
+
+        Requires a role with CREATE TABLE privileges (e.g. neondb_owner).
+        If the role lacks DDL permissions but tables already exist, a warning
+        is logged and startup continues normally.
+        """
         conn = self._connect()
         conn.autocommit = True
         cur = conn.cursor()
-        cur.execute("""
+        try:
+            cur.execute("""
             CREATE TABLE IF NOT EXISTS research (
                 id            SERIAL PRIMARY KEY,
                 paper_id      TEXT UNIQUE,
@@ -120,8 +126,21 @@ class DataStorageManager:
                 message    TEXT
             );
         """)
-        cur.close()
-        conn.close()
+        except Exception as e:
+            import psycopg2
+            if isinstance(e, psycopg2.errors.InsufficientPrivilege):
+                logger.warning(
+                    "DB user lacks CREATE TABLE privileges — "
+                    "assuming schema already exists. "
+                    "Use neondb_owner role for first-time setup."
+                )
+                conn.rollback()
+            else:
+                conn.rollback()
+                raise
+        finally:
+            cur.close()
+            conn.close()
 
     # ── Research ──────────────────────────────────────────────────────────────
 
