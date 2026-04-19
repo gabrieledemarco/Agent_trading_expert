@@ -23,6 +23,14 @@ class ResearchAgent:
             ("cs.LG", "Machine Learning"),
             ("stat.ML", "Machine Learning (Statistics)"),
         ]
+        self._db = None  # lazy-initialised
+
+    @property
+    def db(self):
+        if self._db is None:
+            from data.storage.data_manager import DataStorageManager
+            self._db = DataStorageManager()
+        return self._db
 
     def search_arxiv(
         self,
@@ -153,6 +161,23 @@ Found {len(papers)} relevant papers this week.
         output_file = self.output_dir / f"research_{datetime.now().strftime('%Y-%m-%d')}.md"
         output_file.write_text(summary)
         logger.info(f"Saved research findings to {output_file}")
+
+        # Persist to Neon PostgreSQL
+        try:
+            for paper in relevant:
+                self.db.save_research({
+                    "id":              str(paper.get("id", "")),
+                    "title":           str(paper.get("title", "")),
+                    "authors":         str(paper.get("authors", "")),
+                    "published":       str(paper.get("published", "")),
+                    "categories":      str(paper.get("categories", "")),
+                    "abstract":        str(paper.get("summary", "")),
+                    "pdf_url":         str(paper.get("pdf_url", "")),
+                    "relevance_score": float(paper.get("relevance_score", 0) or 0),
+                })
+            logger.info(f"Saved {len(relevant)} papers to Neon")
+        except Exception as _e:
+            logger.warning(f"Could not save research to Neon: {_e}")
 
         return str(output_file)
 

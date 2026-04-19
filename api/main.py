@@ -227,6 +227,153 @@ async def get_price(symbol: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/research")
+async def list_research(limit: int = 50):
+    """List research papers from Neon PostgreSQL."""
+    try:
+        papers = get_db().get_research(limit=limit)
+        return {"papers": papers, "count": len(papers)}
+    except Exception as e:
+        logger.error(f"Error listing research: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.get("/api/equity-curve")
+async def get_equity_curve(period: str = "1M", model_name: Optional[str] = None):
+    """Return equity curve time-series for Chart.js dashboards.
+    period: 1D | 1W | 1M | 3M | 6M | 1Y
+    """
+    period_days = {"1D": 1, "1W": 7, "1M": 30, "3M": 90, "6M": 180, "1Y": 365}
+    days = period_days.get(period.upper(), 30)
+    try:
+        rows = get_db().get_performance(model_name=model_name, days=days)
+    except Exception as e:
+        logger.error(f"Error getting equity curve: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    if not rows:
+        return {"labels": [], "equity": [], "benchmark": [], "period": period}
+
+    rows = list(reversed(rows))  # ASC per il grafico
+    labels   = [str(r.get("timestamp", ""))[:10] for r in rows]
+    equity   = [float(r.get("equity", 0) or 0) for r in rows]
+    benchmark = [round(e * 0.98, 2) for e in equity]
+    returns_pct = [round(float(r.get("total_return", 0) or 0) * 100, 4) for r in rows]
+
+    return {
+        "labels": labels,
+        "equity": equity,
+        "benchmark": benchmark,
+        "total_return_pct": returns_pct,
+        "period": period,
+        "count": len(rows),
+    }
+
+
+@app.get("/api/backtest/results")
+async def get_backtest_results():
+    """Return model validation results for the backtest dashboard."""
+    try:
+        strategies = get_db().get_strategies()
+    except Exception as e:
+        logger.error(f"Error getting backtest results: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    results = [
+        {
+            "name":            s.get("name"),
+            "model_type":      s.get("model_type"),
+            "status":          s.get("status"),
+            "validation_date": s.get("validation_date"),
+            "risk_level":      s.get("risk_level") or "UNKNOWN",
+            "sharpe_ratio":    float(s.get("sharpe_ratio") or 0),
+            "robustness":      s.get("robustness") or "UNKNOWN",
+        }
+        for s in strategies
+    ]
+    return {"results": results, "count": len(results)}
+
+
+@app.get("/api/risk/summary")
+async def get_risk_summary():
+    """Return portfolio risk metrics computed from Neon data."""
+    import math
+    try:
+        perf_rows  = get_db().get_performance(days=30)
+        trade_rows = get_db().get_trades(limit=200)
+    except Exception as e:
+        logger.error(f"Error getting risk summary: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    if not perf_rows:
+        return {"var_95": 0, "cvar_95": 0, "max_drawdown_pct": 0,
+                "volatility_annual_pct": 0, "sharpe_ratio": 0,
+                "current_equity": 0, "total_trades": len(trade_rows)}
+
+    equities = [float(r.get("equity", 0) or 0) for r in reversed(perf_rows)]
+    daily_returns = [
+        (equities[i] - equities[i-1]) / equities[i-1]
+        for i in range(1, len(equities)) if equities[i-1] > 0
+    ]
+
+    if daily_returns:
+        n = len(daily_returns)
+        mean_r = sum(daily_returns) / n
+        vol_daily = math.sqrt(sum((r - mean_r) ** 2 for r in daily_returns) / n)
+        vol_annual = vol_daily * math.sqrt(252) * 100
+        sorted_r = sorted(daily_returns)
+        idx_5 = max(0, int(n * 0.05))
+        last_eq = equities[-1]
+        var_95  = round(abs(sorted_r[idx_5]) * last_eq, 2)
+        cvar_95 = round(abs(sum(sorted_r[:idx_5+1]) / max(1, idx_5+1)) * last_eq, 2)
+    else:
+        var_95 = cvar_95 = vol_annual = 0.0
+
+    latest = perf_rows[0]
+    return {
+        "current_equity":        float(latest.get("equity") or 0),
+        "var_95":                var_95,
+        "cvar_95":               cvar_95,
+        "max_drawdown_pct":      round(float(latest.get("max_drawdown") or 0) * 100, 2),
+        "volatility_annual_pct": round(vol_annual, 2),
+        "sharpe_ratio":          round(float(latest.get("sharpe_ratio") or 0), 2),
+        "total_trades":          len(trade_rows),
+        "period_days":           len(perf_rows),
+    }
+
+
+@app.get("/api/agent-status")
+async def get_agent_status():
+    """Return current status of each agent (last log entry per agent)."""
+    try:
+        logs = get_db().get_agent_logs(limit=200)
+    except Exception as e:
+        logger.error(f"Error getting agent status: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    seen: dict = {}
+    for log in logs:  # già DESC per timestamp
+        name = log.get("agent_name")
+        if name and name not in seen:
+            seen[name] = {
+                "agent_name": name,
+                "status":     log.get("status"),
+                "last_run":   log.get("timestamp"),
+                "message":    log.get("message"),
+            }
+
+    default_agents = [
+        "ResearchAgent", "SpecAgent", "MLEngineerAgent",
+        "ValidationAgent", "TradingExecutor", "MonitoringAgent",
+    ]
+    result = [
+        seen.get(a, {"agent_name": a, "status": "IDLE",
+                     "last_run": None, "message": "No activity recorded"})
+        for a in default_agents
+    ]
+    return {"agents": result, "count": len(result)}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

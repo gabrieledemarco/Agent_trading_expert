@@ -82,6 +82,14 @@ class TradingExecutorAgent:
         self.active_strategy = None
         self.strategy_profiles = {}
         self._lock = threading.Lock()
+        self._db = None  # lazy-initialised
+
+    @property
+    def db(self):
+        if self._db is None:
+            from data.storage.data_manager import DataStorageManager
+            self._db = DataStorageManager()
+        return self._db
 
     def load_validated_strategies(self) -> list[StrategyProfile]:
         """Load all validated strategies."""
@@ -369,12 +377,40 @@ class TradingExecutorAgent:
         log_file = self.log_dir / f"trades_{datetime.now().strftime('%Y-%m-%d')}.jsonl"
         with open(log_file, "a") as f:
             f.write(json.dumps(asdict(trade)) + "\n")
+        try:
+            t = asdict(trade)
+            self.db.save_trade({
+                "timestamp":  str(t.get("timestamp", "")),
+                "symbol":     str(t.get("symbol", "")),
+                "action":     str(t.get("action", "")),
+                "quantity":   float(t.get("quantity", 0) or 0),
+                "price":      float(t.get("price", 0) or 0),
+                "value":      float(t.get("value", 0) or 0),
+                "model_name": str(t.get("model_name", "")),
+                "status":     "executed",
+            })
+        except Exception as _e:
+            logger.warning(f"Could not save trade to Neon: {_e}")
 
     def _log_metrics(self, metrics: PerformanceMetrics):
         """Log metrics to file."""
         log_file = self.log_dir / f"metrics_{datetime.now().strftime('%Y-%m-%d')}.jsonl"
         with open(log_file, "a") as f:
             f.write(json.dumps(asdict(metrics)) + "\n")
+        try:
+            m = asdict(metrics)
+            self.db.save_performance({
+                "timestamp":    str(m.get("timestamp", "")),
+                "model_name":   str(m.get("model_name", "portfolio")),
+                "equity":       float(m.get("current_equity", 0) or 0),
+                "total_return": float(m.get("total_return", 0) or 0),
+                "sharpe_ratio": float(m.get("sharpe_ratio", 0) or 0),
+                "max_drawdown": float(m.get("max_drawdown", 0) or 0),
+                "win_rate":     float(m.get("win_rate", 0) or 0),
+                "num_trades":   int(m.get("num_trades", 0) or 0),
+            })
+        except Exception as _e:
+            logger.warning(f"Could not save performance to Neon: {_e}")
 
     def get_performance_summary(self) -> dict:
         """Get performance summary."""

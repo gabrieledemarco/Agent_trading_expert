@@ -74,6 +74,14 @@ class MonitoringAgent:
         self.alert_history = []
         self.performance_history = []
         self._lock = threading.Lock()
+        self._db = None  # lazy-initialised
+
+    @property
+    def db(self):
+        if self._db is None:
+            from data.storage.data_manager import DataStorageManager
+            self._db = DataStorageManager()
+        return self._db
 
     def load_performance_data(self, days: int = 30) -> list[PerformanceSnapshot]:
         """Load performance data from trading logs."""
@@ -405,6 +413,18 @@ class MonitoringAgent:
         with open(alert_file, "a") as f:
             for alert in critical_alerts:
                 f.write(json.dumps(asdict(alert)) + "\n")
+
+        # Persist to Neon PostgreSQL
+        try:
+            for alert in critical_alerts:
+                a = asdict(alert) if hasattr(alert, '__dataclass_fields__') else (alert.__dict__ if hasattr(alert, '__dict__') else alert)
+                self.db.log_agent_activity(
+                    "MonitoringAgent",
+                    str(a.get("severity", "WARNING")),
+                    str(a.get("message", str(a))),
+                )
+        except Exception as _e:
+            logger.warning(f"Could not log alert to Neon: {_e}")
 
         # Note: In production, implement webhook/email notifications here
         # Example webhook (disabled):
