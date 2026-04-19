@@ -407,10 +407,10 @@ async function hydrateChartDataFromApi() {
             const response = await fetch((window.TRADING_API_BASE||'') + `/api/equity-curve?period=${apiPeriod}`);
             if (response.ok) {
                 const data = await response.json();
-                if (data.labels && data.values && data.labels.length > 0) {
+                if (data.labels && data.equity && data.labels.length > 0) {
                     // Convert equity values to percentage returns
-                    const baseValue = data.values[0] || 10000;
-                    const equity = data.values.map(v => ((v - baseValue) / baseValue) * 100);
+                    const baseValue = data.equity[0] || 10000;
+                    const equity = data.equity.map(v => ((v - baseValue) / baseValue) * 100);
                     
                     // Update chartData with real data
                     if (chartData[period]) {
@@ -419,10 +419,10 @@ async function hydrateChartDataFromApi() {
                         chartData[period].benchmark = equity.slice(-12).map(v => v * 0.6); // Approximate benchmark
                     }
                 } else if (data.message && data.message.includes('No performance data')) {
-                    showDbError('Nessun dato di performance disponibile in Neon. Configura DATABASE_URL.');
+                    showDbBanner('Nessun dato di performance disponibile in Neon. Configura DATABASE_URL.');
                 }
             } else {
-                showDbError('Database non configurato. Imposta DATABASE_URL per leggere da Neon.');
+                showDbBanner('Database non configurato. Imposta DATABASE_URL per leggere da Neon.');
             }
         }
         
@@ -432,22 +432,22 @@ async function hydrateChartDataFromApi() {
             const strategiesData = await strategiesResponse.json();
             const strategies = strategiesData.strategies || [];
             if (strategies.length === 0) {
-                showDbError('Nessuna strategia trovata in Neon. Esegui il seed per popolare il database.');
+                showDbBanner('Nessuna strategia trovata in Neon. Esegui il seed per popolare il database.');
             }
             updateStrategyTable(strategies);
         } else {
-            showDbError('Impossibile leggere strategie da Neon. DATABASE_URL non configurato.');
+            showDbBanner('Impossibile leggere strategie da Neon. DATABASE_URL non configurato.');
         }
         
         // Rebuild chart with new data
         buildEquityChart(currentPeriod);
     } catch (err) {
         console.error('Database error:', err.message);
-        showDbError('Errore connessione database Neon: ' + err.message);
+        showDbBanner('Errore connessione database Neon: ' + err.message);
     }
 }
 
-function showDbError(message) {
+function showDbBanner(message) {
     // Show error in the console and as a visible alert
     console.error('🔴 ' + message);
     const errorDiv = document.getElementById('dbError') || document.createElement('div');

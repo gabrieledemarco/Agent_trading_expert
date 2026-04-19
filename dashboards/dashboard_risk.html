@@ -365,11 +365,11 @@ new Chart(document.getElementById('stressChart').getContext('2d'),{type:'bar',da
                 }
             } catch (err) {
                 console.log('Using fallback risk data:', err.message);
-                showDbError('Errore connessione risk database: ' + err.message);
+                showDbBanner('Errore connessione risk database: ' + err.message);
             }
         }
         
-        function showDbError(message) {
+        function showDbBanner(message) {
             console.error('🔴 ' + message);
             const errorDiv = document.getElementById('dbError') || document.createElement('div');
             errorDiv.id = 'dbError';

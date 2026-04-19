@@ -504,11 +504,11 @@ async function hydrateResearchFromApi() {
         }
     } catch (err) {
         console.log('Using fallback research data:', err.message);
-        showDbError('Errore connessione research database: ' + err.message);
+        showDbBanner('Errore connessione research database: ' + err.message);
     }
 }
 
-function showDbError(message) {
+function showDbBanner(message) {
     console.error('🔴 ' + message);
     const errorDiv = document.getElementById('dbError') || document.createElement('div');
     errorDiv.id = 'dbError';

@@ -598,11 +598,11 @@ async function hydrateAgentActivityFromApi() {
     } catch (err) {
         // Keep local simulated logs as fallback.
         console.error('Agent status error:', err.message);
-        showDbError('Errore connessione agenti: ' + err.message);
+        showDbBanner('Errore connessione agenti: ' + err.message);
     }
 }
 
-function showDbError(message) {
+function showDbBanner(message) {
     console.error('🔴 ' + message);
     const errorDiv = document.getElementById('dbError') || document.createElement('div');
     errorDiv.id = 'dbError';

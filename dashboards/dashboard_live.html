@@ -288,7 +288,7 @@ function updateLivePrices() {
         })
         .catch(err => {
             console.error('Error fetching prices:', err);
-            showDbError('Errore connessione price feed: ' + err.message);
+            showDbBanner('Errore connessione price feed: ' + err.message);
             // Fallback to simulation if API fails
             const aaplDelta = Math.sin(tick * 0.3) * 0.4 + Math.cos(tick * 0.7) * 0.2;
             const msftDelta = Math.cos(tick * 0.4) * 0.35 - Math.sin(tick * 0.2) * 0.15;
@@ -372,7 +372,7 @@ tick_();
             document.querySelector('.terminal').classList.add('sidebar-collapsed');
         }
 
-function showDbError(message) {
+function showDbBanner(message) {
     console.error('🔴 ' + message);
     const errorDiv = document.getElementById('dbError') || document.createElement('div');
     errorDiv.id = 'dbError';
