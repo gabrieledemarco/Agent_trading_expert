@@ -404,7 +404,7 @@ buildStaticCharts();
                     bm: data.values.slice(-10).map(v => v * 0.9)
                 };
                 // Rebuild charts
-                changePeriod('1W');
+                setEqPeriod('1W', null);
             } else if (data.message) {
                 showDbError('Nessun dato di performance in Neon. DATABASE_URL non configurato.');
             }
