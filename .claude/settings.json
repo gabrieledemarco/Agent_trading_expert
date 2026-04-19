@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "render": {
+      "command": "/usr/local/bin/python3",
+      "args": [
+        "/home/user/Agent_trading_expert/mcp_servers/render_mcp.py"
+      ],
+      "env": {
+        "RENDER_API_KEY": "${RENDER_API_KEY}",
+        "RENDER_SERVICE_ID": "${RENDER_SERVICE_ID}"
+      }
+    }
+  }
+}
