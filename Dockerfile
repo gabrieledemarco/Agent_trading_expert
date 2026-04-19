@@ -32,5 +32,5 @@ RUN mkdir -p data/research_findings data/market_data models/versions specs tests
 # Expose ports
 EXPOSE 8000 5000 8080
 
-# Default command
-CMD ["python", "-m", "agents.research.research_agent"]
+# Default command — override PORT via env var (Render injects $PORT)
+CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
