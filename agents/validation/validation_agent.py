@@ -33,6 +33,17 @@ class ValidationAgent:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._computation = ComputationService()
+        self._db = None  # lazy-initialised
+
+    @property
+    def db(self):
+        if self._db is None:
+            from data.storage.data_manager import DataStorageManager
+            self._db = DataStorageManager()
+        return self._db
+
+    def log_activity(self, status: str, message: str):
+        self.db.log_agent_activity(self.__class__.__name__, status, message)
 
     def load_specs(self) -> list[dict]:
         """Load all specification files."""
@@ -406,6 +417,27 @@ The model generates trading signals based on:
         # Save documentation
         doc_file = self.output_dir / f"{model_name}_documentation.md"
         doc_file.write_text(doc)
+
+        # Persist to Neon PostgreSQL
+        try:
+            rr = result.get("risk_return_profile", {})
+            model_id = self.db.save_model({
+                "model_name": result.get("model_name"),
+                "model_type": result.get("model_type", "unknown"),
+                "status": "implemented",
+                "metrics": rr,
+            })
+            self.db.save_validation({
+                "model_id": model_id,
+                "status": result.get("validation_status", "REJECTED").lower(),
+                "risk_score": rr.get("risk_score", "UNKNOWN"),
+                "sharpe_ratio": float(rr.get("sharpe_ratio", 0) or 0),
+                "robustness_score": result.get("statistical_robustness", {}).get("robustness_score", "UNKNOWN"),
+                "anomalies": result.get("anomalies", []),
+            })
+            self.log_activity("COMPLETED", f"Validation for {result.get('model_name')} saved to Neon")
+        except Exception as e:
+            logger.warning(f"Could not persist validation to Neon: {e}")
 
         logger.info(f"Validation complete: {validation_status} for {model_name}")
         return result
