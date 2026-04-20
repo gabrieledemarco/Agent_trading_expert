@@ -1,11 +1,13 @@
 """Trading Agents API — data served exclusively from Neon PostgreSQL."""
 
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
+import asyncio
 import logging
+from contextlib import asynccontextmanager
+from typing import List, Optional
+
+from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from configs.paths import Paths
 
@@ -15,6 +17,7 @@ logger = logging.getLogger(__name__)
 # DB singleton — created once at startup, shared across all requests.
 _db = None
 
+
 def get_db():
     global _db
     if _db is None:
@@ -22,17 +25,34 @@ def get_db():
         _db = DataStorageManager()
     return _db
 
+
+def _run_research_if_due():
+    """Run research agent in a background thread if it hasn't run in 7 days."""
+    try:
+        from agents.research.research_agent import ResearchAgent
+        agent = ResearchAgent()
+        if agent.should_run_now(min_interval_days=7):
+            logger.info("Auto-triggering ResearchAgent (no run in last 7 days)")
+            agent.run()
+        else:
+            logger.info("ResearchAgent: last run recent enough, skipping auto-run")
+    except Exception as e:
+        logger.warning(f"Auto research run failed: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: trigger research in background thread (non-blocking)
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _run_research_if_due)
+    yield
+
+
 app = FastAPI(
     title="Trading Agents API",
     description="API for the multi-agent trading system",
     version="0.1.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    lifespan=lifespan,
 )
 
 app.mount("/dashboards", StaticFiles(directory=str(Paths.DASHBOARDS_DIR), html=True), name="dashboards")
@@ -71,26 +91,48 @@ async def health_check():
 
 
 @app.post("/research")
-async def run_research(request: ResearchRequest):
-    """Run research agent."""
-    try:
+async def run_research(request: ResearchRequest, background_tasks: BackgroundTasks):
+    """Trigger research agent — runs in background, saves results to Neon."""
+    def _run():
         from agents.research.research_agent import ResearchAgent
-        
         agent = ResearchAgent()
-        papers = agent.search_arxiv(
-            search_query=request.query,
-            max_results=request.max_results
-        )
-        relevant = agent.filter_relevant_papers(papers)
-        
-        return {
-            "total_papers": len(papers),
-            "relevant_papers": len(relevant),
-            "papers": relevant[:5]
-        }
-    except Exception as e:
-        logger.error(f"Error in research: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        # Override defaults if caller supplied a custom query
+        if request.query != "trading OR quantitative finance":
+            papers = agent.search_arxiv(search_query=request.query, max_results=request.max_results)
+            relevant = agent.filter_relevant_papers(papers)
+            saved = 0
+            for paper in relevant:
+                try:
+                    agent.db.save_research({
+                        "id":              str(paper.get("id", "")),
+                        "title":           str(paper.get("title", "")),
+                        "authors":         str(paper.get("authors", [])),
+                        "published":       str(paper.get("published", "")),
+                        "categories":      str(paper.get("categories", [])),
+                        "abstract":        str(paper.get("summary", "")),
+                        "pdf_url":         str(paper.get("pdf_url", "")),
+                        "relevance_score": float(paper.get("relevance_score", 0)),
+                    })
+                    saved += 1
+                except Exception:
+                    pass
+            return {"relevant": len(relevant), "saved": saved}
+        else:
+            return agent.run()
+
+    background_tasks.add_task(_run)
+    return {"status": "accepted", "message": "Research agent started in background"}
+
+
+@app.post("/api/agents/research/run")
+async def trigger_research_now(background_tasks: BackgroundTasks):
+    """Manually trigger the research agent regardless of last-run date."""
+    def _run():
+        from agents.research.research_agent import ResearchAgent
+        ResearchAgent().run()
+
+    background_tasks.add_task(_run)
+    return {"status": "accepted", "message": "ResearchAgent triggered — results will appear in /research GET"}
 
 
 @app.get("/models")
