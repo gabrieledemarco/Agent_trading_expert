@@ -170,310 +170,195 @@
 </div>
 
 <script>
-// XSS Fix: all DOM manipulation uses createElement/textContent instead of innerHTML concatenation
+// Agent phase → API trigger endpoint mapping
+const AGENT_TRIGGER = {
+    'ResearchAgent':       '/api/agents/research/run',
+    'SpecAgent':           '/api/pipeline/run/spec',
+    'MLEngineerAgent':     '/api/pipeline/run/ml_engineer',
+    'ValidationAgent':     '/api/pipeline/run/validation',
+    'ImprovementAgent':    '/api/pipeline/run/improvement',
+    'TradingExecutorAgent':'/api/pipeline/run/trading',
+    'MonitoringAgent':     '/api/pipeline/run/monitoring',
+    'PipelineOrchestrator':'/api/pipeline/run',
+};
 
-const AGENTS = {
-    research: { name:'ResearchAgent', type:'Weekly arXiv search', icon:'&#128300;', status:'idle', runs:23, stat1lbl:'Papers found', stat1val:'6', stat2lbl:'Last arXiv', stat2val:'2026-04-09', lastRun:'2026-04-09 08:00', progress:0, api:'/api/research/trigger' },
-    spec:     { name:'SpecAgent',     type:'Research → Spec conversion', icon:'&#128203;', status:'idle', runs:8,  stat1lbl:'Specs created', stat1val:'8', stat2lbl:'Pending', stat2val:'2', lastRun:'2026-04-09 09:15', progress:0, api:'/api/spec/generate' },
-    ml:       { name:'MLEngineerAgent', type:'Model development & training', icon:'&#9881;&#65039;', status:'idle', runs:5, stat1lbl:'Models built', stat1val:'6', stat2lbl:'Pass rate', stat2val:'66%', lastRun:'2026-04-10 14:00', progress:0, api:'/api/ml/build' },
-    validation:{ name:'ValidationAgent', type:'Model quality & performance validation', icon:'&#9989;', status:'idle', runs:4, stat1lbl:'Pass rate', stat1val:'66%', stat2lbl:'Rejected', stat2val:'2', lastRun:'2026-04-11 16:20', progress:0, api:'/api/validation/run' },
-    trading:  { name:'TradingExecutor', type:'Live strategy execution (paper)', icon:'&#128200;', status:'running', runs:312, stat1lbl:'Trades', stat1val:'44', stat2lbl:'P&L', stat2val:'-$190', lastRun:'now', progress:100, api:'/api/trade/execute' },
-    monitoring:{ name:'MonitoringAgent', type:'System health & alerts', icon:'&#128202;', status:'running', runs:8760, stat1lbl:'Uptime', stat1val:'24h', stat2lbl:'Health', stat2val:'OK', lastRun:'now', progress:100, api:'/api/monitor/status' },
+const AGENT_TYPE = {
+    'ResearchAgent':       'Weekly arXiv scan',
+    'SpecAgent':           'Research → YAML specs',
+    'MLEngineerAgent':     'Model code generation',
+    'ValidationAgent':     'Model validation',
+    'ImprovementAgent':    'Strategy optimisation',
+    'TradingExecutorAgent':'Live paper trading',
+    'MonitoringAgent':     'System health & alerts',
+    'ChatAgent':           'Conversational interface',
+    'PipelineOrchestrator':'Full pipeline coordination',
 };
 
 let logEntryCount = 0;
 
+function escapeHTML(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showDbBanner(msg) {
+    let b = document.getElementById('dbBanner');
+    if (b) b.remove();
+    b = document.createElement('div');
+    b.id = 'dbBanner';
+    b.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1a1200;border:1px solid #cc7700;padding:10px 14px;color:#ff9900;font-family:Consolas,monospace;font-size:11px;z-index:9999;max-width:360px;display:flex;align-items:flex-start;gap:10px;';
+    b.innerHTML = '<span style="flex:1">' + escapeHTML(msg) + '</span><button onclick="document.getElementById(\'dbBanner\').remove()" style="background:none;border:none;color:#ff9900;cursor:pointer;font-size:14px;padding:0;">&#x2715;</button>';
+    document.body.appendChild(b);
+    setTimeout(() => { if (b.parentNode) b.remove(); }, 8000);
+}
+
 function addLog(type, agent, msg) {
-    // SECURITY: Use DOM APIs — never inject user-controlled strings via innerHTML
-    const console_ = document.getElementById('logConsole');
-    const t = new Date().toLocaleTimeString();
+    const con = document.getElementById('logConsole');
     const entry = document.createElement('div');
     entry.className = 'log-entry';
-
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'log-time';
-    timeSpan.textContent = '[' + t + '] ';
-
-    const tagSpan = document.createElement('span');
-    tagSpan.className = 'log-tag';
-    tagSpan.textContent = '[' + agent + '] ';
-
-    const msgSpan = document.createElement('span');
-    msgSpan.className = 'log-' + type;
-    msgSpan.textContent = msg;
-
-    entry.appendChild(timeSpan);
-    entry.appendChild(tagSpan);
-    entry.appendChild(msgSpan);
-    console_.insertBefore(entry, console_.firstChild);
-    while (console_.children.length > 80) console_.removeChild(console_.lastChild);
-
+    const ts = document.createElement('span'); ts.className='log-time'; ts.textContent='['+new Date().toLocaleTimeString()+'] ';
+    const tag = document.createElement('span'); tag.className='log-tag'; tag.textContent='['+agent+'] ';
+    const txt = document.createElement('span'); txt.className='log-'+type; txt.textContent=msg;
+    entry.append(ts, tag, txt);
+    con.insertBefore(entry, con.firstChild);
+    while (con.children.length > 80) con.removeChild(con.lastChild);
     logEntryCount++;
     document.getElementById('logCount').textContent = logEntryCount + ' events';
-    updateFooter();
 }
 
-function updateFooter() {
-    let active=0, idle=0, completed=0;
-    Object.values(AGENTS).forEach(a => {
-        if(a.status==='running') active++;
-        else if(a.status==='idle') idle++;
-        else if(a.status==='completed') completed++;
-    });
-    document.getElementById('activeCount').textContent = active;
-    document.getElementById('idleCount').textContent = idle;
-    document.getElementById('completedCount').textContent = completed;
+// ── Render agent grid from /api/agents/status ──────────────────────────────
+
+function statusMeta(s) {
+    const m = {
+        active:    { cls:'status-running',   lbl:'ACTIVE',    dot:'var(--green)' },
+        warning:   { cls:'status-completed', lbl:'WARNING',   dot:'var(--yellow)' },
+        error:     { cls:'status-error',     lbl:'ERROR',     dot:'var(--red)' },
+        never_run: { cls:'status-idle',      lbl:'NEVER RUN', dot:'var(--text-muted)' },
+    };
+    return m[s] || m['never_run'];
 }
 
-function renderAgents() {
+function renderAgentCard(a) {
+    const name = a.agent_name || '?';
+    const sm = statusMeta(a.last_status);
+    const lastRun = a.last_run ? new Date(a.last_run).toLocaleString() : '—';
+    const dur = a.duration_ms ? (a.duration_ms/1000).toFixed(1)+'s' : '—';
+    const rec = a.records_written != null ? a.records_written : '—';
+    const msg = (a.last_message || '').slice(0, 80);
+    const hasTrigger = !!AGENT_TRIGGER[name];
+
+    const card = document.createElement('div');
+    card.className = 'agent-card' + (a.last_status==='active'?' running':a.last_status==='error'?' error':'');
+    card.id = 'card-' + name;
+    card.innerHTML = `
+        <div class="agent-header">
+            <div>
+                <div class="agent-name">${escapeHTML(name)}</div>
+                <div class="agent-type">${escapeHTML(AGENT_TYPE[name]||'Agent')}</div>
+            </div>
+            <span class="status-badge ${sm.cls}">${sm.lbl}</span>
+        </div>
+        <div class="agent-metrics">
+            <span class="metric-lbl">Last run:</span><span>${escapeHTML(lastRun)}</span>
+            <span class="metric-lbl">Duration:</span><span>${escapeHTML(dur)}</span>
+            <span class="metric-lbl">Records:</span><span>${escapeHTML(String(rec))}</span>
+            <span class="metric-lbl">Message:</span><span style="color:var(--text-muted)">${escapeHTML(msg||'—')}</span>
+        </div>
+        <div class="agent-actions">
+            ${hasTrigger ? `<button class="agent-btn" onclick="triggerAgent('${escapeHTML(name)}')">&#9654; RUN</button>` : ''}
+            <button class="agent-btn" onclick="viewAgentHistory('${escapeHTML(name)}')">&#128203; LOGS</button>
+        </div>`;
+    return card;
+}
+
+function renderAgentsGrid(agents) {
     const grid = document.getElementById('agentsGrid');
     grid.innerHTML = '';
-    Object.entries(AGENTS).forEach(([id, a]) => {
-        const card = document.createElement('div');
-        card.className = 'agent-card' + (a.status==='running'?' running':a.status==='error'?' error':'');
-        card.id = 'card-'+id;
-
-        const statusClass = { idle:'status-idle', running:'status-running', completed:'status-completed', error:'status-error' };
-        const statusLabel = { idle:'IDLE', running:'RUNNING', completed:'COMPLETED', error:'ERROR' };
-
-        card.innerHTML = `
-            <div class="agent-header">
-                <div>
-                    <div class="agent-name">${escapeHTML(a.name)}</div>
-                    <div class="agent-type">${escapeHTML(a.type)}</div>
-                </div>
-                <span class="status-badge ${statusClass[a.status]}" id="status-${id}">${statusLabel[a.status]}</span>
-            </div>
-            <div class="agent-metrics">
-                <span class="metric-lbl">Runs:</span><span>${escapeHTML(String(a.runs))}</span>
-                <span class="metric-lbl">${escapeHTML(a.stat1lbl)}:</span><span>${escapeHTML(a.stat1val)}</span>
-                <span class="metric-lbl">${escapeHTML(a.stat2lbl)}:</span><span>${escapeHTML(a.stat2val)}</span>
-                <span class="metric-lbl">Last run:</span><span style="color:var(--text-muted)">${escapeHTML(a.lastRun)}</span>
-            </div>
-            <div class="progress-bar"><div class="progress-fill progress-green" id="prog-${id}" style="width:${a.progress}%"></div></div>
-            <div class="last-run" id="info-${id}">—</div>
-            <div class="agent-actions">
-                <button class="agent-btn${a.status==='running'?' stop':''}" id="btn-${id}" onclick="toggleAgent('${id}')">${a.status==='running'?'&#9632; STOP':'&#9654; RUN'}</button>
-                <button class="agent-btn" onclick="viewLogs('${id}')">&#128203; LOGS</button>
-            </div>`;
-        grid.appendChild(card);
+    let active=0, warn=0, err=0, never=0;
+    agents.forEach(a => {
+        grid.appendChild(renderAgentCard(a));
+        const s = a.last_status;
+        if (s==='active') active++;
+        else if (s==='warning') warn++;
+        else if (s==='error') err++;
+        else if (s==='never_run') never++;
     });
+    document.getElementById('agentGridSubtitle').textContent = agents.length + ' agents registered';
+    document.getElementById('activeCount').textContent = active;
+    document.getElementById('warnCount').textContent   = warn;
+    document.getElementById('errorCount').textContent  = err;
+    document.getElementById('neverCount').textContent  = never;
 }
 
-function escapeHTML(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+// ── Fetch agent status ─────────────────────────────────────────────────────
+
+function loadAgentStatus() {
+    fetch('/api/agents/status')
+        .then(r => r.json())
+        .then(data => renderAgentsGrid(data.agents || []))
+        .catch(err => showDbBanner('Errore caricamento status agenti: ' + err.message));
 }
 
-function toggleAgent(id) {
-    const a = AGENTS[id];
-    if (a.status === 'running') {
-        stopAgent(id);
-    } else {
-        runAgent(id);
-    }
+// ── Fetch activity log ─────────────────────────────────────────────────────
+
+function loadActivityLog() {
+    fetch('/dashboard/agent-activity?limit=30')
+        .then(r => r.json())
+        .then(data => {
+            const logs = data.activities || [];
+            if (!logs.length) return;
+            const con = document.getElementById('logConsole');
+            con.innerHTML = '';
+            logEntryCount = 0;
+            logs.forEach(l => {
+                const s = (l.status||'info').toLowerCase();
+                const type = s==='error'?'error':s==='warning'?'warn':s==='active'?'success':'info';
+                addLog(type, l.agent_name||'Agent', l.message||'');
+            });
+        })
+        .catch(() => {});
 }
 
-function runAgent(id) {
-    const a = AGENTS[id];
-    a.status = 'running';
-    a.runs++;
-    a.lastRun = 'now';
-    renderAgents();
-    addLog('info', a.name, 'Starting run #' + a.runs + '...');
+// ── Trigger agent ──────────────────────────────────────────────────────────
 
-    // Detailed logs based on agent type
-    if (id === 'research') {
-        setTimeout(() => addLog('info', a.name, 'Connecting to arXiv API (api.arxiv.org)...'), 200);
-        setTimeout(() => addLog('success', a.name, 'Connected. Searching: cat:q-fin.TR OR cat:q-fin.PM'), 400);
-        setTimeout(() => addLog('info', a.name, 'Filter: submitted_date:[2026-04-10 TO 2026-04-17]'), 600);
-        setTimeout(() => addLog('success', a.name, 'Found 6 papers matching criteria'), 900);
-        setTimeout(() => addLog('info', a.name, '[1/6] arXiv:2604.08821 - "Deep Reinforcement Learning for Dynamic Portfolio Allocation"'), 1200);
-        setTimeout(() => addLog('info', a.name, '      Authors: Zhang et al. (2026) | Relevance: 94%'), 1300);
-        setTimeout(() => addLog('info', a.name, '      Key finding: PPO with attention mechanisms achieves Sharpe 1.82'), 1400);
-        setTimeout(() => addLog('info', a.name, '[2/6] arXiv:2604.09156 - "Transformer-Based Limit Order Book Prediction"'), 1700);
-        setTimeout(() => addLog('info', a.name, '      Authors: Kim & Park (2026) | Relevance: 89%'), 1800);
-        setTimeout(() => addLog('info', a.name, '      Key finding: Temporal attention on LOB snapshots improves prediction by 18%'), 1900);
-        setTimeout(() => addLog('info', a.name, '[3/6] arXiv:2604.09403 - "Risk-Aware Kelly Criterion for Crypto Trading"'), 2200);
-        setTimeout(() => addLog('info', a.name, '      Authors: Chen et al. (2026) | Relevance: 91%'), 2300);
-        setTimeout(() => addLog('info', a.name, '      Key finding: Fractional Kelly (1/4) reduces drawdown by 40% vs full Kelly'), 2400);
-        setTimeout(() => addLog('info', a.name, '[4/6] arXiv:2604.10012 - "Graph Neural Networks for Cross-Asset Correlation"'), 2700);
-        setTimeout(() => addLog('info', a.name, '      Authors: Liu & Wang (2026) | Relevance: 87%'), 2800);
-        setTimeout(() => addLog('info', a.name, '      Key finding: GNN captures dynamic correlations better than rolling windows'), 2900);
-        setTimeout(() => addLog('info', a.name, '[5/6] arXiv:2604.10234 - "Volatility Forecasting with LSTMs and GARCH"'), 3200);
-        setTimeout(() => addLog('info', a.name, '      Authors: Rodriguez (2026) | Relevance: 82%'), 3300);
-        setTimeout(() => addLog('info', a.name, '      Key finding: Hybrid LSTM-GARCH outperforms pure GARCH by 23% (MAE)'), 3400);
-        setTimeout(() => addLog('info', a.name, '[6/6] arXiv:2604.10445 - "Multi-Agent Systems for Algorithmic Trading"'), 3700);
-        setTimeout(() => addLog('info', a.name, '      Authors: Smith & Johnson (2026) | Relevance: 96%'), 3800);
-        setTimeout(() => addLog('info', a.name, '      Key finding: Cooperative agents with shared risk framework increase returns by 31%'), 3900);
-        setTimeout(() => addLog('success', a.name, 'Papers indexed and stored in research/papers_2026_W16/'), 4100);
-    } else if (id === 'spec') {
-        setTimeout(() => addLog('info', a.name, 'Loading paper: arXiv:2604.10445 (Multi-Agent Systems)'), 200);
-        setTimeout(() => addLog('info', a.name, 'Extracting methodology from sections 3-5...'), 400);
-        setTimeout(() => addLog('success', a.name, 'Identified architecture: Multi-agent RL with centralized critic'), 700);
-        setTimeout(() => addLog('info', a.name, 'Generating specification document...'), 900);
-        setTimeout(() => addLog('info', a.name, 'SPEC: Model architecture'), 1100);
-        setTimeout(() => addLog('info', a.name, '  - Base: PPO with 3 specialized agents (Signal, Risk, Execution)'), 1200);
-        setTimeout(() => addLog('info', a.name, '  - Shared critic network: 256→128→64 units'), 1300);
-        setTimeout(() => addLog('info', a.name, '  - Individual actor networks: 128→64 units per agent'), 1400);
-        setTimeout(() => addLog('info', a.name, 'SPEC: Hyperparameters'), 1600);
-        setTimeout(() => addLog('info', a.name, '  - Learning rate: 3e-4 (Adam optimizer)'), 1700);
-        setTimeout(() => addLog('info', a.name, '  - Clip ratio: 0.2, Entropy coef: 0.01'), 1800);
-        setTimeout(() => addLog('info', a.name, '  - Batch size: 64, Mini-batches: 4'), 1900);
-        setTimeout(() => addLog('info', a.name, '  - GAE lambda: 0.95, Discount: 0.99'), 2000);
-        setTimeout(() => addLog('info', a.name, 'SPEC: Data requirements'), 2200);
-        setTimeout(() => addLog('info', a.name, '  - Training period: 3 years daily data (2021-2023)'), 2300);
-        setTimeout(() => addLog('info', a.name, '  - Features: OHLCV + 15 technical indicators + market regime'), 2400);
-        setTimeout(() => addLog('info', a.name, '  - Validation: 1 year OOS (2024)'), 2500);
-        setTimeout(() => addLog('info', a.name, 'SPEC: Constraints & Requirements'), 2700);
-        setTimeout(() => addLog('info', a.name, '  - Max position size: 5% NAV per agent'), 2800);
-        setTimeout(() => addLog('info', a.name, '  - Risk per trade: 1% NAV (enforced by Risk agent)'), 2900);
-        setTimeout(() => addLog('info', a.name, '  - Target Sharpe: >1.5 (validation threshold)'), 3000);
-        setTimeout(() => addLog('info', a.name, '  - Max correlation between agents: <0.6'), 3100);
-        setTimeout(() => addLog('success', a.name, 'Spec document created: specs/multi_agent_rl_2026_04_17.md'), 3400);
-    } else if (id === 'ml') {
-        setTimeout(() => addLog('info', a.name, 'Loading spec: specs/multi_agent_rl_2026_04_17.md'), 200);
-        setTimeout(() => addLog('success', a.name, 'Spec validated. Starting model implementation...'), 400);
-        setTimeout(() => addLog('info', a.name, 'Building architecture: 3-agent PPO system'), 600);
-        setTimeout(() => addLog('info', a.name, '[Agent 1] SignalAgent: Observation space (50,) → Actor (128→64→3 actions)'), 800);
-        setTimeout(() => addLog('info', a.name, '[Agent 2] RiskAgent: Observation space (30,) → Actor (128→64→5 actions)'), 1000);
-        setTimeout(() => addLog('info', a.name, '[Agent 3] ExecutionAgent: Observation space (20,) → Actor (128→64→4 actions)'), 1200);
-        setTimeout(() => addLog('info', a.name, '[Shared] Centralized Critic: Combined obs (100,) → Value (256→128→64→1)'), 1400);
-        setTimeout(() => addLog('success', a.name, 'Architecture built. Total parameters: 142,337'), 1600);
-        setTimeout(() => addLog('info', a.name, 'Loading training data: SPY/QQQ daily 2021-2023 (756 days)'), 1800);
-        setTimeout(() => addLog('info', a.name, 'Computing technical indicators: RSI, MACD, BB, ATR, ADX, Stoch...'), 2000);
-        setTimeout(() => addLog('success', a.name, 'Feature matrix ready: (756, 50) per agent'), 2200);
-        setTimeout(() => addLog('info', a.name, 'Starting training: Epoch 1/50'), 2400);
-        setTimeout(() => addLog('info', a.name, 'Epoch 1/50 → Loss: 0.284 | Policy loss: 0.158 | Value loss: 0.126'), 2600);
-        setTimeout(() => addLog('info', a.name, 'Epoch 5/50 → Loss: 0.197 | Policy loss: 0.104 | Value loss: 0.093'), 2900);
-        setTimeout(() => addLog('info', a.name, 'Epoch 10/50 → Loss: 0.145 | Policy loss: 0.078 | Value loss: 0.067'), 3200);
-        setTimeout(() => addLog('info', a.name, 'Epoch 15/50 → Loss: 0.112 | Policy loss: 0.059 | Value loss: 0.053'), 3500);
-        setTimeout(() => addLog('info', a.name, 'Epoch 20/50 → Loss: 0.089 | Policy loss: 0.047 | Value loss: 0.042'), 3800);
-        setTimeout(() => addLog('info', a.name, 'Early stopping triggered: val_loss no improvement for 5 epochs'), 4000);
-        setTimeout(() => addLog('success', a.name, 'Training completed. Best epoch: 20 (val_loss: 0.089)'), 4200);
-        setTimeout(() => addLog('info', a.name, 'Running backtests on 2024 OOS data (252 days)...'), 4400);
-        setTimeout(() => addLog('success', a.name, 'Backtest results: Sharpe 1.64 | Sortino 2.12 | Max DD 8.4%'), 4700);
-        setTimeout(() => addLog('success', a.name, 'Model saved: models/multi_agent_ppo_v1_2026_04_17.pkl'), 4900);
-    } else if (id === 'validation') {
-        setTimeout(() => addLog('info', a.name, 'Loading model: models/multi_agent_ppo_v1_2026_04_17.pkl'), 200);
-        setTimeout(() => addLog('success', a.name, 'Model loaded. Starting validation suite...'), 400);
-        setTimeout(() => addLog('info', a.name, '[Test 1/8] Architecture verification'), 600);
-        setTimeout(() => addLog('success', a.name, '  ✓ Parameter count matches spec (142,337)'), 700);
-        setTimeout(() => addLog('success', a.name, '  ✓ Layer dimensions correct'), 800);
-        setTimeout(() => addLog('info', a.name, '[Test 2/8] Performance metrics (2024 OOS)'), 1000);
-        setTimeout(() => addLog('success', a.name, '  ✓ Sharpe: 1.64 (threshold: >1.5) PASS'), 1100);
-        setTimeout(() => addLog('success', a.name, '  ✓ Sortino: 2.12 (threshold: >1.8) PASS'), 1200);
-        setTimeout(() => addLog('success', a.name, '  ✓ Max DD: 8.4% (threshold: <10%) PASS'), 1300);
-        setTimeout(() => addLog('success', a.name, '  ✓ Win rate: 54.2% (threshold: >50%) PASS'), 1400);
-        setTimeout(() => addLog('info', a.name, '[Test 3/8] Risk management compliance'), 1600);
-        setTimeout(() => addLog('success', a.name, '  ✓ Max position size: 4.8% (limit: 5%) PASS'), 1700);
-        setTimeout(() => addLog('success', a.name, '  ✓ Risk per trade: 0.97% avg (limit: 1%) PASS'), 1800);
-        setTimeout(() => addLog('success', a.name, '  ✓ Stop loss hit rate: 32% (acceptable)'), 1900);
-        setTimeout(() => addLog('info', a.name, '[Test 4/8] Correlation checks'), 2100);
-        setTimeout(() => addLog('success', a.name, '  ✓ Signal-Risk agent correlation: 0.42 (<0.6) PASS'), 2200);
-        setTimeout(() => addLog('success', a.name, '  ✓ Signal-Execution correlation: 0.38 (<0.6) PASS'), 2300);
-        setTimeout(() => addLog('success', a.name, '  ✓ Risk-Execution correlation: 0.51 (<0.6) PASS'), 2400);
-        setTimeout(() => addLog('info', a.name, '[Test 5/8] Regime robustness'), 2600);
-        setTimeout(() => addLog('success', a.name, '  ✓ High volatility (Mar 2024): Sharpe 1.21 PASS'), 2700);
-        setTimeout(() => addLog('success', a.name, '  ✓ Low volatility (Aug 2024): Sharpe 1.58 PASS'), 2800);
-        setTimeout(() => addLog('success', a.name, '  ✓ Trending market (Oct 2024): Sharpe 1.89 PASS'), 2900);
-        setTimeout(() => addLog('info', a.name, '[Test 6/8] Monte Carlo simulation (1000 runs)'), 3100);
-        setTimeout(() => addLog('success', a.name, '  ✓ Median Sharpe: 1.61 (95% CI: [1.42, 1.79])'), 3300);
-        setTimeout(() => addLog('success', a.name, '  ✓ P(Sharpe>1.5) = 68% PASS'), 3400);
-        setTimeout(() => addLog('info', a.name, '[Test 7/8] Transaction cost sensitivity'), 3600);
-        setTimeout(() => addLog('success', a.name, '  ✓ 0bps: Sharpe 1.64 | 5bps: Sharpe 1.51 | 10bps: Sharpe 1.38'), 3800);
-        setTimeout(() => addLog('success', a.name, '  ✓ Remains profitable up to 12bps PASS'), 3900);
-        setTimeout(() => addLog('info', a.name, '[Test 8/8] Edge decay analysis'), 4100);
-        setTimeout(() => addLog('success', a.name, '  ✓ 30-day rolling Sharpe stable (σ=0.18)'), 4300);
-        setTimeout(() => addLog('success', a.name, '  ✓ No significant edge decay detected'), 4400);
-        setTimeout(() => addLog('success', a.name, 'Validation PASSED: 8/8 tests (100%)'), 4700);
-        setTimeout(() => addLog('success', a.name, 'Model approved for paper trading'), 4800);
-    } else if (id === 'trading') {
-        setTimeout(() => addLog('info', a.name, 'Checking position sizing: Kelly 1/4 = 2.05% NAV'), 200);
-        setTimeout(() => addLog('info', a.name, 'Verifying stop loss: 1.5x ATR(14) from entry'), 400);
-        setTimeout(() => addLog('info', a.name, 'Risk per trade: 1.0% NAV ($100 max loss)'), 600);
-        setTimeout(() => addLog('info', a.name, 'Current drawdown: 2.3% (limit: 15.0%)'), 800);
-        setTimeout(() => addLog('success', a.name, 'Correlation check: Strategy pairs within limits'), 1000);
-        setTimeout(() => addLog('info', a.name, 'Volatility adjustment: 0.85x multiplier (vol=22%)'), 1200);
-        setTimeout(() => addLog('success', a.name, 'R:R ratio: 1:3.0 (above min 1:2.0 threshold)'), 1400);
-        setTimeout(() => addLog('info', a.name, 'Fetching market data: SPY, QQQ (last 100 bars)'), 1600);
-        setTimeout(() => addLog('success', a.name, 'Market data received. Computing indicators...'), 1800);
-        setTimeout(() => addLog('info', a.name, 'SPY: Price=$515.20 | ATR(14)=$3.45 | RSI(14)=58.2'), 2000);
-        setTimeout(() => addLog('info', a.name, 'QQQ: Price=$447.10 | ATR(14)=$4.12 | RSI(14)=62.1'), 2200);
-        setTimeout(() => addLog('info', a.name, '[SignalAgent] Analyzing entry opportunity...'), 2400);
-        setTimeout(() => addLog('success', a.name, '[SignalAgent] Signal: LONG SPY (confidence: 72%)'), 2600);
-        setTimeout(() => addLog('info', a.name, '[RiskAgent] Calculating position size...'), 2800);
-        setTimeout(() => addLog('info', a.name, '[RiskAgent] Kelly fraction: 0.25 × (0.542×1.85 - 0.458×1.0)/1.85 = 0.0205'), 3000);
-        setTimeout(() => addLog('success', a.name, '[RiskAgent] Approved: 2.05% NAV ($205) → 0.39 shares'), 3200);
-        setTimeout(() => addLog('info', a.name, '[RiskAgent] Stop loss: $515.20 - 1.5×$3.45 = $510.03'), 3400);
-        setTimeout(() => addLog('info', a.name, '[RiskAgent] Take profit: $515.20 + 3.0×$5.17 = $530.71'), 3600);
-        setTimeout(() => addLog('info', a.name, '[ExecutionAgent] Checking liquidity...'), 3800);
-        setTimeout(() => addLog('success', a.name, '[ExecutionAgent] Bid-ask spread: $0.02 (0.004%) - acceptable'), 4000);
-        setTimeout(() => addLog('info', a.name, '[ExecutionAgent] Placing LIMIT order: BUY 0.39 SPY @ $515.20'), 4200);
-        setTimeout(() => addLog('success', a.name, '[ExecutionAgent] Order filled: 0.39 SPY @ $515.21 (slippage: $0.01)'), 4500);
-        setTimeout(() => addLog('success', a.name, 'Trade executed successfully. Position ID: #TRD-2604-00044'), 4700);
-    } else if (id === 'monitoring') {
-        setTimeout(() => addLog('info', a.name, 'Running system health checks...'), 200);
-        setTimeout(() => addLog('success', a.name, '  ✓ Database connection: OK (latency: 12ms)'), 400);
-        setTimeout(() => addLog('success', a.name, '  ✓ Market data feed: OK (last update: 2s ago)'), 600);
-        setTimeout(() => addLog('success', a.name, '  ✓ Trading API: OK (response time: 45ms)'), 800);
-        setTimeout(() => addLog('info', a.name, 'Checking resource usage...'), 1000);
-        setTimeout(() => addLog('info', a.name, '  CPU: 23% (4 cores) | Memory: 2.1GB / 8GB (26%)'), 1200);
-        setTimeout(() => addLog('info', a.name, '  Disk: 45GB / 100GB (45%) | Network: 1.2Mbps'), 1400);
-        setTimeout(() => addLog('info', a.name, 'Monitoring active positions...'), 1600);
-        setTimeout(() => addLog('info', a.name, '  Open positions: 3 | Total exposure: $615 (6.15% NAV)'), 1800);
-        setTimeout(() => addLog('info', a.name, '  Unrealized P&L: +$12.50 (+2.03%)'), 2000);
-        setTimeout(() => addLog('success', a.name, 'All systems nominal. No alerts.'), 2200);
-    }
-
-    // Simulate progress
-    let progress = 0;
-    const interval = setInterval(() => {
-        progress += 5 + Math.random() * 15;
-        if (progress >= 100) {
-            progress = 100;
-            clearInterval(interval);
-            a.status = 'completed';
-            a.progress = 100;
-            a.lastRun = new Date().toLocaleTimeString();
-            addLog('success', a.name, 'Run #' + a.runs + ' completed successfully');
-            renderAgents();
-            updateFooter();
-        } else {
-            a.progress = Math.round(progress);
-            const progEl = document.getElementById('prog-'+id);
-            if (progEl) progEl.style.width = a.progress + '%';
-            const infoEl = document.getElementById('info-'+id);
-            if (infoEl) infoEl.textContent = 'Progress: ' + a.progress + '%';
-        }
-    }, 300);
+function triggerAgent(name) {
+    const url = AGENT_TRIGGER[name];
+    if (!url) return;
+    fetch(url, {method:'POST'})
+        .then(r => r.json())
+        .then(() => {
+            addLog('info', name, 'Triggered — running in background…');
+            setTimeout(loadAgentStatus, 3000);
+        })
+        .catch(err => showDbBanner('Errore trigger ' + name + ': ' + err.message));
 }
 
-function stopAgent(id) {
-    const a = AGENTS[id];
-    a.status = 'idle';
-    a.progress = 0;
-    a.lastRun = new Date().toLocaleTimeString();
-    addLog('warn', a.name, 'Stopped manually');
-    renderAgents();
-    updateFooter();
+// ── View history ───────────────────────────────────────────────────────────
+
+function viewAgentHistory(name) {
+    fetch('/api/agents/' + encodeURIComponent(name) + '/history?limit=20')
+        .then(r => r.json())
+        .then(data => {
+            const con = document.getElementById('logConsole');
+            con.innerHTML = '';
+            logEntryCount = 0;
+            (data.history || []).forEach(l => {
+                const s = (l.status||'info').toLowerCase();
+                const type = s==='error'?'error':s==='warning'?'warn':s==='active'?'success':'info';
+                addLog(type, l.agent_name||name, l.message||'');
+            });
+            addLog('info', 'System', 'Showing history for ' + name + ' (' + (data.count||0) + ' entries)');
+        })
+        .catch(err => showDbBanner('Errore history: ' + err.message));
 }
 
-function runAllAgents() {
-    Object.keys(AGENTS).forEach(id => {
-        if (AGENTS[id].status !== 'running') setTimeout(() => runAgent(id), Math.random() * 500);
-    });
+// ── Refresh all ────────────────────────────────────────────────────────────
+
+function refreshAll() {
+    loadAgentStatus();
+    loadActivityLog();
 }
 
-function stopAllAgents() {
-    Object.keys(AGENTS).forEach(id => {
-        if (AGENTS[id].status === 'running') stopAgent(id);
-    });
-}
-
-function viewLogs(id) {
-    const a = AGENTS[id];
-    addLog('info', 'System', 'Showing last logs for ' + a.name);
-}
+// ── Resize / sidebar ───────────────────────────────────────────────────────
 
 function toggleResize(sectionId) {
     const section = document.querySelector(`[data-section="${sectionId}"]`);
@@ -522,37 +407,11 @@ function loadResizeStates() {
 
 
 
-async function hydrateAgentActivityFromApi() {
-    try {
-        const response = await fetch((window.TRADING_API_BASE||'') + '/dashboard/agent-activity?limit=20');
-        if (!response.ok) return;
-        const payload = await response.json();
-        const activities = Array.isArray(payload.activities) ? payload.activities : [];
-        if (!activities.length) return;
-
-        const console_ = document.getElementById('logConsole');
-        const shouldSeedFromApi = console_.children.length <= 3;
-        if (!shouldSeedFromApi) return;
-
-        activities.forEach((a) => {
-            const msg = a.message || 'No message';
-            const status = String(a.status || 'INFO').toLowerCase();
-            const type = status.includes('error') ? 'error' : status.includes('warn') ? 'warn' : status.includes('complete') ? 'success' : 'info';
-            addLog(type, a.agent_name || 'Agent', msg);
-        });
-    } catch (err) {
-        // Keep local simulated logs as fallback.
-    }
-}
-
-// Init
-renderAgents();
-addLog('success', 'System', 'Agent monitor initialized');
-addLog('info', 'TradingExecutor', 'Active — paper trading mode');
-addLog('info', 'MonitoringAgent', 'All systems nominal');
-hydrateAgentActivityFromApi();
-updateFooter();
+// ── Bootstrap ──────────────────────────────────────────────────────────────
+loadAgentStatus();
+loadActivityLog();
 loadResizeStates();
+setInterval(refreshAll, 30000);
 function toggleSidebar() {
     const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
     localStorage.setItem('sidebarCollapsed', isCollapsed);

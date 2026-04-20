@@ -384,36 +384,45 @@ async def get_risk_summary():
     }
 
 
-@app.get("/api/agent-status")
-async def get_agent_status():
-    """Return current status of each agent (last log entry per agent)."""
+@app.get("/api/agents/status")
+async def get_agents_status():
+    """Stato corrente di tutti gli agenti (ultimo log per ciascuno, con duration/records)."""
     try:
-        logs = get_db().get_agent_logs(limit=200)
+        agents = get_db().get_agent_status()
+        known = [
+            "ResearchAgent", "SpecAgent", "MLEngineerAgent", "ValidationAgent",
+            "ImprovementAgent", "TradingExecutorAgent", "MonitoringAgent",
+            "ChatAgent", "PipelineOrchestrator",
+        ]
+        seen = {a["agent_name"] for a in agents}
+        for name in known:
+            if name not in seen:
+                agents.append({
+                    "agent_name": name, "last_run": None, "last_status": "never_run",
+                    "last_message": "No activity recorded", "duration_ms": 0,
+                    "records_written": 0, "error_detail": None,
+                })
+        return {"agents": agents, "count": len(agents)}
     except Exception as e:
         logger.error(f"Error getting agent status: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Database unavailable")
 
-    seen: dict = {}
-    for log in logs:  # già DESC per timestamp
-        name = log.get("agent_name")
-        if name and name not in seen:
-            seen[name] = {
-                "agent_name": name,
-                "status":     log.get("status"),
-                "last_run":   log.get("timestamp"),
-                "message":    log.get("message"),
-            }
 
-    default_agents = [
-        "ResearchAgent", "SpecAgent", "MLEngineerAgent",
-        "ValidationAgent", "TradingExecutor", "MonitoringAgent",
-    ]
-    result = [
-        seen.get(a, {"agent_name": a, "status": "IDLE",
-                     "last_run": None, "message": "No activity recorded"})
-        for a in default_agents
-    ]
-    return {"agents": result, "count": len(result)}
+@app.get("/api/agent-status")
+async def get_agent_status_legacy():
+    """Legacy endpoint — redirects to /api/agents/status."""
+    return await get_agents_status()
+
+
+@app.get("/api/agents/{agent_name}/history")
+async def get_agent_history(agent_name: str, limit: int = 20):
+    """Storico delle run di un agente specifico."""
+    try:
+        history = get_db().get_agent_run_history(agent_name, limit=limit)
+        return {"agent_name": agent_name, "history": history, "count": len(history)}
+    except Exception as e:
+        logger.error(f"Error getting agent history: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.get("/api/trades")
