@@ -1,9 +1,7 @@
 """Validation Agent - Verify models, identify anomalies, and validate scientific basis."""
 
-import os
 import re
 import logging
-import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -12,15 +10,15 @@ import yaml
 import numpy as np
 import pandas as pd
 
+from agents.base.base_agent import BaseAgent
 from configs.paths import Paths
 from execution_engine.computation_service import ComputationService
-from data.storage.data_manager import DataStorageManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class ValidationAgent:
+class ValidationAgent(BaseAgent):
     """Agent responsible for validating ML models and their scientific basis."""
 
     def __init__(
@@ -28,20 +26,13 @@ class ValidationAgent:
         models_dir: str = str(Paths.MODELS_DIR),
         specs_dir: str = str(Paths.SPECS_DIR),
         output_dir: str = str(Paths.VALIDATED_DIR),
-        db_url: Optional[str] = None,
     ):
+        super().__init__()
         self.models_dir = Path(models_dir)
         self.specs_dir = Path(specs_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._computation = ComputationService()
-        
-        # Initialize database connection for Neon persistence
-        try:
-            self.db = DataStorageManager(db_url)
-        except RuntimeError as e:
-            logger.warning(f"Database not available: {e}")
-            self.db = None
 
     def load_specs(self) -> list[dict]:
         """Load all specification files."""
@@ -416,38 +407,33 @@ The model generates trading signals based on:
         doc_file = self.output_dir / f"{model_name}_documentation.md"
         doc_file.write_text(doc)
 
-        # Persist to Neon database
-        if self.db:
-            try:
-                # Save model if not exists
-                model_id = self.db.save_model({
-                    "model_name": model_name,
-                    "model_type": spec.get("model", {}).get("type", "unknown"),
-                    "status": "validated",
-                })
-                
-                # Save validation result
-                self.db.save_validation({
-                    "model_id": model_id,
-                    "status": validation_status.lower(),
-                    "risk_score": risk_return.get("risk_score", "unknown").lower(),
-                    "sharpe_ratio": risk_return.get("sharpe_ratio", 0),
-                    "robustness_score": robustness.get("robustness_score", "unknown").lower(),
-                })
-                
-                # Log agent activity
-                self.db.log_agent_activity(
-                    "validation",
-                    "completed",
-                    f"Validated {model_name}: {validation_status}"
-                )
-                
-                logger.info(f"Persisted validation for {model_name} to Neon")
-            except Exception as e:
-                logger.error(f"Failed to persist to Neon: {e}")
+        # Persist to Neon PostgreSQL
+        try:
+            rr = result.get("risk_return_profile", {})
+            model_id = self.db.save_model({
+                "model_name": result.get("model_name"),
+                "model_type": result.get("model_type", "unknown"),
+                "status": "implemented",
+                "metrics": rr,
+            })
+            self.db.save_validation({
+                "model_id": model_id,
+                "status": result.get("validation_status", "REJECTED").lower(),
+                "risk_score": rr.get("risk_score", "UNKNOWN"),
+                "sharpe_ratio": float(rr.get("sharpe_ratio", 0) or 0),
+                "robustness_score": result.get("statistical_robustness", {}).get("robustness_score", "UNKNOWN"),
+                "anomalies": result.get("anomalies", []),
+            })
+            self.log_activity("COMPLETED", f"Validation for {result.get('model_name')} saved to Neon")
+        except Exception as e:
+            logger.warning(f"Could not persist validation to Neon: {e}")
 
         logger.info(f"Validation complete: {validation_status} for {model_name}")
         return result
+
+    def run(self) -> list[str]:
+        """Alias for run_validation — satisfies BaseAgent contract."""
+        return self.run_validation()
 
     def run_validation(self) -> list[str]:
         """Run validation for all specs."""

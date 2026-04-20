@@ -1,20 +1,22 @@
 """ML Engineer Agent - Implement and validate ML models from specifications."""
 
-import os
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import yaml
 
+from agents.base.base_agent import BaseAgent
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class MLEngineerAgent:
+class MLEngineerAgent(BaseAgent):
     """Agent responsible for implementing and validating ML models."""
 
     def __init__(self, specs_dir: str = "specs", models_dir: str = "models"):
+        super().__init__()
         self.specs_dir = Path(specs_dir)
         self.models_dir = Path(models_dir)
         self.models_dir.mkdir(parents=True, exist_ok=True)
@@ -708,6 +710,7 @@ if __name__ == "__main__":
     def implement_model(self, spec: dict) -> str:
         """Implement a model from specification."""
         model_name = spec.get("model", {}).get("name", "model")
+        model_type = spec.get("model", {}).get("type", "time_series_forecasting")
 
         logger.info(f"Implementing model: {model_name}")
 
@@ -732,7 +735,29 @@ if __name__ == "__main__":
         backtest_file.write_text(backtest_code)
 
         logger.info(f"Model implementation complete for {model_name}")
+
+        # Persist to DB
+        try:
+            specs = self.db.get_specs()
+            spec_row = next((s for s in specs if s.get("model_name") == model_name), {})
+            spec_id = spec_row.get("id")
+
+            row_id = self.db.save_model({
+                "model_name": model_name,
+                "spec_id":    spec_id,
+                "model_type": model_type,
+                "status":     "implemented",
+                "metrics":    {},
+            })
+            self.log_activity("active", f"Model saved to DB: {model_name} (id={row_id})")
+        except Exception as e:
+            self.log_activity("warning", f"Could not save model to DB: {e}")
+
         return str(model_file)
+
+    def run(self) -> list[str]:
+        """Alias for run_implementation — satisfies BaseAgent contract."""
+        return self.run_implementation()
 
     def run_implementation(self) -> list[str]:
         """Run model implementation for all specs."""

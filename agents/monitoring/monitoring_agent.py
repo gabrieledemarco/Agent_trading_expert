@@ -1,18 +1,16 @@
 """Monitoring Agent - Real-time performance monitoring and alerting in production."""
 
-import os
 import logging
 import time
 import json
-import smtplib
 import threading
-from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, asdict
 import numpy as np
 
+from agents.base.base_agent import BaseAgent
 from configs.paths import Paths
 from data.storage.data_manager import DataStorageManager
 
@@ -46,7 +44,7 @@ class Alert:
     metrics: dict
 
 
-class MonitoringAgent:
+class MonitoringAgent(BaseAgent):
     """Agent responsible for monitoring trading performance in production."""
 
     def __init__(
@@ -57,6 +55,7 @@ class MonitoringAgent:
         alert_threshold: dict = None,
         db_url: Optional[str] = None,
     ):
+        super().__init__()
         self.trading_log_dir = Path(trading_log_dir)
         self.validated_dir = Path(validated_dir)
         self.monitoring_log_dir = Path(monitoring_log_dir)
@@ -84,8 +83,41 @@ class MonitoringAgent:
             logger.warning(f"Database not available: {e}")
             self.db = None
 
+    def should_run_now(self, min_interval_days: int = 0) -> bool:
+        return True  # Monitoring gira sempre quando chiamato dal loop
+
+    def run(self) -> list:
+        """Alias for run_monitoring_cycle — satisfies BaseAgent contract."""
+        return self.run_monitoring_cycle()
+
     def load_performance_data(self, days: int = 30) -> list[PerformanceSnapshot]:
-        """Load performance data from trading logs."""
+        """Load performance data from Neon DB (fallback: JSONL files)."""
+        # Try DB first
+        try:
+            rows = self.db.get_performance(days=days)
+            if rows:
+                snapshots = []
+                for data in rows:
+                    snapshot = PerformanceSnapshot(
+                        timestamp=data.get("timestamp"),
+                        equity=data.get("equity", 0),
+                        daily_return=data.get("total_return", 0),
+                        cumulative_return=data.get("total_return", 0),
+                        sharpe_ratio=data.get("sharpe_ratio", 0),
+                        max_drawdown=data.get("max_drawdown", 0),
+                        win_rate=data.get("win_rate", 0),
+                        num_trades=data.get("num_trades", 0),
+                        active_positions=0,
+                        model_name=data.get("model_name", "unknown"),
+                        risk_profile="UNKNOWN",
+                    )
+                    snapshots.append(snapshot)
+                logger.info(f"Loaded {len(snapshots)} performance records from DB")
+                return snapshots
+        except Exception as e:
+            logger.warning(f"DB performance query failed: {e}")
+
+        # Fallback: read JSONL files
         snapshots = []
 
         if not self.trading_log_dir.exists():
@@ -432,6 +464,18 @@ class MonitoringAgent:
         with open(alert_file, "a") as f:
             for alert in critical_alerts:
                 f.write(json.dumps(asdict(alert)) + "\n")
+
+        # Persist to Neon PostgreSQL
+        try:
+            for alert in critical_alerts:
+                a = asdict(alert) if hasattr(alert, '__dataclass_fields__') else (alert.__dict__ if hasattr(alert, '__dict__') else alert)
+                self.db.log_agent_activity(
+                    "MonitoringAgent",
+                    str(a.get("severity", "WARNING")),
+                    str(a.get("message", str(a))),
+                )
+        except Exception as _e:
+            logger.warning(f"Could not log alert to Neon: {_e}")
 
         # Note: In production, implement webhook/email notifications here
         # Example webhook (disabled):

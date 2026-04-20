@@ -1,6 +1,5 @@
 """Spec Agent - Transform research into technical specifications."""
 
-import os
 import re
 import logging
 from datetime import datetime
@@ -8,14 +7,17 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
+from agents.base.base_agent import BaseAgent
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class SpecAgent:
+class SpecAgent(BaseAgent):
     """Agent responsible for creating technical specifications from research."""
 
     def __init__(self, research_dir: str = "data/research_findings", output_dir: str = "specs"):
+        super().__init__()
         self.research_dir = Path(research_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -238,6 +240,10 @@ class SpecAgent:
                 lines.append(f"   - {layer['type']}")
         return "\n".join(lines)
 
+    def run(self) -> list[str]:
+        """Alias for run_spec_generation — satisfies BaseAgent contract."""
+        return self.run_spec_generation()
+
     def run_spec_generation(self) -> list[str]:
         """Run specification generation from latest research."""
         logger.info("Starting spec generation...")
@@ -269,6 +275,18 @@ class SpecAgent:
             plan_file = self.output_dir / f"{spec['model']['name']}_action_plan.md"
             plan_file.write_text(action_plan)
             logger.info(f"Saved action plan to {plan_file}")
+
+            # Persist to DB
+            try:
+                row_id = self.db.save_spec({
+                    "model_name":      spec["model"]["name"],
+                    "source_paper_id": paper.get("id", ""),
+                    "model_type":      spec["model"]["type"],
+                    "status":          "pending",
+                })
+                self.log_activity("active", f"Spec saved to DB: {spec['model']['name']} (id={row_id})")
+            except Exception as e:
+                self.log_activity("warning", f"Could not save spec to DB: {e}")
 
         return spec_files
 

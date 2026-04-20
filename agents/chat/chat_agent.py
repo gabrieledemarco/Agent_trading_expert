@@ -5,16 +5,23 @@ from datetime import datetime
 from typing import Dict, List
 import logging
 
+from agents.base.base_agent import BaseAgent
+
 logger = logging.getLogger(__name__)
 
 
-class ChatAgent:
+class ChatAgent(BaseAgent):
     """Agent that answers user questions about the trading system."""
 
     def __init__(self, data_dir: str = "data", models_dir: str = "models"):
+        super().__init__()
         self.data_dir = data_dir
         self.models_dir = models_dir
         self.conversation_history: List[Dict] = []
+
+    def run(self) -> Dict:
+        """Satisfy BaseAgent contract — returns a help response."""
+        return self.process_message("help")
 
     def process_message(self, user_message: str) -> Dict:
         """Process user message and generate response."""

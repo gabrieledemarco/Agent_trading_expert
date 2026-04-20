@@ -46,17 +46,11 @@ class DataStorageManager:
         return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     def _init_schema(self):
-        """Ensure all tables exist (idempotent).
-
-        Requires a role with CREATE TABLE privileges (e.g. neondb_owner).
-        If the role lacks DDL permissions but tables already exist, a warning
-        is logged and startup continues normally.
-        """
+        """Ensure all tables exist (idempotent)."""
         conn = self._connect()
         conn.autocommit = True
         cur = conn.cursor()
-        try:
-            cur.execute("""
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS research (
                 id            SERIAL PRIMARY KEY,
                 paper_id      TEXT UNIQUE,
@@ -119,28 +113,22 @@ class DataStorageManager:
                 num_trades   INTEGER
             );
             CREATE TABLE IF NOT EXISTS agent_logs (
-                id         SERIAL PRIMARY KEY,
-                agent_name TEXT,
-                timestamp  TEXT,
-                status     TEXT,
-                message    TEXT
+                id              SERIAL PRIMARY KEY,
+                agent_name      TEXT,
+                timestamp       TEXT,
+                status          TEXT,
+                message         TEXT,
+                duration_ms     INTEGER DEFAULT 0,
+                records_written INTEGER DEFAULT 0,
+                error_detail    TEXT
             );
         """)
-        except Exception as e:
-            import psycopg2
-            if isinstance(e, psycopg2.errors.InsufficientPrivilege):
-                logger.warning(
-                    "DB user lacks CREATE TABLE privileges — "
-                    "assuming schema already exists. "
-                    "Use neondb_owner role for first-time setup."
-                )
-                conn.rollback()
-            else:
-                conn.rollback()
-                raise
-        finally:
-            cur.close()
-            conn.close()
+        # Non-destructive migration: add columns if the table already existed
+        cur.execute("ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS duration_ms INTEGER DEFAULT 0;")
+        cur.execute("ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS records_written INTEGER DEFAULT 0;")
+        cur.execute("ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS error_detail TEXT;")
+        cur.close()
+        conn.close()
 
     # ── Research ──────────────────────────────────────────────────────────────
 
@@ -371,15 +359,53 @@ class DataStorageManager:
 
     # ── Agent logs ────────────────────────────────────────────────────────────
 
-    def log_agent_activity(self, agent_name: str, status: str, message: str):
+    def log_agent_activity(self, agent_name: str, status: str, message: str,
+                           duration_ms: int = 0, records_written: int = 0,
+                           error_detail: str = None):
         conn = self._connect()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO agent_logs (agent_name, timestamp, status, message) VALUES (%s, %s, %s, %s)",
-            (agent_name, datetime.now().isoformat(), status, message),
+            """INSERT INTO agent_logs
+               (agent_name, timestamp, status, message, duration_ms, records_written, error_detail)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (agent_name, datetime.now().isoformat(), status, message,
+             duration_ms, records_written, error_detail),
         )
         conn.commit()
         conn.close()
+
+    def get_agent_status(self) -> list[dict]:
+        """Ritorna stato corrente di ogni agente (ultimo log + statistiche)."""
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute("""
+            SELECT DISTINCT ON (agent_name)
+                agent_name,
+                timestamp      AS last_run,
+                status         AS last_status,
+                message        AS last_message,
+                duration_ms,
+                records_written,
+                error_detail
+            FROM agent_logs
+            ORDER BY agent_name, timestamp DESC
+        """)
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+
+    def get_agent_run_history(self, agent_name: str, limit: int = 20) -> list[dict]:
+        """Storico delle run di un agente specifico."""
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute(
+            """SELECT * FROM agent_logs WHERE agent_name = %s
+               ORDER BY timestamp DESC LIMIT %s""",
+            (agent_name, limit)
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
 
     def get_agent_logs(self, agent_name: Optional[str] = None, limit: int = 100) -> list[dict]:
         conn = self._connect()

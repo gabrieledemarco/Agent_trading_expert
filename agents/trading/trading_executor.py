@@ -1,6 +1,5 @@
 """Trading Executor Agent - Execute and monitor trading strategies with validated models."""
 
-import os
 import logging
 import time
 import json
@@ -11,8 +10,8 @@ from typing import Optional
 from dataclasses import dataclass, asdict
 import numpy as np
 
+from agents.base.base_agent import BaseAgent
 from configs.paths import Paths
-from data.storage.data_manager import DataStorageManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -58,7 +57,7 @@ class StrategyProfile:
     documentation_path: str
 
 
-class TradingExecutorAgent:
+class TradingExecutorAgent(BaseAgent):
     """Agent responsible for executing and monitoring trading strategies."""
 
     def __init__(
@@ -68,8 +67,8 @@ class TradingExecutorAgent:
         trading_log_dir: str = str(Paths.TRADING_LOGS),
         initial_capital: float = 10000,
         paper_trading: bool = True,
-        db_url: Optional[str] = None,
     ):
+        super().__init__()
         self.model_path = Path(model_path)
         self.validated_dir = Path(validated_dir)
         self.log_dir = Path(trading_log_dir)
@@ -84,13 +83,22 @@ class TradingExecutorAgent:
         self.active_strategy = None
         self.strategy_profiles = {}
         self._lock = threading.Lock()
-        
-        # Initialize database connection for Neon persistence
-        try:
-            self.db = DataStorageManager(db_url)
-        except RuntimeError as e:
-            logger.warning(f"Database not available: {e}")
-            self.db = None
+
+    def should_run_now(self, min_interval_days: int = 0) -> bool:
+        return True  # Trading gira sempre quando chiamato dal loop
+
+    def run(
+        self,
+        symbols: list = None,
+        interval_seconds: int = 60,
+        max_iterations: int = 100,
+    ):
+        """Alias for run_trading_loop — satisfies BaseAgent contract."""
+        return self.run_trading_loop(
+            symbols=symbols or ["AAPL", "MSFT", "GOOG"],
+            interval_seconds=interval_seconds,
+            max_iterations=max_iterations,
+        )
 
     def load_validated_strategies(self) -> list[StrategyProfile]:
         """Load all validated strategies."""
@@ -374,51 +382,44 @@ class TradingExecutorAgent:
         return self.calculate_metrics()
 
     def _log_trade(self, trade: Trade):
-        """Log trade to file and database."""
-        # Log to file
+        """Log trade to file."""
         log_file = self.log_dir / f"trades_{datetime.now().strftime('%Y-%m-%d')}.jsonl"
         with open(log_file, "a") as f:
             f.write(json.dumps(asdict(trade)) + "\n")
-        
-        # Persist to Neon database
-        if self.db:
-            try:
-                self.db.save_trade({
-                    "timestamp": trade.timestamp,
-                    "symbol": trade.symbol,
-                    "action": trade.action,
-                    "quantity": trade.quantity,
-                    "price": trade.price,
-                    "value": trade.value,
-                    "model_name": trade.model_name,
-                })
-                logger.debug(f"Persisted trade {trade.symbol} to Neon")
-            except Exception as e:
-                logger.error(f"Failed to persist trade to Neon: {e}")
+        try:
+            t = asdict(trade)
+            self.db.save_trade({
+                "timestamp":  str(t.get("timestamp", "")),
+                "symbol":     str(t.get("symbol", "")),
+                "action":     str(t.get("action", "")),
+                "quantity":   float(t.get("quantity", 0) or 0),
+                "price":      float(t.get("price", 0) or 0),
+                "value":      float(t.get("value", 0) or 0),
+                "model_name": str(t.get("model_name", "")),
+                "status":     "executed",
+            })
+        except Exception as _e:
+            logger.warning(f"Could not save trade to Neon: {_e}")
 
     def _log_metrics(self, metrics: PerformanceMetrics):
-        """Log metrics to file and database."""
-        # Log to file
+        """Log metrics to file."""
         log_file = self.log_dir / f"metrics_{datetime.now().strftime('%Y-%m-%d')}.jsonl"
         with open(log_file, "a") as f:
             f.write(json.dumps(asdict(metrics)) + "\n")
-        
-        # Persist to Neon database
-        if self.db:
-            try:
-                self.db.save_performance({
-                    "timestamp": metrics.timestamp,
-                    "model_name": metrics.model_name,
-                    "equity": metrics.current_equity,
-                    "total_return": metrics.total_return,
-                    "sharpe_ratio": metrics.sharpe_ratio,
-                    "max_drawdown": metrics.max_drawdown,
-                    "win_rate": metrics.win_rate,
-                    "num_trades": metrics.num_trades,
-                })
-                logger.debug(f"Persisted performance to Neon")
-            except Exception as e:
-                logger.error(f"Failed to persist performance to Neon: {e}")
+        try:
+            m = asdict(metrics)
+            self.db.save_performance({
+                "timestamp":    str(m.get("timestamp", "")),
+                "model_name":   str(m.get("model_name", "portfolio")),
+                "equity":       float(m.get("current_equity", 0) or 0),
+                "total_return": float(m.get("total_return", 0) or 0),
+                "sharpe_ratio": float(m.get("sharpe_ratio", 0) or 0),
+                "max_drawdown": float(m.get("max_drawdown", 0) or 0),
+                "win_rate":     float(m.get("win_rate", 0) or 0),
+                "num_trades":   int(m.get("num_trades", 0) or 0),
+            })
+        except Exception as _e:
+            logger.warning(f"Could not save performance to Neon: {_e}")
 
     def get_performance_summary(self) -> dict:
         """Get performance summary."""

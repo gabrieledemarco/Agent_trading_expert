@@ -8,23 +8,12 @@ eventually expose the same interface over HTTP.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Optional
 
 import numpy as np
-
-from data.storage.data_manager import DataStorageManager
 
 
 class ComputationService:
     """Stateless numerical computation helpers."""
-
-    def __init__(self, db_url: Optional[str] = None):
-        # Initialize database connection for Neon persistence (optional)
-        try:
-            self.db = DataStorageManager(db_url)
-        except RuntimeError:
-            self.db = None
 
     # ── Strategy Execution ────────────────────────────────────────────────────
 
@@ -51,25 +40,23 @@ class ComputationService:
             initial_capital,
             transaction_cost,
         )
-        
-        # Persist performance snapshot to Neon database
-        if self.db:
-            try:
-                strategy_id = parameters.get("strategy_id", "unknown")
-                self.db.save_performance({
-                    "timestamp": datetime.now().isoformat(),
-                    "model_name": strategy_id,
-                    "equity": metrics.get("final_equity", initial_capital),
-                    "total_return": metrics.get("total_return", 0),
-                    "sharpe_ratio": metrics.get("sharpe_ratio", 0),
-                    "max_drawdown": metrics.get("max_drawdown", 0),
-                    "win_rate": metrics.get("win_rate", 0),
-                    "num_trades": metrics.get("num_trades", 0),
-                })
-            except Exception:
-                # Silently fail - don't disrupt computation
-                pass
-        
+        try:
+            from datetime import datetime
+            from data.storage.data_manager import DataStorageManager
+            _db = DataStorageManager()
+            _m = metrics
+            _db.save_performance({
+                "timestamp":    datetime.now().isoformat(),
+                "model_name":   str(parameters.get("strategy_id", "backtest")),
+                "equity":       float(_m.get("final_equity", initial_capital * (1 + float(_m.get("total_return", 0))))),
+                "total_return": float(_m.get("total_return", 0)),
+                "sharpe_ratio": float(_m.get("sharpe_ratio", 0)),
+                "max_drawdown": float(_m.get("max_drawdown", 0)),
+                "win_rate":     float(_m.get("win_rate", 0)),
+                "num_trades":   int(_m.get("num_trades", 0)),
+            })
+        except Exception:
+            pass  # Non bloccare mai l'execution engine
         return {
             "execution_id": str(uuid.uuid4()),
             "strategy_id": parameters.get("strategy_id", "unknown"),
