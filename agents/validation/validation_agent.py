@@ -1,9 +1,7 @@
 """Validation Agent - Verify models, identify anomalies, and validate scientific basis."""
 
-import os
 import re
 import logging
-import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +10,7 @@ import yaml
 import numpy as np
 import pandas as pd
 
+from agents.base.base_agent import BaseAgent
 from configs.paths import Paths
 from execution_engine.computation_service import ComputationService
 
@@ -19,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class ValidationAgent:
+class ValidationAgent(BaseAgent):
     """Agent responsible for validating ML models and their scientific basis."""
 
     def __init__(
@@ -28,22 +27,12 @@ class ValidationAgent:
         specs_dir: str = str(Paths.SPECS_DIR),
         output_dir: str = str(Paths.VALIDATED_DIR),
     ):
+        super().__init__()
         self.models_dir = Path(models_dir)
         self.specs_dir = Path(specs_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._computation = ComputationService()
-        self._db = None  # lazy-initialised
-
-    @property
-    def db(self):
-        if self._db is None:
-            from data.storage.data_manager import DataStorageManager
-            self._db = DataStorageManager()
-        return self._db
-
-    def log_activity(self, status: str, message: str):
-        self.db.log_agent_activity(self.__class__.__name__, status, message)
 
     def load_specs(self) -> list[dict]:
         """Load all specification files."""
@@ -441,6 +430,10 @@ The model generates trading signals based on:
 
         logger.info(f"Validation complete: {validation_status} for {model_name}")
         return result
+
+    def run(self) -> list[str]:
+        """Alias for run_validation — satisfies BaseAgent contract."""
+        return self.run_validation()
 
     def run_validation(self) -> list[str]:
         """Run validation for all specs."""

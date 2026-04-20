@@ -1,18 +1,16 @@
 """Monitoring Agent - Real-time performance monitoring and alerting in production."""
 
-import os
 import logging
 import time
 import json
-import smtplib
 import threading
-from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, asdict
 import numpy as np
 
+from agents.base.base_agent import BaseAgent
 from configs.paths import Paths
 
 logging.basicConfig(level=logging.INFO)
@@ -45,7 +43,7 @@ class Alert:
     metrics: dict
 
 
-class MonitoringAgent:
+class MonitoringAgent(BaseAgent):
     """Agent responsible for monitoring trading performance in production."""
 
     def __init__(
@@ -55,6 +53,7 @@ class MonitoringAgent:
         monitoring_log_dir: str = str(Paths.MONITORING_DIR),
         alert_threshold: dict = None,
     ):
+        super().__init__()
         self.trading_log_dir = Path(trading_log_dir)
         self.validated_dir = Path(validated_dir)
         self.monitoring_log_dir = Path(monitoring_log_dir)
@@ -74,14 +73,10 @@ class MonitoringAgent:
         self.alert_history = []
         self.performance_history = []
         self._lock = threading.Lock()
-        self._db = None  # lazy-initialised
 
-    @property
-    def db(self):
-        if self._db is None:
-            from data.storage.data_manager import DataStorageManager
-            self._db = DataStorageManager()
-        return self._db
+    def run(self) -> list:
+        """Alias for run_monitoring_cycle — satisfies BaseAgent contract."""
+        return self.run_monitoring_cycle()
 
     def load_performance_data(self, days: int = 30) -> list[PerformanceSnapshot]:
         """Load performance data from trading logs."""

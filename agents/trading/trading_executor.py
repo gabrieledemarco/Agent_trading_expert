@@ -1,6 +1,5 @@
 """Trading Executor Agent - Execute and monitor trading strategies with validated models."""
 
-import os
 import logging
 import time
 import json
@@ -11,6 +10,7 @@ from typing import Optional
 from dataclasses import dataclass, asdict
 import numpy as np
 
+from agents.base.base_agent import BaseAgent
 from configs.paths import Paths
 
 logging.basicConfig(level=logging.INFO)
@@ -57,7 +57,7 @@ class StrategyProfile:
     documentation_path: str
 
 
-class TradingExecutorAgent:
+class TradingExecutorAgent(BaseAgent):
     """Agent responsible for executing and monitoring trading strategies."""
 
     def __init__(
@@ -68,6 +68,7 @@ class TradingExecutorAgent:
         initial_capital: float = 10000,
         paper_trading: bool = True,
     ):
+        super().__init__()
         self.model_path = Path(model_path)
         self.validated_dir = Path(validated_dir)
         self.log_dir = Path(trading_log_dir)
@@ -82,14 +83,19 @@ class TradingExecutorAgent:
         self.active_strategy = None
         self.strategy_profiles = {}
         self._lock = threading.Lock()
-        self._db = None  # lazy-initialised
 
-    @property
-    def db(self):
-        if self._db is None:
-            from data.storage.data_manager import DataStorageManager
-            self._db = DataStorageManager()
-        return self._db
+    def run(
+        self,
+        symbols: list = None,
+        interval_seconds: int = 60,
+        max_iterations: int = 100,
+    ):
+        """Alias for run_trading_loop — satisfies BaseAgent contract."""
+        return self.run_trading_loop(
+            symbols=symbols or ["AAPL", "MSFT", "GOOG"],
+            interval_seconds=interval_seconds,
+            max_iterations=max_iterations,
+        )
 
     def load_validated_strategies(self) -> list[StrategyProfile]:
         """Load all validated strategies."""
