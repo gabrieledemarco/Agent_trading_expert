@@ -26,25 +26,62 @@ def get_db():
     return _db
 
 
-def _run_research_if_due():
-    """Run research agent in a background thread if it hasn't run in 7 days."""
+def _run_pipeline_if_due():
+    """Avvia il pipeline chain se ResearchAgent non ha girato negli ultimi 7 giorni."""
     try:
         from agents.research.research_agent import ResearchAgent
-        agent = ResearchAgent()
-        if agent.should_run_now(min_interval_days=7):
-            logger.info("Auto-triggering ResearchAgent (no run in last 7 days)")
-            agent.run()
-        else:
-            logger.info("ResearchAgent: last run recent enough, skipping auto-run")
+        if not ResearchAgent().should_run_now(min_interval_days=7):
+            logger.info("Pipeline: last run recent, skipping auto-run")
+            return
+        logger.info("Pipeline: auto-starting weekly chain")
+        from agents.orchestration.pipeline_orchestrator import PipelineOrchestrator
+        PipelineOrchestrator().run_pipeline_chain()
     except Exception as e:
-        logger.warning(f"Auto research run failed: {e}")
+        logger.warning(f"Auto pipeline run failed: {e}")
+
+
+def _run_monitoring_loop():
+    """Monitoring in background thread continuo (ogni ora)."""
+    import time
+    while True:
+        try:
+            from agents.monitoring.monitoring_agent import MonitoringAgent
+            MonitoringAgent().run()
+        except Exception as e:
+            logger.warning(f"Monitoring cycle failed: {e}")
+        time.sleep(3600)
+
+
+def _run_trading_loop():
+    """Trading in background thread continuo (ogni 5 minuti, paper trading)."""
+    import time
+    while True:
+        try:
+            from agents.trading.trading_executor import TradingExecutorAgent
+            agent = TradingExecutorAgent(paper_trading=True)
+            agent.run_trading_loop(
+                symbols=["AAPL", "MSFT", "GOOG"],
+                interval_seconds=300,
+                max_iterations=1,  # 1 iterazione per ciclo, poi sleep
+            )
+        except Exception as e:
+            logger.warning(f"Trading cycle failed: {e}")
+        time.sleep(300)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: trigger research in background thread (non-blocking)
     loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, _run_research_if_due)
+
+    # Thread 1: pipeline chain settimanale (non-blocking)
+    loop.run_in_executor(None, _run_pipeline_if_due)
+
+    # Thread 2: monitoring loop ogni ora
+    loop.run_in_executor(None, _run_monitoring_loop)
+
+    # Thread 3: trading loop ogni 5 minuti
+    loop.run_in_executor(None, _run_trading_loop)
+
     yield
 
 

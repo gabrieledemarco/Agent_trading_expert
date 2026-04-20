@@ -84,6 +84,9 @@ class TradingExecutorAgent(BaseAgent):
         self.strategy_profiles = {}
         self._lock = threading.Lock()
 
+    def should_run_now(self, min_interval_days: int = 0) -> bool:
+        return True  # Trading gira sempre quando chiamato dal loop
+
     def run(
         self,
         symbols: list = None,

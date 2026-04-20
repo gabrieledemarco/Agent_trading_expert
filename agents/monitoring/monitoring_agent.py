@@ -74,6 +74,9 @@ class MonitoringAgent(BaseAgent):
         self.performance_history = []
         self._lock = threading.Lock()
 
+    def should_run_now(self, min_interval_days: int = 0) -> bool:
+        return True  # Monitoring gira sempre quando chiamato dal loop
+
     def run(self) -> list:
         """Alias for run_monitoring_cycle — satisfies BaseAgent contract."""
         return self.run_monitoring_cycle()

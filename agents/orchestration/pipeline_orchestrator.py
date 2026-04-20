@@ -92,6 +92,52 @@ class PipelineOrchestrator:
             return {"alerts": len(alerts)}
         return {}
 
+    def run_pipeline_chain(self) -> dict:
+        """Esegue il pipeline completo come catena sequenziale.
+
+        Research → (se nuovi paper) → Spec → ML → Validation → Improvement
+        Ogni fase parte solo se la precedente ha prodotto output.
+        """
+        results = {}
+
+        # 1. Research — sempre
+        r = self._run_phase("research")
+        results["research"] = r
+        if r.get("status") == "error":
+            return results
+
+        # 2. Spec — se research ha trovato paper
+        research_result = r.get("result", {})
+        if research_result.get("saved_to_db", 0) > 0 or research_result.get("relevant", 0) > 0:
+            results["spec"] = self._run_phase("spec")
+        else:
+            results["spec"] = {"status": "skipped", "reason": "no new research papers"}
+
+        # 3. ML Engineer — se ci sono specs pending
+        try:
+            pending_specs = self.db.get_specs(status="pending")
+            if pending_specs:
+                results["ml_engineer"] = self._run_phase("ml_engineer")
+            else:
+                results["ml_engineer"] = {"status": "skipped", "reason": "no pending specs"}
+        except Exception:
+            results["ml_engineer"] = self._run_phase("ml_engineer")
+
+        # 4. Validation — sempre (valida modelli implemented)
+        results["validation"] = self._run_phase("validation")
+
+        # 5. Improvement — se ci sono modelli rejected
+        try:
+            rejected = self.db.get_validations(status="rejected")
+            if rejected:
+                results["improvement"] = self._run_phase("improvement")
+            else:
+                results["improvement"] = {"status": "skipped", "reason": "no rejected models"}
+        except Exception:
+            results["improvement"] = {"status": "skipped", "reason": "db error"}
+
+        return results
+
     def get_pipeline_status(self) -> dict:
         """Stato corrente di ogni fase basato sul DB."""
         try:
