@@ -374,6 +374,65 @@ async def get_agent_status():
     return {"agents": result, "count": len(result)}
 
 
+@app.get("/api/trades")
+async def get_trades(limit: int = 100, model_name: Optional[str] = None):
+    """Get trade history from Neon PostgreSQL."""
+    try:
+        trades = get_db().get_trades(model_name=model_name, limit=limit)
+        return {"trades": trades, "count": len(trades)}
+    except Exception as e:
+        logger.error(f"Error getting trades: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.get("/api/positions")
+async def get_positions():
+    """Compute open positions by aggregating trades (buy qty - sell qty per symbol)."""
+    try:
+        trades = get_db().get_trades(limit=1000)
+
+        # Aggregate per symbol
+        agg: dict = {}
+        for t in trades:
+            sym = t.get("symbol", "").upper()
+            if not sym:
+                continue
+            if sym not in agg:
+                agg[sym] = {"symbol": sym, "qty": 0.0, "cost": 0.0, "trades": 0}
+            action = (t.get("action") or "").upper()
+            qty = float(t.get("quantity") or 0)
+            price = float(t.get("price") or 0)
+            if action == "BUY":
+                agg[sym]["cost"] += qty * price
+                agg[sym]["qty"] += qty
+            elif action == "SELL":
+                # Reduce position proportionally
+                sell_qty = min(qty, agg[sym]["qty"])
+                if agg[sym]["qty"] > 0:
+                    agg[sym]["cost"] *= (agg[sym]["qty"] - sell_qty) / agg[sym]["qty"]
+                agg[sym]["qty"] -= sell_qty
+            agg[sym]["trades"] += 1
+
+        positions = []
+        for sym, data in agg.items():
+            qty = round(data["qty"], 4)
+            if qty <= 0:
+                continue
+            avg_entry = round(data["cost"] / qty, 4) if qty > 0 else 0
+            positions.append({
+                "symbol": sym,
+                "quantity": qty,
+                "avg_entry": avg_entry,
+                "side": "LONG",
+                "num_trades": data["trades"],
+            })
+
+        return {"positions": positions, "count": len(positions)}
+    except Exception as e:
+        logger.error(f"Error computing positions: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

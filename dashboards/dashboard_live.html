@@ -149,13 +149,9 @@
             </div>
             <div class="card">
                 <div class="card-title"><span>OPEN POSITIONS</span></div>
-                <table>
+                <table id="positionsTable">
                     <thead><tr><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>Unreal P&amp;L</th><th>Hold</th></tr></thead>
-                    <tbody>
-                        <tr><td class="neutral">AAPL</td><td><span class="badge badge-long">LONG</span></td><td>3.8</td><td>$263.11</td><td id="aaplMark">$265.23</td><td class="positive" id="aaplPnl">+$8.06</td><td>2d</td></tr>
-                        <tr><td class="neutral">MSFT</td><td><span class="badge badge-short">SHORT</span></td><td>2.1</td><td>$418.54</td><td id="msftMark">$417.12</td><td class="positive" id="msftPnl">+$2.98</td><td>1d</td></tr>
-                        <tr><td class="neutral">GOOG</td><td><span class="badge badge-long">LONG</span></td><td>5.2</td><td>$175.23</td><td id="googMark">$176.45</td><td class="positive" id="googPnl">+$6.34</td><td>3h</td></tr>
-                    </tbody>
+                    <tbody><tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:12px;">Caricamento…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -178,60 +174,50 @@
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
 
 <script>
+// ── State ──────────────────────────────────────────────────────────────────
 let tick = 0;
 let logCount = 0;
 let equityData = [];
 let equityLabels = [];
 let liveChart;
-let equity = 10000;
-const aaplBase = 265.23, msftBase = 417.12, googBase = 176.45;
+let positions = [];    // loaded from /api/positions
+let currentPrices = {}; // symbol → latest price
 
-const logMessages = [
-    ['info','[TradingExecutor]','Checking signal for AAPL on 5m bar'],
-    ['info','[HFAgent]','Cointegration spread: SPY/QQQ = 0.021'],
-    ['info','[MonitorAgent]','Portfolio VaR(95%) = $210 — within limit'],
-    ['warn','[RiskMgr]','Momentum Sharpness DD approaching limit: 4.7%'],
-    ['info','[TradingExecutor]','No new signals generated this bar'],
-    ['success','[HFAgent]','Entry signal: BUY SPY @ market'],
-    ['info','[MonitorAgent]','System health check: all components OK'],
-    ['info','[ResearchAgent]','Scheduled run in 2h 14m'],
-    ['warn','[RiskMgr]','Intraday Momentum Sharpe below threshold'],
-    ['info','[TradingExecutor]','Mark-to-market update complete'],
-    ['info','[DataFeed]','Bar close received: AAPL 5m'],
-    ['success','[MLEngineer]','Portfolio Opt v2 validation: step 3/5'],
-];
+// ── Utilities ──────────────────────────────────────────────────────────────
+function fmt(v) { return (v >= 0 ? '+' : '') + '$' + Math.abs(v).toFixed(2); }
+function setColor(el, v, cls) {
+    el.textContent = cls ? v : fmt(v);
+    el.className = (v >= 0 ? 'positive' : 'negative') + (cls ? ' ' + cls : '');
+}
+
+function showDbBanner(message) {
+    console.warn('DB notice: ' + message);
+    let banner = document.getElementById('dbBanner');
+    if (banner) { banner.remove(); }
+    banner = document.createElement('div');
+    banner.id = 'dbBanner';
+    banner.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1a1200;border:1px solid #cc7700;padding:10px 14px;color:#ff9900;font-family:Consolas,monospace;font-size:11px;z-index:9999;max-width:360px;display:flex;align-items:flex-start;gap:10px;';
+    banner.innerHTML = '<span style="flex:1">' + message + '</span><button onclick="document.getElementById(\'dbBanner\').remove()" style="background:none;border:none;color:#ff9900;cursor:pointer;font-size:14px;line-height:1;padding:0;">&#x2715;</button>';
+    document.body.appendChild(banner);
+    setTimeout(() => { if (banner.parentNode) banner.remove(); }, 8000);
+}
 
 function addLog(type, tag, msg) {
-    const console_ = document.getElementById('logConsole');
+    const con = document.getElementById('logConsole');
     const t = new Date().toLocaleTimeString();
     const entry = document.createElement('div');
     entry.className = 'log-entry';
-
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'log-time';
-    timeSpan.textContent = '[' + t + '] ';
-
-    const tagSpan = document.createElement('span');
-    tagSpan.className = 'log-tag';
-    tagSpan.textContent = tag + ' ';
-
-    const msgSpan = document.createElement('span');
-    msgSpan.className = 'log-' + type;
-    msgSpan.textContent = msg;
-
-    entry.appendChild(timeSpan);
-    entry.appendChild(tagSpan);
-    entry.appendChild(msgSpan);
-
-    console_.insertBefore(entry, console_.firstChild);
-    // Keep max 50 entries
-    while (console_.children.length > 50) {
-        console_.removeChild(console_.lastChild);
-    }
+    entry.innerHTML =
+        '<span class="log-time">[' + t + '] </span>' +
+        '<span class="log-tag">' + tag + ' </span>' +
+        '<span class="log-' + type + '">' + msg + '</span>';
+    con.insertBefore(entry, con.firstChild);
+    while (con.children.length > 50) con.removeChild(con.lastChild);
     logCount++;
     document.getElementById('logCounter').textContent = logCount + ' events';
 }
 
+// ── Chart ──────────────────────────────────────────────────────────────────
 function buildLiveChart() {
     const ctx = document.getElementById('liveChart').getContext('2d');
     liveChart = new Chart(ctx, {
@@ -248,88 +234,150 @@ function buildLiveChart() {
     });
 }
 
-function updateLivePrices() {
-    // Deterministic price simulation (tick-based, reproducible)
-    const aaplDelta = Math.sin(tick * 0.3) * 0.4 + Math.cos(tick * 0.7) * 0.2;
-    const msftDelta = Math.cos(tick * 0.4) * 0.35 - Math.sin(tick * 0.2) * 0.15;
-    const googDelta = Math.sin(tick * 0.5 + 1) * 0.25 + Math.cos(tick * 0.8) * 0.1;
-
-    const aaplMark = aaplBase + aaplDelta + (tick * 0.02);
-    const msftMark = msftBase + msftDelta - (tick * 0.01);
-    const googMark = googBase + googDelta + (tick * 0.015);
-
-    const aaplPnl = (aaplMark - 263.11) * 3.8;
-    const msftPnl = (418.54 - msftMark) * 2.1; // short
-    const googPnl = (googMark - 175.23) * 5.2;
-
-    document.getElementById('aaplMark').textContent = '$' + aaplMark.toFixed(2);
-    document.getElementById('msftMark').textContent = '$' + msftMark.toFixed(2);
-    document.getElementById('googMark').textContent = '$' + googMark.toFixed(2);
-
-    const fmt = (v) => (v >= 0 ? '+' : '') + '$' + v.toFixed(2);
-    const setColor = (el, v) => { el.textContent = fmt(v); el.className = v >= 0 ? 'positive' : 'negative'; };
-    setColor(document.getElementById('aaplPnl'), aaplPnl);
-    setColor(document.getElementById('msftPnl'), msftPnl);
-    setColor(document.getElementById('googPnl'), googPnl);
-
-    const totalUnreal = aaplPnl + msftPnl + googPnl;
-    const unrealEl = document.getElementById('unrealVal');
-    unrealEl.textContent = fmt(totalUnreal);
-    unrealEl.className = 'stat-value ' + (totalUnreal >= 0 ? 'positive' : 'negative');
+// ── Load equity curve from DB ──────────────────────────────────────────────
+function loadEquityCurve() {
+    fetch('/api/equity-curve?period=7d')
+        .then(r => r.json())
+        .then(data => {
+            const vals = data.values || data.equity || [];
+            const lbls = data.labels || [];
+            if (vals.length === 0) return;
+            equityData = vals.map(Number);
+            equityLabels = lbls;
+            if (liveChart) {
+                liveChart.data.labels = equityLabels;
+                liveChart.data.datasets[0].data = equityData;
+                liveChart.update('none');
+            }
+            const latest = equityData[equityData.length - 1] || 0;
+            const first  = equityData[0] || latest;
+            document.getElementById('equityVal').textContent = '$' + Math.round(latest).toLocaleString();
+            const pnl = latest - first;
+            const pnlEl = document.getElementById('pnlVal');
+            pnlEl.textContent = fmt(pnl);
+            pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
+        })
+        .catch(() => {});
 }
 
+// ── Load positions from DB ─────────────────────────────────────────────────
+function loadPositions() {
+    fetch('/api/positions')
+        .then(r => r.json())
+        .then(data => {
+            positions = data.positions || [];
+            renderPositionsTable();
+            document.getElementById('posCount').textContent = positions.length;
+        })
+        .catch(err => showDbBanner('Errore caricamento posizioni: ' + err.message));
+}
+
+function renderPositionsTable() {
+    const tbody = document.querySelector('#positionsTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (positions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:12px;">Nessuna posizione aperta</td></tr>';
+        return;
+    }
+    positions.forEach(pos => {
+        const mark = currentPrices[pos.symbol] || pos.avg_entry;
+        const pnl = (mark - pos.avg_entry) * pos.quantity;
+        const sideClass = pos.side === 'LONG' ? 'badge-long' : 'badge-short';
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td class="neutral">' + pos.symbol + '</td>' +
+            '<td><span class="badge ' + sideClass + '">' + pos.side + '</span></td>' +
+            '<td>' + pos.quantity.toFixed(2) + '</td>' +
+            '<td>$' + pos.avg_entry.toFixed(2) + '</td>' +
+            '<td id="mark_' + pos.symbol + '">$' + mark.toFixed(2) + '</td>' +
+            '<td class="' + (pnl >= 0 ? 'positive' : 'negative') + '" id="pnl_' + pos.symbol + '">' + fmt(pnl) + '</td>' +
+            '<td>live</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+// ── Load agent logs from DB ────────────────────────────────────────────────
+function loadAgentLogs() {
+    fetch('/dashboard/agent-activity?limit=20')
+        .then(r => r.json())
+        .then(data => {
+            const logs = data.activities || [];
+            if (logs.length === 0) return;
+            // Clear existing and repopulate
+            const con = document.getElementById('logConsole');
+            con.innerHTML = '';
+            logCount = 0;
+            logs.forEach(log => {
+                const status = (log.status || 'info').toLowerCase();
+                const type = status === 'warning' ? 'warn' : status === 'active' ? 'success' : 'info';
+                const tag  = '[' + (log.agent_name || 'Agent') + ']';
+                const msg  = log.message || '';
+                addLog(type, tag, msg);
+            });
+        })
+        .catch(() => {});
+}
+
+// ── Update live prices & mark-to-market ───────────────────────────────────
+function updateLivePrices() {
+    const symbols = positions.length > 0
+        ? [...new Set(positions.map(p => p.symbol))]
+        : ['AAPL', 'MSFT', 'GOOG'];
+
+    Promise.all(symbols.map(s =>
+        fetch('/api/price?symbol=' + s).then(r => r.json())
+    )).then(results => {
+        results.forEach(data => {
+            if (data.price) currentPrices[data.symbol] = data.price;
+        });
+        // Refresh positions table with updated marks
+        renderPositionsTable();
+
+        // Update unrealized total
+        let totalUnreal = 0;
+        positions.forEach(pos => {
+            const mark = currentPrices[pos.symbol] || pos.avg_entry;
+            totalUnreal += (mark - pos.avg_entry) * pos.quantity;
+        });
+        const unrealEl = document.getElementById('unrealVal');
+        unrealEl.textContent = fmt(totalUnreal);
+        unrealEl.className = 'stat-value ' + (totalUnreal >= 0 ? 'positive' : 'negative');
+    }).catch(err => {
+        document.getElementById('feedStatus').textContent = 'ERROR';
+        document.getElementById('feedStatus').style.color = 'var(--red)';
+    });
+}
+
+// ── Tick (every 2s) ────────────────────────────────────────────────────────
 function tick_() {
     tick++;
-    const t = new Date().toLocaleTimeString();
-    document.getElementById('lastUpdate').textContent = t;
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
     document.getElementById('tickCount').textContent = tick;
-
-    // Equity simulation: deterministic walk with upward bias
-    const tickBias = 0.08;
-    const volatility = 12;
-    const drift = tickBias - (volatility / 2) + (Math.sin(tick * 0.5) * 3);
-    equity = Math.max(9500, Math.min(10500, equity + drift));
-    equityData.push(Math.round(equity));
-    equityLabels.push(t);
-    if (equityData.length > 60) { equityData.shift(); equityLabels.shift(); }
-
-    if (liveChart) {
-        liveChart.data.labels = equityLabels;
-        liveChart.data.datasets[0].data = equityData;
-        liveChart.update('none');
-    }
-
-    // Update equity display
-    document.getElementById('equityVal').textContent = '$' + Math.round(equity).toLocaleString();
-    const pnl = equity - 10190;
-    const pnlEl = document.getElementById('pnlVal');
-    pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + Math.round(Math.abs(pnl));
-    pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
-
     updateLivePrices();
-
-    // Add a log message every 3-5 ticks
-    if (tick % 4 === 0) {
-        const entry = logMessages[Math.floor(tick / 4) % logMessages.length];
-        addLog(entry[0], entry[1], entry[2]);
-    }
 }
 
-// Initialize
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function toggleSidebar() {
+    const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+    localStorage.setItem('sidebarCollapsed', isCollapsed);
+}
+if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    document.querySelector('.terminal').classList.add('sidebar-collapsed');
+}
+
+// ── Bootstrap ──────────────────────────────────────────────────────────────
 buildLiveChart();
+loadEquityCurve();
+loadPositions();
+loadAgentLogs();
 addLog('success', '[System]', 'Live monitor started');
-addLog('info', '[MonitorAgent]', 'All agents nominal');
-addLog('info', '[DataFeed]', 'Connected to price feed');
 
 setInterval(tick_, 2000);
+setInterval(loadEquityCurve, 60000);   // refresh equity curve every 60s
+setInterval(loadAgentLogs,   30000);   // refresh logs every 30s
+setInterval(loadPositions,   60000);   // refresh positions every 60s
 tick_();
-        function toggleSidebar() {
-            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        }
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.querySelector('.terminal').classList.add('sidebar-collapsed');
-        }
 </script>
 </body>
 </html>
