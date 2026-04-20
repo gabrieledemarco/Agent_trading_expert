@@ -1,20 +1,22 @@
 """ML Engineer Agent - Implement and validate ML models from specifications."""
 
-import os
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import yaml
 
+from agents.base.base_agent import BaseAgent
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class MLEngineerAgent:
+class MLEngineerAgent(BaseAgent):
     """Agent responsible for implementing and validating ML models."""
 
     def __init__(self, specs_dir: str = "specs", models_dir: str = "models"):
+        super().__init__()
         self.specs_dir = Path(specs_dir)
         self.models_dir = Path(models_dir)
         self.models_dir.mkdir(parents=True, exist_ok=True)
@@ -733,6 +735,10 @@ if __name__ == "__main__":
 
         logger.info(f"Model implementation complete for {model_name}")
         return str(model_file)
+
+    def run(self) -> list[str]:
+        """Alias for run_implementation — satisfies BaseAgent contract."""
+        return self.run_implementation()
 
     def run_implementation(self) -> list[str]:
         """Run model implementation for all specs."""

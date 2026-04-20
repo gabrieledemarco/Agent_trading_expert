@@ -5,6 +5,8 @@ Provides:
 - ExecutionClient access (no agent computes numerics directly)
 - DataStorageManager access
 - Standardized run() interface
+- log_activity() helper
+- should_run_now() scheduling helper
 """
 
 from __future__ import annotations
@@ -26,8 +28,14 @@ class BaseAgent(ABC):
 
     def __init__(self, engine_url: str | None = None):
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.execution_client = ExecutionClient(engine_url=engine_url)
+        self._execution_client = ExecutionClient(engine_url=engine_url)
         self._db = None  # lazy
+
+    # ── Backward-compat alias ─────────────────────────────────────────────────
+
+    @property
+    def execution_client(self) -> ExecutionClient:
+        return self._execution_client
 
     # ── Subclass contract ─────────────────────────────────────────────────────
 
@@ -47,5 +55,9 @@ class BaseAgent(ABC):
     def log_activity(self, status: str, message: str):
         self.db.log_agent_activity(self.__class__.__name__, status, message)
 
+    def should_run_now(self, min_interval_days: int = 1) -> bool:
+        """Check whether the agent should run (override for custom scheduling logic)."""
+        return True
+
     def _now(self) -> str:
-        return datetime.utcnow().isoformat()
+        return datetime.now().isoformat()

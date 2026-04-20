@@ -1,6 +1,5 @@
 """Spec Agent - Transform research into technical specifications."""
 
-import os
 import re
 import logging
 from datetime import datetime
@@ -8,14 +7,17 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
+from agents.base.base_agent import BaseAgent
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class SpecAgent:
+class SpecAgent(BaseAgent):
     """Agent responsible for creating technical specifications from research."""
 
     def __init__(self, research_dir: str = "data/research_findings", output_dir: str = "specs"):
+        super().__init__()
         self.research_dir = Path(research_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -237,6 +239,10 @@ class SpecAgent:
             else:
                 lines.append(f"   - {layer['type']}")
         return "\n".join(lines)
+
+    def run(self) -> list[str]:
+        """Alias for run_spec_generation — satisfies BaseAgent contract."""
+        return self.run_spec_generation()
 
     def run_spec_generation(self) -> list[str]:
         """Run specification generation from latest research."""

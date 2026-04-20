@@ -7,13 +7,14 @@ Triggered by:
   • CLI: python -m agents.research.research_agent
 """
 
-import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import requests
+
+from agents.base.base_agent import BaseAgent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -50,20 +51,13 @@ _HIGH_VALUE_CATEGORIES = {"q-fin.PR", "q-fin.TR", "q-fin.CP", "q-fin.RM", "q-fin
 _MEDIUM_VALUE_CATEGORIES = {"cs.LG", "stat.ML", "cs.AI", "econ.EM"}
 
 
-class ResearchAgent:
+class ResearchAgent(BaseAgent):
     """Scans arXiv weekly for ML/quant papers and persists results to Neon."""
 
     def __init__(self, output_dir: str = "data/research_findings"):
+        super().__init__()
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self._db = None
-
-    @property
-    def db(self):
-        if self._db is None:
-            from data.storage.data_manager import DataStorageManager
-            self._db = DataStorageManager()
-        return self._db
 
     # ── arXiv fetch ────────────────────────────────────────────────────────
 
@@ -196,7 +190,7 @@ class ResearchAgent:
         return None
 
     def should_run_now(self, min_interval_days: int = 7) -> bool:
-        """True if we haven't run in the last min_interval_days days."""
+        """True if we haven't run in the last min_interval_days days (default: 7)."""
         last = self._last_run_date()
         if last is None:
             return True
@@ -209,13 +203,13 @@ class ResearchAgent:
 
         Returns a summary dict with counts and the output file path.
         """
-        self.db.log_agent_activity(AGENT_NAME, "active", "Research cycle started")
+        self.log_activity("active", "Research cycle started")
         logger.info("Research cycle started")
 
         try:
             papers = self.search_arxiv(max_results=25)
             if not papers:
-                self.db.log_agent_activity(AGENT_NAME, "warning", "arXiv returned 0 papers — network issue?")
+                self.log_activity("warning", "arXiv returned 0 papers — network issue?")
                 return {"total": 0, "saved": 0, "error": "no papers fetched"}
 
             relevant = self.filter_relevant_papers(papers, min_score=0.1)
@@ -244,7 +238,7 @@ class ResearchAgent:
             output_file.write_text(self.create_summary(relevant))
 
             msg = f"Research complete: {saved}/{len(relevant)} papers saved to Neon (file: {output_file.name})"
-            self.db.log_agent_activity(AGENT_NAME, "active", msg)
+            self.log_activity("active", msg)
             logger.info(msg)
 
             return {
@@ -259,7 +253,7 @@ class ResearchAgent:
             err = f"Research cycle failed: {e}"
             logger.error(err, exc_info=True)
             try:
-                self.db.log_agent_activity(AGENT_NAME, "error", err)
+                self.log_activity("error", err)
             except Exception:
                 pass
             return {"error": str(e)}
