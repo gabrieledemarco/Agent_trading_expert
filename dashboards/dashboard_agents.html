@@ -111,8 +111,7 @@
             <div class="topbar-brand"><span>TA</span> AGENT MONITOR</div>
         </div>
         <div class="topbar-actions">
-            <button class="btn" onclick="runAllAgents()">&#9654; RUN ALL</button>
-            <button class="btn btn-danger" onclick="stopAllAgents()">&#9632; STOP ALL</button>
+            <button class="btn" id="refreshBtn" onclick="refreshAll()">&#8635; REFRESH</button>
         </div>
     </header>
 
@@ -143,54 +142,18 @@
     </nav>
 
     <main class="main">
-        <div class="resizable-section" data-section="risk-framework" style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
-            <div style="color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;">
-                <span>AGENT RISK MANAGEMENT FRAMEWORK</span>
-                <button class="resize-btn" onclick="toggleResize('risk-framework')" title="Minimize/Expand">⊟</button>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
-                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">POSITION SIZING</div>
-                    <div style="color:var(--orange);font-size:12px;font-weight:bold;">Kelly ¼</div>
-                    <div style="color:var(--text-muted);font-size:8px;">Dynamic sizing</div>
-                </div>
-                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
-                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">STOP LOSS</div>
-                    <div style="color:var(--red);font-size:12px;font-weight:bold;">1.5× ATR</div>
-                    <div style="color:var(--text-muted);font-size:8px;">Dynamic stops</div>
-                </div>
-                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
-                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">RISK/TRADE</div>
-                    <div style="color:var(--yellow);font-size:12px;font-weight:bold;">1.0% NAV</div>
-                    <div style="color:var(--text-muted);font-size:8px;">Max $100</div>
-                </div>
-                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
-                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">MAX DD LIMIT</div>
-                    <div style="color:var(--red);font-size:12px;font-weight:bold;">15.0%</div>
-                    <div style="color:var(--text-muted);font-size:8px;">Circuit breaker</div>
-                </div>
-                <div style="background:var(--bg-primary);border:1px solid var(--border);padding:8px;text-align:center;">
-                    <div style="color:var(--text-muted);font-size:9px;margin-bottom:4px;">CORRELATION</div>
-                    <div style="color:var(--green);font-size:12px;font-weight:bold;">Monitored</div>
-                    <div style="color:var(--text-muted);font-size:8px;">Cross-strategy</div>
-                </div>
-            </div>
-            <div style="margin-top:8px;padding:8px;background:var(--yellow-a05);border:1px solid var(--yellow-a30);font-size:10px;color:var(--text-secondary);">
-                <span style="color:var(--yellow);">&#9888;</span> <strong>Risk Framework Active:</strong> Tutti gli agenti considerano position sizing (Kelly), stop loss (ATR-based), risk per trade (1% NAV), max drawdown limits (15%), leverage controls (none), R:R ratios (min 1:2), volatility adjustments, e correlation checks tra strategie prima di ogni decisione di trading.
-            </div>
-        </div>
         <div class="resizable-section" data-section="agents-grid" style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
             <div style="color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;">
-                <span>AGENTS</span>
+                <span>AGENTS — <span id="agentGridSubtitle" style="color:var(--text-muted);font-size:10px;text-transform:none;">loading…</span></span>
                 <button class="resize-btn" onclick="toggleResize('agents-grid')" title="Minimize/Expand">⊟</button>
             </div>
             <div class="agents-grid" id="agentsGrid">
-                <!-- Agents rendered by JS -->
+                <!-- Agents rendered by JS from /api/agents/status -->
             </div>
         </div>
         <div class="log-panel resizable-section" data-section="log-panel">
             <div class="log-title">
-                <span>AGENT ACTIVITY LOG</span>
+                <span>AGENT ACTIVITY LOG — LAST 30</span>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span>
                     <button class="resize-btn" onclick="toggleResize('log-panel')" title="Minimize/Expand">⊟</button>
@@ -201,7 +164,7 @@
     </main>
 
     <footer class="bottombar">
-        <div>ACTIVE: <span id="activeCount" style="color:var(--green)">2</span> | IDLE: <span id="idleCount" style="color:var(--text-muted)">4</span> | COMPLETED: <span id="completedCount" style="color:var(--blue)">0</span></div>
+        <div>ACTIVE: <span id="activeCount" style="color:var(--green)">0</span> | WARNING: <span id="warnCount" style="color:var(--yellow)">0</span> | ERROR: <span id="errorCount" style="color:var(--red)">0</span> | NEVER RUN: <span id="neverCount" style="color:var(--text-muted)">0</span></div>
         <div>Trading Agent v1.1 | Research Use Only</div>
     </footer>
 </div>
