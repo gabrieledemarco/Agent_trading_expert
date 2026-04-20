@@ -710,6 +710,7 @@ if __name__ == "__main__":
     def implement_model(self, spec: dict) -> str:
         """Implement a model from specification."""
         model_name = spec.get("model", {}).get("name", "model")
+        model_type = spec.get("model", {}).get("type", "time_series_forecasting")
 
         logger.info(f"Implementing model: {model_name}")
 
@@ -734,6 +735,24 @@ if __name__ == "__main__":
         backtest_file.write_text(backtest_code)
 
         logger.info(f"Model implementation complete for {model_name}")
+
+        # Persist to DB
+        try:
+            specs = self.db.get_specs()
+            spec_row = next((s for s in specs if s.get("model_name") == model_name), {})
+            spec_id = spec_row.get("id")
+
+            row_id = self.db.save_model({
+                "model_name": model_name,
+                "spec_id":    spec_id,
+                "model_type": model_type,
+                "status":     "implemented",
+                "metrics":    {},
+            })
+            self.log_activity("active", f"Model saved to DB: {model_name} (id={row_id})")
+        except Exception as e:
+            self.log_activity("warning", f"Could not save model to DB: {e}")
+
         return str(model_file)
 
     def run(self) -> list[str]:

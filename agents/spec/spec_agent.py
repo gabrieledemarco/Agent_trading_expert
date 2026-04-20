@@ -276,6 +276,18 @@ class SpecAgent(BaseAgent):
             plan_file.write_text(action_plan)
             logger.info(f"Saved action plan to {plan_file}")
 
+            # Persist to DB
+            try:
+                row_id = self.db.save_spec({
+                    "model_name":      spec["model"]["name"],
+                    "source_paper_id": paper.get("id", ""),
+                    "model_type":      spec["model"]["type"],
+                    "status":          "pending",
+                })
+                self.log_activity("active", f"Spec saved to DB: {spec['model']['name']} (id={row_id})")
+            except Exception as e:
+                self.log_activity("warning", f"Could not save spec to DB: {e}")
+
         return spec_files
 
 

@@ -79,7 +79,33 @@ class MonitoringAgent(BaseAgent):
         return self.run_monitoring_cycle()
 
     def load_performance_data(self, days: int = 30) -> list[PerformanceSnapshot]:
-        """Load performance data from trading logs."""
+        """Load performance data from Neon DB (fallback: JSONL files)."""
+        # Try DB first
+        try:
+            rows = self.db.get_performance(days=days)
+            if rows:
+                snapshots = []
+                for data in rows:
+                    snapshot = PerformanceSnapshot(
+                        timestamp=data.get("timestamp"),
+                        equity=data.get("equity", 0),
+                        daily_return=data.get("total_return", 0),
+                        cumulative_return=data.get("total_return", 0),
+                        sharpe_ratio=data.get("sharpe_ratio", 0),
+                        max_drawdown=data.get("max_drawdown", 0),
+                        win_rate=data.get("win_rate", 0),
+                        num_trades=data.get("num_trades", 0),
+                        active_positions=0,
+                        model_name=data.get("model_name", "unknown"),
+                        risk_profile="UNKNOWN",
+                    )
+                    snapshots.append(snapshot)
+                logger.info(f"Loaded {len(snapshots)} performance records from DB")
+                return snapshots
+        except Exception as e:
+            logger.warning(f"DB performance query failed: {e}")
+
+        # Fallback: read JSONL files
         snapshots = []
 
         if not self.trading_log_dir.exists():

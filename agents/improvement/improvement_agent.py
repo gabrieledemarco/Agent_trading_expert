@@ -110,6 +110,36 @@ class ImprovementAgent(BaseAgent):
         final_status = "improved" if best_sharpe > validation.get("risk_return_profile", {}).get("sharpe_ratio", 0) else "no_improvement"
         self.log_activity("COMPLETED", f"{model_name}: {final_status}, best_sharpe={best_sharpe:.3f}")
 
+        # Persist improvement results to DB
+        try:
+            # Resolve model_id from DB (if present)
+            models = self.db.get_models()
+            model_row = next((m for m in models if m.get("model_name") == model_name), {})
+            model_id = model_row.get("id")
+            model_type = model_row.get("model_type", "time_series_forecasting")
+
+            # Update model record to "improved" status with latest metrics
+            self.db.save_model({
+                "model_name": model_name,
+                "model_type": model_type,
+                "status":     "improved",
+                "metrics":    {"best_sharpe": best_sharpe, "iterations": len(history)},
+            })
+
+            # Insert a new validation row reflecting the improved state
+            self.db.save_validation({
+                "model_id":         model_id,
+                "status":           "improved",
+                "sharpe_ratio":     best_sharpe,
+                "risk_score":       "MEDIUM",
+                "robustness_score": "improved",
+                "anomalies":        [],
+            })
+
+            self.log_activity("active", f"Improvement saved to DB: {model_name}, sharpe={best_sharpe:.3f}")
+        except Exception as e:
+            self.log_activity("warning", f"Could not save improvement to DB: {e}")
+
         return {
             "model_name": model_name,
             "status": final_status,
