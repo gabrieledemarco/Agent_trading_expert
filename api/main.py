@@ -475,6 +475,38 @@ async def get_positions():
         raise HTTPException(status_code=503, detail="Database unavailable")
 
 
+# === Pipeline Orchestration ===
+
+@app.post("/api/pipeline/run")
+async def run_full_pipeline(background_tasks: BackgroundTasks, stop_after: Optional[str] = None):
+    """Avvia il pipeline completo in background (research→spec→ml→validation→improvement→monitoring)."""
+    def _run():
+        from agents.orchestration.pipeline_orchestrator import PipelineOrchestrator
+        PipelineOrchestrator().run_full_pipeline(stop_after=stop_after)
+    background_tasks.add_task(_run)
+    return {"status": "accepted", "message": f"Pipeline started (stop_after={stop_after})"}
+
+
+@app.post("/api/pipeline/run/{phase}")
+async def run_pipeline_phase(phase: str, background_tasks: BackgroundTasks):
+    """Avvia una singola fase del pipeline in background."""
+    def _run():
+        from agents.orchestration.pipeline_orchestrator import PipelineOrchestrator
+        PipelineOrchestrator().run_phase(phase)
+    background_tasks.add_task(_run)
+    return {"status": "accepted", "phase": phase}
+
+
+@app.get("/api/pipeline/status")
+async def get_pipeline_status():
+    """Stato corrente di ogni fase del pipeline dal DB."""
+    try:
+        from agents.orchestration.pipeline_orchestrator import PipelineOrchestrator
+        return PipelineOrchestrator().get_pipeline_status()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
