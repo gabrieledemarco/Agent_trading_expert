@@ -6,13 +6,11 @@ import json
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass, asdict
 import numpy as np
 
 from agents.base.base_agent import BaseAgent
 from configs.paths import Paths
-from data.storage.data_manager import DataStorageManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -53,7 +51,6 @@ class MonitoringAgent(BaseAgent):
         validated_dir: str = str(Paths.VALIDATED_DIR),
         monitoring_log_dir: str = str(Paths.MONITORING_DIR),
         alert_threshold: dict = None,
-        db_url: Optional[str] = None,
     ):
         super().__init__()
         self.trading_log_dir = Path(trading_log_dir)
@@ -75,13 +72,6 @@ class MonitoringAgent(BaseAgent):
         self.alert_history = []
         self.performance_history = []
         self._lock = threading.Lock()
-        
-        # Initialize database connection for Neon persistence
-        try:
-            self.db = DataStorageManager(db_url)
-        except RuntimeError as e:
-            logger.warning(f"Database not available: {e}")
-            self.db = None
 
     def should_run_now(self, min_interval_days: int = 0) -> bool:
         return True  # Monitoring gira sempre quando chiamato dal loop
