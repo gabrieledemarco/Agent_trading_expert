@@ -1,12 +1,16 @@
 """Trading Agents API — data served exclusively from Neon PostgreSQL."""
 
 import asyncio
+import json
 import logging
+import os
+from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from configs.paths import Paths
@@ -16,7 +20,38 @@ logger = logging.getLogger(__name__)
 
 # DB singleton — created once at startup, shared across all requests.
 _db = None
+_event_orchestrator = None
 
+
+def is_v2_event_driven_enabled() -> bool:
+    return str(os.getenv("V2_EVENT_DRIVEN", "false")).lower() in {"1", "true", "yes", "on"}
+
+
+def _env_flag(name: str, default: str = "false") -> bool:
+    return str(os.getenv(name, default)).lower() in {"1", "true", "yes", "on"}
+
+
+def is_background_jobs_enabled() -> bool:
+    """Global switch for background loops (off-by-default in deploys)."""
+    return _env_flag("ENABLE_BACKGROUND_LOOPS", "false")
+
+
+def can_connect_db() -> bool:
+    """Best-effort DB readiness check used to avoid noisy failing loops at startup."""
+    try:
+        get_db().get_dashboard_summary()
+        return True
+    except Exception as e:
+        logger.warning("Skipping background jobs: database is not reachable (%s)", e)
+        return False
+
+
+def get_event_orchestrator():
+    global _event_orchestrator
+    if _event_orchestrator is None:
+        from agents.orchestration import EventDrivenOrchestrator
+        _event_orchestrator = EventDrivenOrchestrator(enable_v2=is_v2_event_driven_enabled())
+    return _event_orchestrator
 
 def get_db():
     global _db
@@ -28,6 +63,9 @@ def get_db():
 
 def _run_pipeline_if_due():
     """Avvia il pipeline chain se ResearchAgent non ha girato negli ultimi 7 giorni."""
+    if not _env_flag("ENABLE_PIPELINE_AUTORUN", "false"):
+        logger.info("Pipeline autorun disabled (ENABLE_PIPELINE_AUTORUN=false)")
+        return
     try:
         from agents.research.research_agent import ResearchAgent
         if not ResearchAgent().should_run_now(min_interval_days=7):
@@ -42,6 +80,9 @@ def _run_pipeline_if_due():
 
 def _run_monitoring_loop():
     """Monitoring in background thread continuo (ogni ora)."""
+    if not _env_flag("ENABLE_MONITORING_LOOP", "false"):
+        logger.info("Monitoring loop disabled (ENABLE_MONITORING_LOOP=false)")
+        return
     import time
     while True:
         try:
@@ -52,8 +93,20 @@ def _run_monitoring_loop():
         time.sleep(3600)
 
 
+def _run_event_listener_loop():
+    """Event listener for V2 LISTEN/NOTIFY orchestration."""
+    try:
+        orchestrator = get_event_orchestrator()
+        orchestrator.listen_forever()
+    except Exception as e:
+        logger.warning(f"Event listener loop failed: {e}")
+
+
 def _run_trading_loop():
     """Trading in background thread continuo (ogni 5 minuti, paper trading)."""
+    if not _env_flag("ENABLE_TRADING_LOOP", "false"):
+        logger.info("Trading loop disabled (ENABLE_TRADING_LOOP=false)")
+        return
     import time
     while True:
         try:
@@ -73,14 +126,29 @@ def _run_trading_loop():
 async def lifespan(app: FastAPI):
     loop = asyncio.get_event_loop()
 
-    # Thread 1: pipeline chain settimanale (non-blocking)
-    loop.run_in_executor(None, _run_pipeline_if_due)
+    if not is_background_jobs_enabled():
+        logger.info("Background jobs disabled (ENABLE_BACKGROUND_LOOPS=false)")
+        yield
+        return
 
-    # Thread 2: monitoring loop ogni ora
-    loop.run_in_executor(None, _run_monitoring_loop)
+    if not can_connect_db():
+        logger.warning("Background jobs not started: no DB connectivity at startup")
+        yield
+        return
 
-    # Thread 3: trading loop ogni 5 minuti
-    loop.run_in_executor(None, _run_trading_loop)
+    if is_v2_event_driven_enabled():
+        logger.info("Starting API in V2 event-driven mode")
+        loop.run_in_executor(None, _run_event_listener_loop)
+    else:
+        logger.info("Starting API in legacy scheduler mode")
+        # Thread 1: pipeline chain settimanale (non-blocking)
+        loop.run_in_executor(None, _run_pipeline_if_due)
+
+        # Thread 2: monitoring loop ogni ora
+        loop.run_in_executor(None, _run_monitoring_loop)
+
+        # Thread 3: trading loop ogni 5 minuti
+        loop.run_in_executor(None, _run_trading_loop)
 
     yield
 
@@ -113,6 +181,13 @@ class ModelInfo(BaseModel):
     name: str
     type: str
     status: str
+
+
+class StrategyCreateRequest(BaseModel):
+    """Internal V2 strategy creation payload."""
+    name: str
+    spec: dict
+    status: str = "draft"
 
 
 @app.get("/")
@@ -286,6 +361,137 @@ async def list_strategies():
     except Exception as e:
         logger.error(f"Error listing strategies: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.post("/internal/v2/strategies")
+async def create_strategy_v2(request: StrategyCreateRequest):
+    """Internal API: create strategy record in V2 table."""
+    try:
+        from data.repositories import StrategyRepository
+
+        repo = StrategyRepository()
+        strategy_id = repo.create(
+            {"name": request.name, "spec": request.spec, "status": request.status}
+        )
+        return {"status": "created", "strategy_id": strategy_id}
+    except Exception as e:
+        logger.error(f"Error creating V2 strategy: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+@app.get("/internal/v2/strategies")
+async def list_strategies_v2(status: Optional[str] = None, limit: int = 100):
+    """Internal API: list strategies from V2 table."""
+    try:
+        from data.repositories import StrategyRepository
+
+        repo = StrategyRepository()
+        rows = repo.list(status=status, limit=limit)
+        return {"count": len(rows), "strategies": rows}
+    except Exception as e:
+        logger.error(f"Error reading V2 strategies: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+
+
+@app.get("/internal/v2/orchestration/metrics")
+async def get_v2_orchestration_metrics():
+    """Expose event-driven orchestration metrics (latency/errors/retries)."""
+    if not is_v2_event_driven_enabled():
+        return {"enabled": False, "metrics": {}}
+    orchestrator = get_event_orchestrator()
+    return {"enabled": True, "metrics": orchestrator.snapshot_metrics()}
+
+
+@app.get("/api/pipeline/overview")
+async def pipeline_overview():
+    """Aggregated V2 pipeline snapshot for overview dashboards."""
+    try:
+        strategies = get_db().get_strategies_v2(limit=500)
+        logs = get_db().get_agent_logs(limit=20)
+    except Exception as e:
+        logger.error(f"Error reading pipeline overview: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    by_status: dict[str, int] = {}
+    for strategy in strategies:
+        status = str(strategy.get("status", "draft"))
+        by_status[status] = by_status.get(status, 0) + 1
+
+    recent_events = [
+        {
+            "timestamp": row.get("timestamp"),
+            "agent": row.get("agent_name"),
+            "status": row.get("status"),
+            "message": row.get("message"),
+        }
+        for row in logs
+    ]
+
+    return {
+        "generated_at": datetime.utcnow().isoformat(),
+        "counts": by_status,
+        "total_strategies": len(strategies),
+        "human_review_count": by_status.get("human_review", 0),
+        "recent_events": recent_events,
+    }
+
+
+@app.get("/api/pipeline/kanban")
+async def pipeline_kanban(limit: int = 300):
+    """Strategies grouped by lifecycle status for kanban dashboards."""
+    try:
+        strategies = get_db().get_strategies_v2(limit=limit)
+    except Exception as e:
+        logger.error(f"Error reading pipeline kanban: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    grouped: dict[str, list[dict]] = {}
+    for strategy in strategies:
+        status = str(strategy.get("status", "draft"))
+        grouped.setdefault(status, []).append(
+            {
+                "id": strategy.get("id"),
+                "name": strategy.get("name"),
+                "updated_at": strategy.get("updated_at"),
+                "retry_count": strategy.get("retry_count", 0),
+            }
+        )
+    return {"columns": grouped, "count": len(strategies)}
+
+
+@app.get("/api/strategies/{strategy_id}/backtest")
+async def strategy_backtest(strategy_id: str):
+    """Backtest reports for a specific strategy."""
+    try:
+        reports = get_db().get_backtest_reports(strategy_id=strategy_id, limit=50)
+    except Exception as e:
+        logger.error(f"Error reading backtests for {strategy_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    return {"strategy_id": strategy_id, "reports": reports, "count": len(reports)}
+
+
+@app.get("/api/events/stream")
+async def events_stream():
+    """Server-sent events stream with recent activity snapshots."""
+    async def event_generator():
+        while True:
+            try:
+                logs = get_db().get_agent_logs(limit=1)
+                latest = logs[0] if logs else {}
+            except Exception:
+                latest = {}
+            payload = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "event": latest.get("status", "heartbeat"),
+                "agent": latest.get("agent_name"),
+                "message": latest.get("message"),
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+            await asyncio.sleep(2)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @app.get("/api/price")

@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 class ValidationAgent(BaseAgent):
     """Agent responsible for validating ML models and their scientific basis."""
 
+    STRATEGY_THRESHOLDS = {
+        "min_sharpe": 0.5,            # L3
+        "max_drawdown": 0.20,         # L4
+        "max_monte_carlo_pvalue": 0.05,  # L5
+    }
+
     def __init__(
         self,
         models_dir: str = str(Paths.MODELS_DIR),
@@ -435,8 +441,123 @@ The model generates trading signals based on:
         """Alias for run_validation — satisfies BaseAgent contract."""
         return self.run_validation()
 
+    def validate_strategy_report(self, report: dict) -> dict:
+        """Validate strategy-level metrics L1-L5 from a backtest report."""
+        findings = []
+
+        # L1 - minimal structural sanity
+        if not report.get("method"):
+            findings.append({
+                "level": "L1",
+                "status": "failed",
+                "metric_name": "method",
+                "expected_threshold": "non-empty",
+                "actual_value": None,
+                "details": "Backtest method missing",
+            })
+
+        # L2 - execution realism proxy (trade list should exist, even if empty list)
+        if report.get("trades") is None:
+            findings.append({
+                "level": "L2",
+                "status": "warning",
+                "metric_name": "trades",
+                "expected_threshold": "present",
+                "actual_value": None,
+                "details": "Missing trade log payload in report",
+            })
+
+        # L3 - performance
+        sharpe = float(report.get("sharpe_ratio") or 0)
+        if sharpe < self.STRATEGY_THRESHOLDS["min_sharpe"]:
+            findings.append({
+                "level": "L3",
+                "status": "failed",
+                "metric_name": "sharpe_ratio",
+                "expected_threshold": f">={self.STRATEGY_THRESHOLDS['min_sharpe']}",
+                "actual_value": sharpe,
+                "details": "Risk-adjusted return below threshold",
+            })
+
+        # L4 - risk
+        max_drawdown = float(report.get("max_drawdown") or 0)
+        if max_drawdown > self.STRATEGY_THRESHOLDS["max_drawdown"]:
+            findings.append({
+                "level": "L4",
+                "status": "failed",
+                "metric_name": "max_drawdown",
+                "expected_threshold": f"<={self.STRATEGY_THRESHOLDS['max_drawdown']}",
+                "actual_value": max_drawdown,
+                "details": "Drawdown exceeds acceptable risk budget",
+            })
+
+        # L5 - robustness
+        pvalue = float(report.get("monte_carlo_pvalue") or 1.0)
+        if pvalue > self.STRATEGY_THRESHOLDS["max_monte_carlo_pvalue"]:
+            findings.append({
+                "level": "L5",
+                "status": "failed",
+                "metric_name": "monte_carlo_pvalue",
+                "expected_threshold": f"<={self.STRATEGY_THRESHOLDS['max_monte_carlo_pvalue']}",
+                "actual_value": pvalue,
+                "details": "Monte Carlo significance not robust enough",
+            })
+
+        overall = "APPROVED" if not any(f["status"] == "failed" for f in findings) else "REJECTED"
+        return {"overall_status": overall, "findings": findings}
+
+    def run_strategy_validation_v2(self) -> list[str]:
+        """Run strategy-level validation (L1-L5) over V2 backtest reports."""
+        statuses = []
+        reports = self.db.get_backtest_reports(limit=500)
+
+        for report in reports:
+            strategy_id = report.get("strategy_id")
+            report_id = report.get("id")
+            if not strategy_id or not report_id:
+                continue
+
+            result = self.validate_strategy_report(report)
+            findings = result["findings"] or [{
+                "level": "L3",
+                "status": "passed",
+                "metric_name": "strategy_quality",
+                "expected_threshold": "all thresholds satisfied",
+                "actual_value": None,
+                "details": "Strategy passed all configured checks",
+            }]
+
+            for finding in findings:
+                self.db.save_validation_v2({
+                    "strategy_id": strategy_id,
+                    "backtest_report_id": report_id,
+                    "level": finding["level"],
+                    "status": finding["status"],
+                    "metric_name": finding["metric_name"],
+                    "expected_threshold": finding["expected_threshold"],
+                    "actual_value": finding["actual_value"],
+                    "details": finding["details"],
+                })
+
+            statuses.append(result["overall_status"])
+
+        return statuses
+
     def run_validation(self) -> list[str]:
-        """Run validation for all specs."""
+        """Run validation.
+
+        Priority:
+        1) V2 strategy validation from backtest reports (L1-L5)
+        2) Legacy model validation fallback (existing behavior)
+        """
+        try:
+            v2_reports = self.db.get_backtest_reports(limit=1)
+            if v2_reports:
+                return self.run_strategy_validation_v2()
+        except Exception as e:
+            logger.warning(f"V2 strategy validation unavailable, falling back to legacy flow: {e}")
+
+        # Legacy fallback
         specs = self.load_specs()
         results = []
 
