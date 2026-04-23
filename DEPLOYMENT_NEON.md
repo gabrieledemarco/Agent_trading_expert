@@ -1,6 +1,6 @@
 # Deploy ufficiale — Render + Neon PostgreSQL
 
-## Baseline
+## Prerequisiti
 
 - Runtime: **Render Web Service**
 - Database: **Neon PostgreSQL**

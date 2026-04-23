@@ -12,5 +12,15 @@ services:
         value: "1"
       - key: LOG_LEVEL
         value: INFO
+      - key: ENABLE_BACKGROUND_LOOPS
+        value: "false"
+      - key: ENABLE_PIPELINE_AUTORUN
+        value: "false"
+      - key: ENABLE_MONITORING_LOOP
+        value: "false"
+      - key: ENABLE_TRADING_LOOP
+        value: "false"
+      - key: V2_EVENT_DRIVEN
+        value: "false"
       - key: DATABASE_URL
         sync: false

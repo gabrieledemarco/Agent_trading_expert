@@ -1,0 +1,70 @@
+name: Apply V2 Neon Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment label"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - staging
+          - production
+      verify_only:
+        description: "Skip migration apply and run verification queries only"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply migration and verify schema
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Validate DATABASE_URL secret exists
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL secret is missing"
+            exit 1
+          fi
+
+      - name: Apply V2 migration
+        if: ${{ !inputs.verify_only }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/V2__architecture.sql
+
+      - name: Verify V2 tables
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.strategies') AS strategies, to_regclass('public.models_v2') AS models_v2, to_regclass('public.backtest_reports') AS backtest_reports, to_regclass('public.validations_v2') AS validations_v2;"
+
+      - name: Verify required triggers
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT tgname FROM pg_trigger WHERE tgname IN ('trg_spec_created','trg_model_state_changed','trg_backtest_completed','trg_validation_result') ORDER BY tgname;"
+
+      - name: Job summary
+        run: |
+          echo "## V2 migration workflow completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify only: ${{ inputs.verify_only }}" >> $GITHUB_STEP_SUMMARY
+          echo "- SQL file: migrations/V2__architecture.sql" >> $GITHUB_STEP_SUMMARY

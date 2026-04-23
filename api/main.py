@@ -23,10 +23,27 @@ _db = None
 _event_orchestrator = None
 
 
-
-
 def is_v2_event_driven_enabled() -> bool:
     return str(os.getenv("V2_EVENT_DRIVEN", "false")).lower() in {"1", "true", "yes", "on"}
+
+
+def _env_flag(name: str, default: str = "false") -> bool:
+    return str(os.getenv(name, default)).lower() in {"1", "true", "yes", "on"}
+
+
+def is_background_jobs_enabled() -> bool:
+    """Global switch for background loops (off-by-default in deploys)."""
+    return _env_flag("ENABLE_BACKGROUND_LOOPS", "false")
+
+
+def can_connect_db() -> bool:
+    """Best-effort DB readiness check used to avoid noisy failing loops at startup."""
+    try:
+        get_db().get_dashboard_summary()
+        return True
+    except Exception as e:
+        logger.warning("Skipping background jobs: database is not reachable (%s)", e)
+        return False
 
 
 def get_event_orchestrator():
@@ -46,6 +63,9 @@ def get_db():
 
 def _run_pipeline_if_due():
     """Avvia il pipeline chain se ResearchAgent non ha girato negli ultimi 7 giorni."""
+    if not _env_flag("ENABLE_PIPELINE_AUTORUN", "false"):
+        logger.info("Pipeline autorun disabled (ENABLE_PIPELINE_AUTORUN=false)")
+        return
     try:
         from agents.research.research_agent import ResearchAgent
         if not ResearchAgent().should_run_now(min_interval_days=7):
@@ -60,6 +80,9 @@ def _run_pipeline_if_due():
 
 def _run_monitoring_loop():
     """Monitoring in background thread continuo (ogni ora)."""
+    if not _env_flag("ENABLE_MONITORING_LOOP", "false"):
+        logger.info("Monitoring loop disabled (ENABLE_MONITORING_LOOP=false)")
+        return
     import time
     while True:
         try:
@@ -81,6 +104,9 @@ def _run_event_listener_loop():
 
 def _run_trading_loop():
     """Trading in background thread continuo (ogni 5 minuti, paper trading)."""
+    if not _env_flag("ENABLE_TRADING_LOOP", "false"):
+        logger.info("Trading loop disabled (ENABLE_TRADING_LOOP=false)")
+        return
     import time
     while True:
         try:
@@ -99,6 +125,16 @@ def _run_trading_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     loop = asyncio.get_event_loop()
+
+    if not is_background_jobs_enabled():
+        logger.info("Background jobs disabled (ENABLE_BACKGROUND_LOOPS=false)")
+        yield
+        return
+
+    if not can_connect_db():
+        logger.warning("Background jobs not started: no DB connectivity at startup")
+        yield
+        return
 
     if is_v2_event_driven_enabled():
         logger.info("Starting API in V2 event-driven mode")
