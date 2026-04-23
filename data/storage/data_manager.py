@@ -238,6 +238,49 @@ class DataStorageManager:
         conn.close()
         return rows
 
+
+    def get_strategy_by_id(self, strategy_id: str) -> Optional[dict]:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute("SELECT * FROM strategies WHERE id = %s", (strategy_id,))
+        row = cur.fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def update_strategy_status(self, strategy_id: str, status: str) -> None:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute(
+            "UPDATE strategies SET status = %s, updated_at = NOW() WHERE id = %s",
+            (status, strategy_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def increment_strategy_retry(self, strategy_id: str) -> dict:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute(
+            """
+            UPDATE strategies
+            SET retry_count = retry_count + 1, updated_at = NOW()
+            WHERE id = %s
+            RETURNING retry_count, max_retries
+            """,
+            (strategy_id,),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        conn.close()
+
+        retry_count = int((row or {}).get("retry_count", 0))
+        max_retries = int((row or {}).get("max_retries", 3))
+        return {
+            "retry_count": retry_count,
+            "max_retries": max_retries,
+            "reached_max": retry_count >= max_retries,
+        }
+
     def save_model_v2(self, model: dict) -> str:
         conn = self._connect()
         cur = self._cursor(conn)

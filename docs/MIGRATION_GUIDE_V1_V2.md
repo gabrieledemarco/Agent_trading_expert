@@ -57,3 +57,20 @@ WHERE tgname IN (
 ## Nota
 
 La V2 documenta lo **stato target**: alcune componenti applicative possono essere ancora in transizione nel codice runtime.
+
+
+## Rollout operativo Fasi 4-6
+
+### Feature flag
+- `V2_EVENT_DRIVEN=false` (default): runtime legacy con scheduler (`pipeline+monitoring+trading loop`).
+- `V2_EVENT_DRIVEN=true`: avvio `EventDrivenOrchestrator` con consumer `LISTEN events`.
+
+### Cutover consigliato
+1. Deploy con flag `false` e verificare endpoint `/internal/v2/strategies`.
+2. Attivare flag `true` solo in environment di staging.
+3. Verificare metriche su `/internal/v2/orchestration/metrics` (`processed_events`, `failed_events`, `total_retries`, `last_latency_ms`).
+4. Promuovere su produzione solo con `failed_events == 0` e retry sotto soglia.
+
+### Rollback
+- Impostare immediatamente `V2_EVENT_DRIVEN=false` e riavviare il service: il runtime torna in modalità legacy senza migrazioni distruttive.
+- Gli eventi già presenti in DB restano compatibili perché il branch status (`approved/rejected/warning/human_review`) è gestito a livello schema.

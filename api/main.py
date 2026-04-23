@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
@@ -16,7 +17,21 @@ logger = logging.getLogger(__name__)
 
 # DB singleton — created once at startup, shared across all requests.
 _db = None
+_event_orchestrator = None
 
+
+
+
+def is_v2_event_driven_enabled() -> bool:
+    return str(os.getenv("V2_EVENT_DRIVEN", "false")).lower() in {"1", "true", "yes", "on"}
+
+
+def get_event_orchestrator():
+    global _event_orchestrator
+    if _event_orchestrator is None:
+        from agents.orchestration import EventDrivenOrchestrator
+        _event_orchestrator = EventDrivenOrchestrator(enable_v2=is_v2_event_driven_enabled())
+    return _event_orchestrator
 
 def get_db():
     global _db
@@ -52,6 +67,15 @@ def _run_monitoring_loop():
         time.sleep(3600)
 
 
+def _run_event_listener_loop():
+    """Event listener for V2 LISTEN/NOTIFY orchestration."""
+    try:
+        orchestrator = get_event_orchestrator()
+        orchestrator.listen_forever()
+    except Exception as e:
+        logger.warning(f"Event listener loop failed: {e}")
+
+
 def _run_trading_loop():
     """Trading in background thread continuo (ogni 5 minuti, paper trading)."""
     import time
@@ -73,14 +97,19 @@ def _run_trading_loop():
 async def lifespan(app: FastAPI):
     loop = asyncio.get_event_loop()
 
-    # Thread 1: pipeline chain settimanale (non-blocking)
-    loop.run_in_executor(None, _run_pipeline_if_due)
+    if is_v2_event_driven_enabled():
+        logger.info("Starting API in V2 event-driven mode")
+        loop.run_in_executor(None, _run_event_listener_loop)
+    else:
+        logger.info("Starting API in legacy scheduler mode")
+        # Thread 1: pipeline chain settimanale (non-blocking)
+        loop.run_in_executor(None, _run_pipeline_if_due)
 
-    # Thread 2: monitoring loop ogni ora
-    loop.run_in_executor(None, _run_monitoring_loop)
+        # Thread 2: monitoring loop ogni ora
+        loop.run_in_executor(None, _run_monitoring_loop)
 
-    # Thread 3: trading loop ogni 5 minuti
-    loop.run_in_executor(None, _run_trading_loop)
+        # Thread 3: trading loop ogni 5 minuti
+        loop.run_in_executor(None, _run_trading_loop)
 
     yield
 
@@ -323,6 +352,17 @@ async def list_strategies_v2(status: Optional[str] = None, limit: int = 100):
     except Exception as e:
         logger.error(f"Error reading V2 strategies: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Database unavailable")
+
+
+
+
+@app.get("/internal/v2/orchestration/metrics")
+async def get_v2_orchestration_metrics():
+    """Expose event-driven orchestration metrics (latency/errors/retries)."""
+    if not is_v2_event_driven_enabled():
+        return {"enabled": False, "metrics": {}}
+    orchestrator = get_event_orchestrator()
+    return {"enabled": True, "metrics": orchestrator.snapshot_metrics()}
 
 
 @app.get("/api/price")
