@@ -1,13 +1,16 @@
 """Trading Agents API — data served exclusively from Neon PostgreSQL."""
 
 import asyncio
+import json
 import logging
 import os
+from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from configs.paths import Paths
@@ -363,6 +366,96 @@ async def get_v2_orchestration_metrics():
         return {"enabled": False, "metrics": {}}
     orchestrator = get_event_orchestrator()
     return {"enabled": True, "metrics": orchestrator.snapshot_metrics()}
+
+
+@app.get("/api/pipeline/overview")
+async def pipeline_overview():
+    """Aggregated V2 pipeline snapshot for overview dashboards."""
+    try:
+        strategies = get_db().get_strategies_v2(limit=500)
+        logs = get_db().get_agent_logs(limit=20)
+    except Exception as e:
+        logger.error(f"Error reading pipeline overview: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    by_status: dict[str, int] = {}
+    for strategy in strategies:
+        status = str(strategy.get("status", "draft"))
+        by_status[status] = by_status.get(status, 0) + 1
+
+    recent_events = [
+        {
+            "timestamp": row.get("timestamp"),
+            "agent": row.get("agent_name"),
+            "status": row.get("status"),
+            "message": row.get("message"),
+        }
+        for row in logs
+    ]
+
+    return {
+        "generated_at": datetime.utcnow().isoformat(),
+        "counts": by_status,
+        "total_strategies": len(strategies),
+        "human_review_count": by_status.get("human_review", 0),
+        "recent_events": recent_events,
+    }
+
+
+@app.get("/api/pipeline/kanban")
+async def pipeline_kanban(limit: int = 300):
+    """Strategies grouped by lifecycle status for kanban dashboards."""
+    try:
+        strategies = get_db().get_strategies_v2(limit=limit)
+    except Exception as e:
+        logger.error(f"Error reading pipeline kanban: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    grouped: dict[str, list[dict]] = {}
+    for strategy in strategies:
+        status = str(strategy.get("status", "draft"))
+        grouped.setdefault(status, []).append(
+            {
+                "id": strategy.get("id"),
+                "name": strategy.get("name"),
+                "updated_at": strategy.get("updated_at"),
+                "retry_count": strategy.get("retry_count", 0),
+            }
+        )
+    return {"columns": grouped, "count": len(strategies)}
+
+
+@app.get("/api/strategies/{strategy_id}/backtest")
+async def strategy_backtest(strategy_id: str):
+    """Backtest reports for a specific strategy."""
+    try:
+        reports = get_db().get_backtest_reports(strategy_id=strategy_id, limit=50)
+    except Exception as e:
+        logger.error(f"Error reading backtests for {strategy_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    return {"strategy_id": strategy_id, "reports": reports, "count": len(reports)}
+
+
+@app.get("/api/events/stream")
+async def events_stream():
+    """Server-sent events stream with recent activity snapshots."""
+    async def event_generator():
+        while True:
+            try:
+                logs = get_db().get_agent_logs(limit=1)
+                latest = logs[0] if logs else {}
+            except Exception:
+                latest = {}
+            payload = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "event": latest.get("status", "heartbeat"),
+                "agent": latest.get("agent_name"),
+                "message": latest.get("message"),
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+            await asyncio.sleep(2)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @app.get("/api/price")

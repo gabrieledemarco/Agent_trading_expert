@@ -70,3 +70,44 @@ def test_v2_orchestration_metrics_endpoint_enabled(monkeypatch):
     body = response.json()
     assert body["enabled"] is True
     assert body["metrics"]["processed_events"] == 7
+
+
+def test_pipeline_overview_endpoint():
+    class _FakeDB:
+        def get_strategies_v2(self, limit=500):
+            return [
+                {"id": "s1", "name": "Momentum", "status": "approved"},
+                {"id": "s2", "name": "Breakout", "status": "human_review"},
+            ]
+
+        def get_agent_logs(self, limit=20):
+            return [{"timestamp": "2026-04-23T10:00:00", "agent_name": "ValidationAgent", "status": "warning", "message": "L4 fail"}]
+
+    with patch("api.main.get_db", return_value=_FakeDB()):
+        client = TestClient(app)
+        response = client.get("/api/pipeline/overview")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["counts"]["approved"] == 1
+    assert body["human_review_count"] == 1
+    assert len(body["recent_events"]) == 1
+
+
+def test_pipeline_kanban_and_backtest_endpoints():
+    class _FakeDB:
+        def get_strategies_v2(self, limit=300):
+            return [{"id": "s1", "name": "MeanRev", "status": "validation_pending", "retry_count": 1, "updated_at": "2026-04-23"}]
+
+        def get_backtest_reports(self, strategy_id=None, limit=50):
+            return [{"id": "r1", "strategy_id": strategy_id, "method": "rolling_window"}]
+
+    with patch("api.main.get_db", return_value=_FakeDB()):
+        client = TestClient(app)
+        kanban = client.get("/api/pipeline/kanban")
+        backtest = client.get("/api/strategies/s1/backtest")
+
+    assert kanban.status_code == 200
+    assert "validation_pending" in kanban.json()["columns"]
+    assert backtest.status_code == 200
+    assert backtest.json()["count"] == 1
