@@ -1,70 +1,67 @@
 # Deploy ufficiale — Render + Neon PostgreSQL
 
-## Baseline
+## Prerequisiti
 
-- Runtime: **Render Web Service**
-- Database: **Neon PostgreSQL**
-- Source of truth: **GitHub**
+- **Render Web Service**: ospita API FastAPI e dashboard statiche
+- **Neon PostgreSQL**: storage persistente
+- **GitHub**: source of truth del codice
 
 ## Prerequisiti
 
-1. Repository collegato a Render
-2. Database Neon attivo
-3. `DATABASE_URL` valida con `sslmode=require`
+1. Repository connesso a Render
+2. Database Neon creato
+3. Connection string Neon con `sslmode=require`
 
-## Configurazione ambiente Render
+## Variabili ambiente minime
 
-Variabili minime:
+In Render (Environment):
 
 - `DATABASE_URL=postgresql://...`
 - `PYTHONUNBUFFERED=1`
 - `LOG_LEVEL=INFO`
-- `ENABLE_BACKGROUND_LOOPS=false`
-- `ENABLE_PIPELINE_AUTORUN=false`
-- `ENABLE_MONITORING_LOOP=false`
-- `ENABLE_TRADING_LOOP=false`
-- `V2_EVENT_DRIVEN=false`
 
-Note operative:
-- In produzione lasciare i loop disattivati finché la connettività Neon non è verificata.
-- Attivare `V2_EVENT_DRIVEN=true` solo dopo smoke test DB e trigger/event bus.
-
-Start command:
+## Start command consigliato
 
 ```bash
 uvicorn api.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Alternativa deploy-as-code:
-
-- usare `render.yaml` in root repository.
-
-## Migrazione architettura V2 (opzionale ma raccomandata)
-
-Per introdurre schema `strategies/models_v2/backtest_reports/validations_v2` + trigger `pg_notify`:
-
-```bash
-psql "$DATABASE_URL" -f migrations/V2__architecture.sql
-```
-
-Alternativa CI/CD:
-- workflow GitHub Actions: `.github/workflows/apply-v2-migration.yml`
-- richiede secret repository/environment `DATABASE_URL`
-- esecuzione manuale via **Actions → Apply V2 Neon Migration → Run workflow**.
-
-Dettagli:
-
-- `docs/ARCHITECTURE_V2.md`
-- `docs/MIGRATION_GUIDE_V1_V2.md`
-
 ## Smoke test post-deploy
 
 ```bash
-curl https://<render-service>/health
-curl https://<render-service>/dashboard/summary
-curl https://<render-service>/strategies
+curl https://<your-render-service>/health
+curl https://<your-render-service>/dashboard/summary
+curl https://<your-render-service>/strategies
 ```
 
-## Nota
+## Endpoint disponibili dopo deploy
 
-Il servizio usa `DataStorageManager` PostgreSQL-only: se `DATABASE_URL` manca o non è `postgresql://`/`postgres://`, l'avvio fallisce esplicitamente.
+### API principale (`api/main.py`)
+
+- `GET /`
+- `GET /health`
+- `POST /research`
+- `GET /models`
+- `POST /trade/execute`
+- `GET /performance`
+- `GET /dashboard/summary`
+- `GET /dashboard/agent-activity`
+- `GET /dashboard/strategy/{strategy_name}`
+- `GET /strategies`
+
+### API chat (`api/chat_api.py`)
+
+- `GET /api/chat/data`
+- `POST /api/chat/message`
+
+### Execution Engine (`execution_engine/app.py`)
+
+- `GET /health`
+- `POST /execute`
+- `GET /strategies`
+- `GET /dashboard/summary`
+
+## Note operative
+
+- Il sistema è configurato per **paper trading**.
+- Se `DATABASE_URL` manca o è invalida, `DataStorageManager` interrompe l'avvio con errore esplicito.

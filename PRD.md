@@ -1,42 +1,61 @@
-# PRD — Agent Trading Expert (V2 target)
+# PRD — Agent Trading Expert (Current Baseline)
 
-## Obiettivo
+## 1. Obiettivo
 
-Costruire una pipeline event-driven di trading research che separi chiaramente:
+Costruire una piattaforma multi-agent per:
 
-1. **Model validation (MLEngineer)**: accuratezza predittiva ML
-2. **Strategy validation (ValidationAgent)**: performance/risk/robustness della strategia completa
+1. ricerca paper quant/ML
+2. trasformazione in specifiche implementabili
+3. validazione tecnica/statistica
+4. paper trading monitorato
 
-## Stack approvato
+## 2. Architettura target attuale
 
-- GitHub (versionamento)
-- Render (deploy)
-- Neon PostgreSQL (persistenza)
-- FastAPI (API)
-- PostgreSQL LISTEN/NOTIFY (event bus)
+- **Versionamento**: GitHub
+- **Runtime**: Render Web Service
+- **Database**: Neon PostgreSQL
+- **API**: FastAPI
+- **Computation layer**: `execution_engine/`
 
-## Regola architetturale fondamentale
+## 3. Agenti e responsabilità
 
-| Livello | Owner | Domanda |
-|---|---|---|
-| Model Validation | MLEngineer | Il modello è predittivamente utile? |
-| Strategy Validation | ValidationAgent | La strategia è profittevole, gestibile e robusta? |
+| Agente | Responsabilità |
+|---|---|
+| ResearchAgent | Scansione arXiv e creazione summary markdown |
+| SpecAgent | Generazione specifiche YAML e action plan |
+| MLEngineerAgent | Generazione codice modello e feature pipeline |
+| ValidationAgent | Verifica qualità, coerenza e robustezza |
+| TradingExecutorAgent | Selezione strategia e paper trading |
+| MonitoringAgent | Alerting e reporting KPI |
+| ChatAgent | Q&A operativo su modelli e risultati |
+| StrategyAgent / ImprovementAgent | Supporto orchestrazione e iterazione migliorativa |
 
-## Flusso V2
+## 4. Flusso di lavoro (as-is)
 
 ```text
-ResearchEngine -> MLEngineer -> StrategyEngineer -> ValidationAgent -> ExecutionEngine
-                                      ^                  |
-                                      |------retry/feedback loop-----|
+Research -> Spec -> ML Engineer -> Validation -> Trading -> Monitoring
 ```
 
-## Stati strategia (target)
+Layer API:
 
-`draft -> backtest_pending -> backtest_running -> validation_pending -> approved/rejected/warning -> deployed/human_review/archived`
+- `api/main.py` (operativo + dashboard)
+- `api/chat_api.py` (chat/dashboard data)
+- `execution_engine/app.py` (health, execute, strategie, summary)
 
-## Documentazione di riferimento
+## 5. Vincoli principali
 
-- Architettura: `docs/ARCHITECTURE_V2.md`
-- Deploy: `DEPLOYMENT_NEON.md`
-- Migrazione V1→V2: `docs/MIGRATION_GUIDE_V1_V2.md`
-- Schema DB/trigger: `migrations/V2__architecture.sql`
+- `DATABASE_URL` obbligatoria e compatibile PostgreSQL (`postgres://` o `postgresql://`)
+- modalità di default: paper trading
+- niente credenziali hardcoded nei file
+
+## 6. Deliverable documentali
+
+- `docs/ARCHITECTURE_MAP.md` → endpoint map + workflow agenti
+- `DEPLOYMENT_NEON.md` → runbook deploy Render + Neon
+- `data/storage/MIGRATION_GUIDE.md` → migrazione dati verso Neon
+
+## 7. Non-obiettivi
+
+- gestione real-money trading
+- orchestrazione distribuita completa con queue obbligatoria
+- multi-tenant authentication avanzata

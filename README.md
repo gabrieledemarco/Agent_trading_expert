@@ -1,39 +1,52 @@
 # Agent Trading Expert
 
-![Architecture](https://img.shields.io/badge/Architecture-V2-blue)
-![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20Neon%20%7C%20Render-green)
+Piattaforma multi-agent per ricerca quantitativa, generazione specifiche, validazione e paper trading.
 
-Piattaforma multi-agent per ricerca quantitativa, validazione strategica e paper trading.
-
-## Stack ufficiale
+## Stack ufficiale (attuale)
 
 - **Versionamento**: GitHub
 - **Deploy**: Render Web Service
 - **Database**: Neon PostgreSQL (`DATABASE_URL` obbligatoria)
-- **Backend/API**: FastAPI
+- **Backend API**: FastAPI
 
-## Documentazione principale
+## Agenti presenti
 
-- Architettura target: `docs/ARCHITECTURE_V2.md`
-- Deploy baseline: `DEPLOYMENT_NEON.md`
-- Migrazione dati legacy: `data/storage/MIGRATION_GUIDE.md`
-- Migrazione architetturale V1→V2: `docs/MIGRATION_GUIDE_V1_V2.md`
+1. **ResearchAgent** (`agents/research/`) — ricerca e sintesi paper arXiv
+2. **SpecAgent** (`agents/spec/`) — converte i risultati ricerca in specifiche YAML
+3. **MLEngineerAgent** (`agents/ml_engineer/`) — genera codice modello e pipeline feature
+4. **ValidationAgent** (`agents/validation/`) — quality check, robustezza, profilo rischio/rendimento
+5. **TradingExecutorAgent** (`agents/trading/`) — selezione strategia, segnali, paper trading
+6. **MonitoringAgent** (`agents/monitoring/`) — monitoraggio KPI e alert
+7. **ChatAgent** (`agents/chat/`) — interfaccia conversazionale informativa
+8. **StrategyAgent / ImprovementAgent** (`agents/strategy/`, `agents/improvement/`) — supporto pipeline orchestrata
 
-## Accuratezza vs Validazione (principio)
+## Mappa endpoint + workflow
 
-- **MLEngineer**: valuta l'accuratezza ML del modello (MSE/MAE/R²/directional accuracy) durante training.
-- **ValidationAgent**: valida la strategia completa (performance netta, risk, robustness L1-L5) dopo backtest.
+Per la mappatura completa e aggiornata:
 
-Questa separazione evita di confondere qualità predittiva del modello con qualità operativa della strategia.
+- `docs/ARCHITECTURE_MAP.md`
+
+Il documento contiene:
+
+- endpoint HTTP (`api/main.py`, `api/chat_api.py`, `execution_engine/app.py`)
+- flusso operativo tra agenti
+- ingressi/uscite per ogni componente
+- dipendenze dati e storage
 
 ## Avvio locale
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env
-# imposta DATABASE_URL con connessione Neon valida
+export DATABASE_URL="postgresql://<user>:<password>@<host>/<db>?sslmode=require"
 uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
+
+## Deploy Render + Neon
+
+Vedi:
+
+- `DEPLOYMENT_NEON.md`
+- `data/storage/MIGRATION_GUIDE.md`
 
 ## Test
 
@@ -43,4 +56,4 @@ pytest tests/ -v
 
 ## Nota operativa
 
-`DataStorageManager` è in modalità **PostgreSQL-only**: senza `DATABASE_URL` valida l'applicazione fallisce in avvio.
+`DataStorageManager` è configurato in modalità **PostgreSQL-only**: senza `DATABASE_URL` valida l'applicazione fallisce in avvio.
