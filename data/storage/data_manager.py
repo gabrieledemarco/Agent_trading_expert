@@ -122,13 +122,244 @@ class DataStorageManager:
                 records_written INTEGER DEFAULT 0,
                 error_detail    TEXT
             );
+            CREATE TABLE IF NOT EXISTS strategies (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                spec JSONB NOT NULL,
+                model_id UUID,
+                status VARCHAR(30) NOT NULL DEFAULT 'draft',
+                validation_result JSONB,
+                feedback_payload JSONB,
+                retry_count INT NOT NULL DEFAULT 0,
+                max_retries INT NOT NULL DEFAULT 3,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS models_v2 (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                strategy_id UUID REFERENCES strategies(id),
+                architecture VARCHAR(100),
+                hyperparams JSONB,
+                directional_accuracy DECIMAL(5,4),
+                r2_score DECIMAL(5,4),
+                mse DECIMAL(15,10),
+                train_test_gap DECIMAL(5,4),
+                artifact_path VARCHAR(500),
+                status VARCHAR(20) NOT NULL DEFAULT 'training',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                validated_at TIMESTAMPTZ
+            );
+            CREATE TABLE IF NOT EXISTS backtest_reports (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                strategy_id UUID REFERENCES strategies(id),
+                method VARCHAR(50) NOT NULL,
+                sharpe_ratio DECIMAL(5,4),
+                max_drawdown DECIMAL(5,4),
+                total_return DECIMAL(8,4),
+                win_rate DECIMAL(5,4),
+                monte_carlo_pvalue DECIMAL(5,4),
+                regime_stability_score DECIMAL(5,4),
+                equity_curve JSONB,
+                trades JSONB,
+                params JSONB,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS validations_v2 (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                strategy_id UUID REFERENCES strategies(id),
+                backtest_report_id UUID REFERENCES backtest_reports(id),
+                level VARCHAR(5) NOT NULL,
+                status VARCHAR(20) NOT NULL,
+                metric_name VARCHAR(50),
+                expected_threshold VARCHAR(50),
+                actual_value DECIMAL(10,6),
+                details TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
         """)
         # Non-destructive migration: add columns if the table already existed
         cur.execute("ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS duration_ms INTEGER DEFAULT 0;")
         cur.execute("ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS records_written INTEGER DEFAULT 0;")
         cur.execute("ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS error_detail TEXT;")
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_strategies_model'
+                ) THEN
+                    ALTER TABLE strategies
+                    ADD CONSTRAINT fk_strategies_model
+                    FOREIGN KEY (model_id) REFERENCES models_v2(id);
+                END IF;
+            END $$;
+        """)
         cur.close()
         conn.close()
+
+    # ── V2 Strategy domain ───────────────────────────────────────────────────
+
+    def save_strategy(self, strategy: dict) -> str:
+        """Write V2 strategy entity (write-by-default for new flows)."""
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute(
+            """
+            INSERT INTO strategies (name, spec, model_id, status, validation_result, feedback_payload, retry_count, max_retries)
+            VALUES (%s, %s::jsonb, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
+            RETURNING id
+            """,
+            (
+                strategy.get("name"),
+                json.dumps(strategy.get("spec", {})),
+                strategy.get("model_id"),
+                strategy.get("status", "draft"),
+                json.dumps(strategy.get("validation_result")) if strategy.get("validation_result") is not None else None,
+                json.dumps(strategy.get("feedback_payload")) if strategy.get("feedback_payload") is not None else None,
+                strategy.get("retry_count", 0),
+                strategy.get("max_retries", 3),
+            ),
+        )
+        row_id = str(cur.fetchone()["id"])
+        conn.commit()
+        conn.close()
+        return row_id
+
+    def get_strategies_v2(self, status: Optional[str] = None, limit: int = 100) -> list[dict]:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        if status:
+            cur.execute(
+                "SELECT * FROM strategies WHERE status = %s ORDER BY created_at DESC LIMIT %s",
+                (status, limit),
+            )
+        else:
+            cur.execute("SELECT * FROM strategies ORDER BY created_at DESC LIMIT %s", (limit,))
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+
+    def save_model_v2(self, model: dict) -> str:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute(
+            """
+            INSERT INTO models_v2
+                (strategy_id, architecture, hyperparams, directional_accuracy, r2_score, mse,
+                 train_test_gap, artifact_path, status)
+            VALUES (%s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                model.get("strategy_id"),
+                model.get("architecture"),
+                json.dumps(model.get("hyperparams", {})),
+                model.get("directional_accuracy"),
+                model.get("r2_score"),
+                model.get("mse"),
+                model.get("train_test_gap"),
+                model.get("artifact_path"),
+                model.get("status", "training"),
+            ),
+        )
+        row_id = str(cur.fetchone()["id"])
+        conn.commit()
+        conn.close()
+        return row_id
+
+    def get_models_v2(self, status: Optional[str] = None, limit: int = 100) -> list[dict]:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        if status:
+            cur.execute("SELECT * FROM models_v2 WHERE status = %s ORDER BY created_at DESC LIMIT %s", (status, limit))
+        else:
+            cur.execute("SELECT * FROM models_v2 ORDER BY created_at DESC LIMIT %s", (limit,))
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+
+    def save_backtest_report(self, report: dict) -> str:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute(
+            """
+            INSERT INTO backtest_reports
+                (strategy_id, method, sharpe_ratio, max_drawdown, total_return, win_rate,
+                 monte_carlo_pvalue, regime_stability_score, equity_curve, trades, params)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb)
+            RETURNING id
+            """,
+            (
+                report.get("strategy_id"),
+                report.get("method", "rolling_window"),
+                report.get("sharpe_ratio"),
+                report.get("max_drawdown"),
+                report.get("total_return"),
+                report.get("win_rate"),
+                report.get("monte_carlo_pvalue"),
+                report.get("regime_stability_score"),
+                json.dumps(report.get("equity_curve", [])),
+                json.dumps(report.get("trades", [])),
+                json.dumps(report.get("params", {})),
+            ),
+        )
+        row_id = str(cur.fetchone()["id"])
+        conn.commit()
+        conn.close()
+        return row_id
+
+    def get_backtest_reports(self, strategy_id: Optional[str] = None, limit: int = 100) -> list[dict]:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        if strategy_id:
+            cur.execute(
+                "SELECT * FROM backtest_reports WHERE strategy_id = %s ORDER BY created_at DESC LIMIT %s",
+                (strategy_id, limit),
+            )
+        else:
+            cur.execute("SELECT * FROM backtest_reports ORDER BY created_at DESC LIMIT %s", (limit,))
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
+
+    def save_validation_v2(self, validation: dict) -> str:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        cur.execute(
+            """
+            INSERT INTO validations_v2
+                (strategy_id, backtest_report_id, level, status, metric_name, expected_threshold, actual_value, details)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                validation.get("strategy_id"),
+                validation.get("backtest_report_id"),
+                validation.get("level", "L3"),
+                validation.get("status", "warning"),
+                validation.get("metric_name"),
+                validation.get("expected_threshold"),
+                validation.get("actual_value"),
+                validation.get("details"),
+            ),
+        )
+        row_id = str(cur.fetchone()["id"])
+        conn.commit()
+        conn.close()
+        return row_id
+
+    def get_validations_v2(self, strategy_id: Optional[str] = None, limit: int = 100) -> list[dict]:
+        conn = self._connect()
+        cur = self._cursor(conn)
+        if strategy_id:
+            cur.execute(
+                "SELECT * FROM validations_v2 WHERE strategy_id = %s ORDER BY created_at DESC LIMIT %s",
+                (strategy_id, limit),
+            )
+        else:
+            cur.execute("SELECT * FROM validations_v2 ORDER BY created_at DESC LIMIT %s", (limit,))
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return rows
 
     # ── Research ──────────────────────────────────────────────────────────────
 
@@ -262,7 +493,26 @@ class DataStorageManager:
         return rows
 
     def get_strategies(self) -> list[dict]:
-        """Return models joined with their most recent validation result."""
+        """Dual-read: return V2 strategies first, fallback to legacy model/validation join."""
+        v2 = self.get_strategies_v2(limit=100)
+        if v2:
+            normalized = []
+            for s in v2:
+                vr = s.get("validation_result") or {}
+                normalized.append({
+                    "id": s.get("id"),
+                    "name": s.get("name"),
+                    "model_type": (s.get("spec") or {}).get("model", {}).get("type", "unknown"),
+                    "created_date": s.get("created_at"),
+                    "status": str(s.get("status", "draft")).upper(),
+                    "risk_level": vr.get("risk_score", "UNKNOWN"),
+                    "sharpe_ratio": vr.get("sharpe_ratio", 0.0),
+                    "robustness": vr.get("robustness_score", "UNKNOWN"),
+                    "validation_date": vr.get("validation_date"),
+                })
+            return normalized
+
+        # Legacy fallback
         conn = self._connect()
         cur = self._cursor(conn)
         cur.execute("""
@@ -434,10 +684,16 @@ class DataStorageManager:
         specs_count = cur.fetchone()["count"]
 
         cur.execute("SELECT COUNT(*) AS count FROM models")
-        models_count = cur.fetchone()["count"]
+        models_count_legacy = cur.fetchone()["count"]
+        cur.execute("SELECT COUNT(*) AS count FROM models_v2")
+        models_count_v2 = cur.fetchone()["count"]
+        models_count = max(models_count_legacy, models_count_v2)
 
         cur.execute("SELECT COUNT(*) AS count FROM validation WHERE status = 'approved'")
-        validated_count = cur.fetchone()["count"]
+        validated_legacy = cur.fetchone()["count"]
+        cur.execute("SELECT COUNT(*) AS count FROM strategies WHERE status = 'approved'")
+        validated_v2 = cur.fetchone()["count"]
+        validated_count = max(validated_legacy, validated_v2)
 
         cur.execute("SELECT COUNT(*) AS count FROM trades")
         trades_count = cur.fetchone()["count"]

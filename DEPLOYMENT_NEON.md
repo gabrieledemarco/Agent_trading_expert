@@ -1,93 +1,56 @@
-# Deployment — Render + Neon PostgreSQL
+# Deploy ufficiale — Render + Neon PostgreSQL
 
-**Architettura**: Render (frontend + API) + Neon PostgreSQL  
-**Database**: Neon PostgreSQL Serverless (Free Tier)
+## Baseline
 
----
+- Runtime: **Render Web Service**
+- Database: **Neon PostgreSQL**
+- Source of truth: **GitHub**
 
-## Architettura
+## Prerequisiti
 
-```
-Utente (Browser)
-       |
-       v
-Render Web Service  (frontend HTML + API — stesso server)
-  URL: https://agent-trading-expert.onrender.com
-  |
-  ├── /dashboards/   → HTML statici (FastAPI StaticFiles)
-  └── /api/*         → API endpoints (FastAPI)
-       |
-       | PostgreSQL Connection (SSL)
-       v
-Neon PostgreSQL Serverless
-  URL: ep-xxx-pooler.us-east-1.aws.neon.tech
-```
+1. Repository collegato a Render
+2. Database Neon attivo
+3. `DATABASE_URL` valida con `sslmode=require`
 
-**Costi**: $0/mese (tutto free tier)
+## Configurazione ambiente Render
 
-**Accesso dashboard**: https://agent-trading-expert.onrender.com/dashboards/
+Variabili minime:
 
----
+- `DATABASE_URL=postgresql://...`
+- `PYTHONUNBUFFERED=1`
+- `LOG_LEVEL=INFO`
 
-## Setup
-
-### 1. Crea Database Neon
-
-1. Vai su https://console.neon.tech
-2. Crea progetto: `agent-trading-expert`
-3. Region: `us-east-1`, PostgreSQL 16
-4. Copia la **Pooled connection string**
-
-Formato:
-```
-postgresql://[user]:[password]@ep-xxxxx-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
-```
-
-### 2. Configura Render
-
-1. Vai su https://dashboard.render.com
-2. Seleziona servizio `agent-trading-expert`
-3. Environment > Add Environment Variable:
-   - **Key**: `DATABASE_URL`
-   - **Value**: [connection string Neon]
-4. Save Changes (auto-redeploy)
-
-### 3. Verifica
+Start command:
 
 ```bash
-# Health check
-curl https://agent-trading-expert.onrender.com/health
-
-# Dashboard principale
-open https://agent-trading-expert.onrender.com/dashboards/
-
-# API summary
-curl https://agent-trading-expert.onrender.com/dashboard/summary
+uvicorn api.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Nel Neon SQL Editor:
-```sql
-SELECT COUNT(*) FROM agent_logs;
-```
+Alternativa deploy-as-code:
 
----
+- usare `render.yaml` in root repository.
 
-## Come Funziona
+## Migrazione architettura V2 (opzionale ma raccomandata)
 
-`DataStorageManager` richiede `DATABASE_URL` con prefisso `postgresql://` o `postgres://`.  
-Le 7 tabelle (research, specs, models, validation, trades, performance, agent_logs) vengono create automaticamente alla prima connessione.
+Per introdurre schema `strategies/models_v2/backtest_reports/validations_v2` + trigger `pg_notify`:
 
-Per popolare il DB con dati demo:
 ```bash
-DATABASE_URL=postgresql://... python scripts/seed_neon.py
+psql "$DATABASE_URL" -f migrations/V2__architecture.sql
 ```
 
----
+Dettagli:
 
-## Free Tier Neon
+- `docs/ARCHITECTURE_V2.md`
+- `docs/MIGRATION_GUIDE_V1_V2.md`
 
-- 0.5 GB storage
-- 191.9h compute/mese
-- 3 GB data transfer/mese
-- Backup automatici (7 giorni)
-- Auto-pause dopo inattività
+## Smoke test post-deploy
+
+```bash
+curl https://<render-service>/health
+curl https://<render-service>/dashboard/summary
+curl https://<render-service>/strategies
+```
+
+## Nota
+
+Il servizio usa `DataStorageManager` PostgreSQL-only: se `DATABASE_URL` manca o non è `postgresql://`/`postgres://`, l'avvio fallisce esplicitamente.
