@@ -47,6 +47,11 @@ Per introdurre schema `strategies/models_v2/backtest_reports/validations_v2` + t
 psql "$DATABASE_URL" -f migrations/V2__architecture.sql
 ```
 
+Alternativa CI/CD:
+- workflow GitHub Actions: `.github/workflows/apply-v2-migration.yml`
+- richiede secret repository/environment `DATABASE_URL`
+- esecuzione manuale via **Actions → Apply V2 Neon Migration → Run workflow**.
+
 Dettagli:
 
 - `docs/ARCHITECTURE_V2.md`
