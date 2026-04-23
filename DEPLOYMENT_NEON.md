@@ -1,93 +1,67 @@
-# Deployment — Render + Neon PostgreSQL
-
-**Architettura**: Render (frontend + API) + Neon PostgreSQL  
-**Database**: Neon PostgreSQL Serverless (Free Tier)
-
----
+# Deploy ufficiale — Render + Neon PostgreSQL
 
 ## Architettura
 
-```
-Utente (Browser)
-       |
-       v
-Render Web Service  (frontend HTML + API — stesso server)
-  URL: https://agent-trading-expert.onrender.com
-  |
-  ├── /dashboards/   → HTML statici (FastAPI StaticFiles)
-  └── /api/*         → API endpoints (FastAPI)
-       |
-       | PostgreSQL Connection (SSL)
-       v
-Neon PostgreSQL Serverless
-  URL: ep-xxx-pooler.us-east-1.aws.neon.tech
-```
+- **Render Web Service**: ospita API FastAPI e dashboard statiche
+- **Neon PostgreSQL**: storage persistente
+- **GitHub**: source of truth del codice
 
-**Costi**: $0/mese (tutto free tier)
+## Prerequisiti
 
-**Accesso dashboard**: https://agent-trading-expert.onrender.com/dashboards/
+1. Repository connesso a Render
+2. Database Neon creato
+3. Connection string Neon con `sslmode=require`
 
----
+## Variabili ambiente minime
 
-## Setup
+In Render (Environment):
 
-### 1. Crea Database Neon
+- `DATABASE_URL=postgresql://...`
+- `PYTHONUNBUFFERED=1`
+- `LOG_LEVEL=INFO`
 
-1. Vai su https://console.neon.tech
-2. Crea progetto: `agent-trading-expert`
-3. Region: `us-east-1`, PostgreSQL 16
-4. Copia la **Pooled connection string**
-
-Formato:
-```
-postgresql://[user]:[password]@ep-xxxxx-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
-```
-
-### 2. Configura Render
-
-1. Vai su https://dashboard.render.com
-2. Seleziona servizio `agent-trading-expert`
-3. Environment > Add Environment Variable:
-   - **Key**: `DATABASE_URL`
-   - **Value**: [connection string Neon]
-4. Save Changes (auto-redeploy)
-
-### 3. Verifica
+## Start command consigliato
 
 ```bash
-# Health check
-curl https://agent-trading-expert.onrender.com/health
-
-# Dashboard principale
-open https://agent-trading-expert.onrender.com/dashboards/
-
-# API summary
-curl https://agent-trading-expert.onrender.com/dashboard/summary
+uvicorn api.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Nel Neon SQL Editor:
-```sql
-SELECT COUNT(*) FROM agent_logs;
-```
+## Smoke test post-deploy
 
----
-
-## Come Funziona
-
-`DataStorageManager` richiede `DATABASE_URL` con prefisso `postgresql://` o `postgres://`.  
-Le 7 tabelle (research, specs, models, validation, trades, performance, agent_logs) vengono create automaticamente alla prima connessione.
-
-Per popolare il DB con dati demo:
 ```bash
-DATABASE_URL=postgresql://... python scripts/seed_neon.py
+curl https://<your-render-service>/health
+curl https://<your-render-service>/dashboard/summary
+curl https://<your-render-service>/strategies
 ```
 
----
+## Endpoint disponibili dopo deploy
 
-## Free Tier Neon
+### API principale (`api/main.py`)
 
-- 0.5 GB storage
-- 191.9h compute/mese
-- 3 GB data transfer/mese
-- Backup automatici (7 giorni)
-- Auto-pause dopo inattività
+- `GET /`
+- `GET /health`
+- `POST /research`
+- `GET /models`
+- `POST /trade/execute`
+- `GET /performance`
+- `GET /dashboard/summary`
+- `GET /dashboard/agent-activity`
+- `GET /dashboard/strategy/{strategy_name}`
+- `GET /strategies`
+
+### API chat (`api/chat_api.py`)
+
+- `GET /api/chat/data`
+- `POST /api/chat/message`
+
+### Execution Engine (`execution_engine/app.py`)
+
+- `GET /health`
+- `POST /execute`
+- `GET /strategies`
+- `GET /dashboard/summary`
+
+## Note operative
+
+- Il sistema è configurato per **paper trading**.
+- Se `DATABASE_URL` manca o è invalida, `DataStorageManager` interrompe l'avvio con errore esplicito.
