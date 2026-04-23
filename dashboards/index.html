@@ -1,747 +1,117 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
-    <title>Trading Agent | Overview</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="colors_and_type.css">
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        html,body { background:var(--bg-primary); color:var(--text-secondary); font-family:var(--font); font-size:12px; height:100%; overflow:hidden; }
-        .terminal { display:grid; grid-template-columns:190px 1fr; grid-template-rows:40px 1fr 24px; height:100vh; transition:grid-template-columns 0.3s ease; }
-        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
-        .topbar { grid-column:1/-1; background:var(--bg-secondary); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 12px; }
-        .topbar-left { display:flex; align-items:center; gap:12px; }
-        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
-        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
-        .topbar-brand { color:var(--orange); font-size:14px; font-weight:bold; display:flex; align-items:center; gap:8px; }
-        .topbar-brand span { background:var(--orange); color:#000; padding:2px 6px; border-radius:2px; font-size:10px; }
-        .topbar-meta { display:flex; gap:16px; font-size:10px; }
-        .sidebar { background:var(--bg-secondary); border-right:1px solid var(--border); padding:8px 0; overflow-y:scroll; display:flex; flex-direction:column; }
-        .sidebar-section { margin-bottom:10px; }
-        .sidebar-title { padding:4px 12px; color:var(--text-muted); font-size:10px; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; transition:opacity 0.2s; }
-        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
-        .sidebar-item { padding:6px 12px; cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none; color:var(--text-secondary); font-size:11px; white-space:nowrap; transition:all 0.2s; }
-        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
-        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
-        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
-        .sidebar-item:hover { background:var(--bg-tertiary); }
-        .sidebar-item.active { color:var(--orange); background:var(--bg-tertiary); border-left:2px solid var(--orange); }
-        .sidebar-item .badge { margin-left:auto; background:var(--bg-tertiary); color:var(--text-muted); padding:1px 5px; border-radius:2px; font-size:9px; }
-        .sidebar-item.active .badge { background:var(--orange-a15); color:var(--orange); }
-        .status-indicator { margin-top:auto; padding:8px 12px; border-top:1px solid var(--border); display:flex; align-items:center; gap:6px; font-size:10px; white-space:nowrap; transition:all 0.2s; }
-        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
-        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
-        .status-dot { width:6px; height:6px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .main { background:var(--bg-primary); overflow-y:scroll; padding:8px; }
-        .dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-        .ticker { grid-column:1/-1; background:var(--bg-secondary); border:1px solid var(--border); padding:8px 12px; display:flex; justify-content:space-between; align-items:center; }
-        .ticker-group { display:flex; gap:24px; }
-        .ticker-item { display:flex; flex-direction:column; gap:2px; }
-        .ticker-label { color:var(--text-muted); font-size:10px; }
-        .ticker-value { color:var(--text-primary); font-weight:bold; font-size:13px; }
-        .ticker-change { font-weight:bold; font-size:11px; }
-        .positive { color:var(--green); }
-        .negative { color:var(--red); }
-        .neutral { color:var(--text-primary); }
-        .stats-row { grid-column:1/-1; display:grid; grid-template-columns:repeat(8,1fr); gap:8px; }
-        .stat-box { background:var(--bg-secondary); border:1px solid var(--border); padding:10px; text-align:center; }
-        .stat-box-label { color:var(--text-muted); font-size:9px; text-transform:uppercase; margin-bottom:4px; }
-        .stat-box-value { color:var(--text-primary); font-size:16px; font-weight:bold; }
-        .stat-box-sub { color:var(--text-muted); font-size:9px; margin-top:2px; }
-        .chart-section { background:var(--bg-secondary); border:1px solid var(--border); padding:12px; }
-        .chart-section-title { color:var(--orange); margin-bottom:8px; font-size:11px; display:flex; justify-content:space-between; align-items:center; }
-        .chart-tabs { display:flex; gap:4px; }
-        .chart-tab { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:2px 8px; font-size:10px; cursor:pointer; font-family:var(--font); }
-        .chart-tab:hover { border-color:var(--orange); color:var(--text-secondary); }
-        .chart-tab.active { background:var(--orange); color:#000; border-color:var(--orange); }
-        .chart-container { height:130px; margin-top:8px; position:relative; }
-        .table-section { background:var(--bg-secondary); border:1px solid var(--border); padding:8px; }
-        .table-title { color:var(--orange); margin-bottom:8px; font-size:11px; display:flex; justify-content:space-between; align-items:center; }
-        table { width:100%; border-collapse:collapse; font-size:11px; }
-        th { text-align:left; padding:4px 8px; color:var(--text-muted); border-bottom:1px solid var(--border); font-weight:normal; font-size:10px; text-transform:uppercase; }
-        td { padding:5px 8px; border-bottom:1px solid var(--bg-tertiary); }
-        tr:hover { background:var(--bg-tertiary); }
-        .badge { padding:1px 6px; border-radius:3px; font-size:9px; }
-        .badge-approved { background:var(--green-a10); color:var(--green); border:1px solid var(--green-a20); }
-        .badge-testing { background:var(--blue-a10); color:var(--blue); border:1px solid var(--blue-a20); }
-        .badge-failed { background:var(--red-a10); color:var(--red); border:1px solid var(--red-a20); }
-        .full-row { grid-column:1/-1; }
-        .half-row { grid-column:span 2; }
-        .bottombar { grid-column:1/-1; background:var(--bg-secondary); border-top:1px solid var(--border); display:flex; align-items:center; padding:0 12px; font-size:10px; color:var(--text-muted); justify-content:space-between; }
-        .mini-spark { width:60px; height:20px; display:inline-block; vertical-align:middle; margin-left:4px; }
-        .alert-bar { grid-column:1/-1; background:var(--yellow-a05); border:1px solid var(--yellow-a30); padding:6px 12px; display:flex; align-items:center; gap:8px; color:var(--yellow); font-size:10px; }
-        .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
-        .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
-        .resizable-section{transition:all 0.3s ease;position:relative;}
-        .resizable-section.minimized{height:40px;overflow:hidden;}
-        .resizable-section.minimized .ticker-group,.resizable-section.minimized .chart-container,.resizable-section.minimized table{display:none;}
-        .resizable-section.expanded{grid-column:1/-1 !important;}
-        .resizable-section.expanded .chart-container{height:300px;}
-        .resize-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:2px 6px; font-size:11px; cursor:pointer; font-family:var(--font); margin-left:8px; transition:all 0.2s; }
-        .resize-btn:hover { border-color:var(--orange); color:var(--orange); }
-        .resizable-section { transition:all 0.3s ease; position:relative; }
-        .resizable-section.minimized { height:40px; overflow:hidden; }
-        .resizable-section.minimized .chart-container,
-        .resizable-section.minimized table,
-        .resizable-section.minimized .ticker-group,
-        .resizable-section.minimized .stat-box-value,
-        .resizable-section.minimized .stat-box-sub { display:none; }
-        .resizable-section.expanded { grid-column:1/-1 !important; }
-        .resizable-section.expanded .chart-container { height:300px; }
-        .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-        /* Custom scrollbar styles */
-        ::-webkit-scrollbar { width:12px; height:12px; }
-        ::-webkit-scrollbar-track { background:var(--bg-primary); border-left:1px solid var(--border); }
-        ::-webkit-scrollbar-thumb { background:var(--border); border-radius:6px; }
-        ::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
-        * { scrollbar-width:thin; scrollbar-color:var(--border) var(--bg-primary); }
-        .main{min-height:calc(100vh - 64px);}
-        .terminal { transition:grid-template-columns 0.3s ease; }
-        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
-        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
-        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
-        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
-        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
-        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
-        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
-        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
-        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
-        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
-    </style>
-    <script src="config.js"></script>
-    <script src="dashboard_data.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Trading Expert | Pipeline Overview</title>
+  <link rel="stylesheet" href="colors_and_type.css" />
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px}
+    .layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}.sidebar{border-right:1px solid var(--border);background:var(--bg-secondary);padding:12px}
+    .brand{color:var(--orange);font-weight:700;margin-bottom:12px}.cluster{font-size:10px;color:var(--text-muted);margin:12px 0 6px;text-transform:uppercase}
+    .item{display:block;color:var(--text-secondary);text-decoration:none;padding:6px;border-radius:4px}.item:hover,.item.active{background:var(--bg-tertiary);color:var(--orange)}
+    .main{padding:12px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.status{font-size:11px;color:var(--text-muted)}
+    .grid{display:grid;gap:10px;grid-template-columns:repeat(12,1fr)}.card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px}
+    .title{color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase}
+    .span-12{grid-column:span 12}.span-6{grid-column:span 6}.span-4{grid-column:span 4}
+    .health{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stage{border:1px solid var(--border);padding:8px;background:var(--bg-primary)}
+    .num{font-size:20px;color:var(--text-primary);font-weight:700}.warn{color:var(--yellow)}.bad{color:var(--red)}.ok{color:var(--green)}
+    table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid var(--border);text-align:left}th{font-size:10px;color:var(--text-muted)}
+    .alert{background:var(--red-a10);border:1px solid var(--red-a20);color:var(--red);padding:8px}
+  </style>
 </head>
 <body>
-<div class="terminal">
-    <header class="topbar">
-        <div class="topbar-left">
-            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
-            <div class="topbar-brand"><span>TA</span> TRADING AGENT TERMINAL</div>
-        </div>
-        <div class="topbar-meta">
-            <span>UPDATE: <span id="lastUpdate" style="color:var(--orange)">--:--:--</span></span>
-            <span>SESSION: <span style="color:var(--green)">ACTIVE</span></span>
-            <span>ENV: <span style="color:var(--orange)">PAPER</span></span>
-        </div>
-    </header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">AGENT TRADING EXPERT — V2</div>
+    <div class="cluster">Pipeline</div>
+    <a class="item active" href="index.html">◉ Overview</a>
+    <a class="item" href="dashboard_pipeline.html">◎ Pipeline</a>
+    <a class="item" href="dashboard_research.html">◈ Research</a>
+    <a class="item" href="dashboard_models.html">◐ Models</a>
+    <a class="item" href="strategy.html">◑ Strategies</a>
+    <a class="item" href="dashboard_validation.html">◒ Validation</a>
+    <a class="item" href="dashboard_execution.html">◓ Execution</a>
+    <a class="item" href="dashboard_agents.html">◔ Monitoring</a>
+    <div class="cluster">Tools</div>
+    <a class="item" href="dashboard_with_chat.html">◆ Chat</a>
+    <a class="item" href="dashboard_documentation.html">◇ Docs</a>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <h2 style="margin:0;color:var(--text-primary)">Overview — Pipeline Health</h2>
+      <div class="status">🟢 LIVE · PAPER MODE · Neon Connected</div>
+    </div>
 
-    <nav class="sidebar">
-        <div class="sidebar-section">
-            <div class="sidebar-title">Dashboard</div>
-            <a href="index.html" class="sidebar-item active"><span>◉</span> Overview</a>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title">Analisi</div>
-            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
-            <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
-            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge">6</span></a>
-            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title">Strategie</div>
-            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies <span class="badge">4</span></a>
-            <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
-            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title">Sistema</div>
-            <a href="dashboard_agents.html" class="sidebar-item"><span>▧</span> Agents <span class="badge">2</span></a>
-            <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
-        </div>
-        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE | PAPER MODE</div>
-    </nav>
+    <section class="grid">
+      <article class="card span-12">
+        <div class="title">Pipeline Health (24h)</div>
+        <div class="health" id="pipelineHealth"></div>
+      </article>
 
-    <main class="main">
-        <div class="dashboard-grid">
+      <article class="card span-8">
+        <div class="title">Active Execution</div>
+        <div id="executionMetrics">Caricamento…</div>
+      </article>
 
-            <div class="alert-bar">
-                <!-- Populated dynamically by updateAlertBar() -->
-            </div>
+      <article class="card span-4">
+        <div class="title">Human Review</div>
+        <div id="humanReviewBox" class="alert">Nessuna strategia in human_review.</div>
+      </article>
 
-            <div class="ticker resizable-section" data-section="ticker">
-                <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
-                <div class="ticker-group">
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value" id="portfolioValue">$40,760</span></div>
-                    <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value" id="totalCapital">$41,000</span></div>
-                    <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value negative" id="totalReturn">-0.59%</span></div>
-                    <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value negative">-0.12%</span></div>
-                </div>
-                <div class="ticker-group">
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value neutral" id="portfolioSharpe">0.18</span></div>
-                    <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value neutral">0.24</span></div>
-                    <div class="ticker-item"><span class="ticker-label">MAX DD</span><span class="ticker-value negative">1.8%</span></div>
-                    <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value" id="activeStrategies">4/6</span></div>
-                </div>
-                <!-- Populated dynamically by updateTicker() -->
-            </div>
-
-            <div class="resizable-section" data-section="allocation" style="grid-column:1/-1;background:var(--yellow-a05);border:1px solid var(--yellow-a30);padding:8px 12px;margin-bottom:8px;">
-                <div style="color:var(--orange);font-size:10px;margin-bottom:6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;">
-                    <span>PORTFOLIO ALLOCATION</span>
-                    <button class="resize-btn" onclick="toggleResize('allocation')" title="Minimize/Expand">⊟</button>
-                </div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-                    <!-- Populated dynamically by updatePortfolioAllocation() -->
-                </div>
-            </div>
-
-            <div class="stats-row resizable-section" data-section="stats">
-                <!-- Populated dynamically by updateStatsRow() -->
-            </div>
-
-            <div class="chart-section half-row resizable-section" data-section="equity-chart">
-                <div class="chart-section-title">
-                    <span>PORTFOLIO RETURN %</span>
-                    <div style="display:flex;gap:4px;align-items:center;">
-                        <div class="chart-tabs">
-                            <button class="chart-tab" onclick="setChartPeriod('5m',this)">5m</button>
-                            <button class="chart-tab" onclick="setChartPeriod('15m',this)">15m</button>
-                            <button class="chart-tab" onclick="setChartPeriod('1h',this)">1h</button>
-                            <button class="chart-tab" onclick="setChartPeriod('4h',this)">4h</button>
-                            <button class="chart-tab active" onclick="setChartPeriod('1D',this)">1D</button>
-                            <button class="chart-tab" onclick="setChartPeriod('1W',this)">1W</button>
-                            <button class="chart-tab" onclick="setChartPeriod('1M',this)">1M</button>
-                        </div>
-                        <button class="resize-btn" onclick="toggleResize('equity-chart')" title="Minimize/Expand">⊟</button>
-                    </div>
-                </div>
-                <div class="chart-container"><canvas id="equityChart"></canvas></div>
-            </div>
-
-            <div class="chart-section half-row resizable-section" data-section="dd-chart">
-                <div class="chart-section-title">
-                    <span>PORTFOLIO DRAWDOWN %</span>
-                    <button class="resize-btn" onclick="toggleResize('dd-chart')" title="Minimize/Expand">⊟</button>
-                </div>
-                <div class="chart-container"><canvas id="drawdownChart"></canvas></div>
-            </div>
-
-            <div class="table-section full-row resizable-section" data-section="strategy-table">
-                <div class="table-title">
-                    <span>STRATEGY ALLOCATION &amp; PERFORMANCE</span>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <span id="strategyTableMeta" style="color:var(--text-muted);font-size:10px;"></span>
-                        <button class="resize-btn" onclick="toggleResize('strategy-table')" title="Minimize/Expand">⊟</button>
-                    </div>
-                </div>
-                <table>
-                    <thead><tr><th>Strategy</th><th>Type</th><th>Capital Allocated</th><th>% Portfolio</th><th>Return</th><th>Win Rate</th><th>Sharpe</th><th>Max DD</th><th>Trades</th><th>Status</th></tr></thead>
-                    <tbody id="strategyTableBody"></tbody>
-                </table>
-            </div>
-
-        </div>
-    </main>
-
-    <footer class="bottombar">
-        <div style="display:flex;gap:16px;">
-            <!-- Populated dynamically by updateBottombar() -->
-        </div>
-        <div>Trading Agent v1.1 | 2026 | Research Use Only</div>
-    </footer>
+      <article class="card span-12">
+        <div class="title">Event Stream (ultimi eventi)</div>
+        <table>
+          <thead><tr><th>Time</th><th>Agent</th><th>Status</th><th>Message</th></tr></thead>
+          <tbody id="eventRows"></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
 </div>
 
 <script>
-'use strict';
-// ── Data ────────────────────────────────────────────────────────────────────
-const portfolioData = {
-    totalCapital: 41000,
-    portfolioValue: 41519,
-    totalReturn: 1.27,
-    dailyPnlPercent: 0.18,
-    dailyPnlDollar: 74,
-    portfolioSharpe: 0.52,
-    portfolioSortino: 0.68,
-    maxDrawdown: 1.8,
-    maxDrawdownLimit: 10,
-    avgWinRate: 55.0,
-    correlation: 0.52,
-    diversification: 1.38,
-    openPositions: 3,
-    papersIndexed: 6,
+async function loadOverview(){
+  try{
+    const [ov, perf] = await Promise.all([
+      fetch('/api/pipeline/overview').then(r=>r.json()),
+      fetch('/dashboard/summary').then(r=>r.json())
+    ]);
 
-    strategies: [
-        {
-            id: 'lstm',
-            name: 'Intraday Momentum',
-            type: 'LSTM',
-            capital: 10000,
-            returnPercent: 1.90,
-            winRate: 52.0,
-            sharpe: 0.34,
-            maxDD: 1.8,
-            trades: 6,
-            status: 'ACTIVE'
-        },
-        {
-            id: 'hf',
-            name: 'High Frequency',
-            type: 'Cointegration',
-            capital: 10000,
-            returnPercent: 2.85,
-            winRate: 63.0,
-            sharpe: 0.89,
-            maxDD: 0.8,
-            trades: 24,
-            status: 'ACTIVE'
-        },
-        {
-            id: 'rl',
-            name: 'Dynamic Time',
-            type: 'RL (PPO)',
-            capital: 11000,
-            returnPercent: 0.90,
-            winRate: 55.0,
-            sharpe: 0.25,
-            maxDD: 2.0,
-            trades: 11,
-            status: 'ACTIVE'
-        },
-        {
-            id: 'xgb',
-            name: 'Momentum Sharpness',
-            type: 'XGBoost',
-            capital: 10000,
-            returnPercent: -0.55,
-            winRate: 47.0,
-            sharpe: -0.18,
-            maxDD: 1.2,
-            trades: 3,
-            status: 'ACTIVE'
-        },
-        {
-            id: 'mvo',
-            name: 'Portfolio Opt v2',
-            type: 'MVO+RL',
-            capital: null,
-            returnPercent: null,
-            winRate: null,
-            sharpe: null,
-            maxDD: null,
-            trades: null,
-            status: 'TESTING'
-        },
-        {
-            id: 'hmm',
-            name: 'Regime Detector',
-            type: 'HMM',
-            capital: null,
-            returnPercent: null,
-            winRate: null,
-            sharpe: null,
-            maxDD: null,
-            trades: null,
-            status: 'TESTING'
-        }
-    ]
-};
-
-
-const chartData = {
-    // Intraday timeframes
-    '5m': {
-        labels: ['10:00','10:05','10:10','10:15','10:20','10:25','10:30','10:35','10:40','10:45','10:50','10:55'],
-        equity: [0.12,0.25,0.35,0.42,0.50,0.55,0.62,0.70,0.82,0.90,1.05],
-        benchmark: [0.02,0.05,0.08,0.10,0.12,0.15,0.18,0.20,0.22,0.25,0.28]
-    },
-    '15m': {
-        labels: ['10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45'],
-        equity: [0.18,0.32,0.45,0.52,0.60,0.72,0.85,0.95,1.08,1.18,1.32],
-        benchmark: [0.05,0.10,0.15,0.18,0.22,0.25,0.28,0.32,0.35,0.38,0.42]
-    },
-    '1h': {
-        labels: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'],
-        equity: [0.25,0.45,0.58,0.62,0.75,0.88,1.02,1.15,1.25,1.38,1.52],
-        benchmark: [0.08,0.15,0.22,0.25,0.28,0.32,0.35,0.38,0.42,0.45,0.48]
-    },
-    '4h': {
-        labels: ['00:00','04:00','08:00','12:00','16:00','20:00','00:00','04:00','08:00','12:00','16:00','20:00'],
-        equity: [0.18,0.35,0.52,0.68,0.85,1.02,1.18,1.35,1.52,1.68,1.85],
-        benchmark: [0.06,0.12,0.18,0.24,0.30,0.36,0.42,0.48,0.54,0.60,0.66]
-    },
-    '1D': {
-        labels: ['09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00'],
-        equity: [1.02,1.08,1.15,1.10,1.14,1.18,1.20,1.22,1.23,1.24,1.25,1.26,1.27,1.27],
-        benchmark: [0.40,0.42,0.44,0.43,0.45,0.46,0.45,0.46,0.47,0.47,0.48,0.48,0.49,0.50]
-    },
-    '1W': {
-        labels: ['Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'],
-        equity: [0.72,0.78,0.85,0.91,0.97,1.03,1.10,1.16,1.22,1.27],
-        benchmark: [0.35,0.38,0.40,0.39,0.42,0.44,0.46,0.47,0.48,0.50]
-    },
-    '1M': {
-        labels: ['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'],
-        equity: [0.20,0.42,0.62,0.85,1.02,0.88,0.72,0.62,0.72,0.90,1.08,1.27],
-        benchmark: [0.80,0.95,1.00,1.10,1.15,1.18,1.15,1.20,1.22,1.25,1.23,1.30]
-    }
-};
-
-// Drawdown: max -1.8% occurred mid-period (W5-W8), then portfolio recovered to near all-time high
-const ddData = {
-    // Intraday drawdown
-    '5m': [0,-0.02,-0.04,-0.06,-0.05,-0.04,-0.03,-0.02,-0.01,0,0],
-    '15m': [0,-0.04,-0.06,-0.08,-0.06,-0.04,-0.03,-0.02,-0.01,0,0],
-    '1h': [0,-0.05,-0.08,-0.10,-0.08,-0.06,-0.04,-0.03,-0.02,0,0],
-    '4h': [0,-0.06,-0.10,-0.12,-0.10,-0.08,-0.05,-0.03,-0.02,0,0],
-    '1D': [0,-0.06,-0.04,-0.10,-0.07,-0.04,-0.06,-0.04,-0.03,-0.02,-0.01,-0.01,0,0],
-    '1W': [0,-0.02,0,-0.06,-0.04,-0.02,-0.01,0,0,0],
-    '1M': [0,0,-0.20,-0.50,-0.80,-1.20,-1.80,-1.60,-1.20,-0.80,-0.50,-0.20]
-};
-
-let equityChart, ddChart;
-let currentPeriod = '1D';
-
-// Function to hydrate chart data from API
-async function hydrateChartDataFromApi() {
-    try {
-        // Map periods to API parameter
-        const periodMap = { '5m': '7d', '15m': '7d', '1h': '30d', '4h': '30d', '1D': '30d', '1W': '90d', '1M': '1y' };
-        
-        // Fetch equity curve for each period
-        for (const period of Object.keys(periodMap)) {
-            const apiPeriod = periodMap[period];
-            const response = await fetch((window.TRADING_API_BASE||'') + `/api/equity-curve?period=${apiPeriod}`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.labels && data.equity && data.labels.length > 0) {
-                    // Convert equity values to percentage returns
-                    const baseValue = data.equity[0] || 10000;
-                    const equity = data.equity.map(v => ((v - baseValue) / baseValue) * 100);
-                    
-                    // Update chartData with real data
-                    if (chartData[period]) {
-                        chartData[period].labels = data.labels.slice(-12); // Limit to 12 points
-                        chartData[period].equity = equity.slice(-12);
-                        chartData[period].benchmark = equity.slice(-12).map(v => v * 0.6); // Approximate benchmark
-                    }
-                } else if (data.message && data.message.includes('No performance data')) {
-                    showDbBanner('Nessun dato di performance disponibile in Neon. Configura DATABASE_URL.');
-                }
-            } else {
-                showDbBanner('Database non configurato. Imposta DATABASE_URL per leggere da Neon.');
-            }
-        }
-        
-        // Fetch strategies
-        const strategiesResponse = await fetch((window.TRADING_API_BASE||'') + '/strategies');
-        if (strategiesResponse.ok) {
-            const strategiesData = await strategiesResponse.json();
-            const strategies = strategiesData.strategies || [];
-            if (strategies.length === 0) {
-                showDbBanner('Nessuna strategia trovata in Neon. Esegui il seed per popolare il database.');
-            }
-            updateStrategyTable(strategies);
-        } else {
-            showDbBanner('Impossibile leggere strategie da Neon. DATABASE_URL non configurato.');
-        }
-        
-        // Rebuild chart with new data
-        buildEquityChart(currentPeriod);
-    } catch (err) {
-        console.error('Database error:', err.message);
-        showDbBanner('Errore connessione database Neon: ' + err.message);
-    }
-}
-
-function showDbBanner(message) {
-    // Show error in the console and as a visible alert
-    console.error('🔴 ' + message);
-    const errorDiv = document.getElementById('dbError') || document.createElement('div');
-    errorDiv.id = 'dbError';
-    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#220000;border:2px solid #ff4444;padding:20px;border-radius:8px;color:#ff6666;font-family:Consolas,monospace;z-index:9999;';
-    errorDiv.innerHTML = '<h3>🔴 DATABASE ERROR</h3><p>' + message + '</p><p style="font-size:12px;color:#888;">Verifica che DATABASE_URL sia configurato in Render</p>';
-    document.body.appendChild(errorDiv);
-}
-
-function updateStrategyTable(strategies) {
-    const table = document.getElementById('strategyTable');
-    if (!table) return;
-    
-    // Clear existing rows (except header)
-    const rows = table.querySelectorAll('tr:not(:first-child)');
-    rows.forEach(r => r.remove());
-    
-    // Add strategies from API
-    strategies.slice(0, 5).forEach(s => {
-        const row = table.insertRow();
-        row.innerHTML = `
-            <td>${s.name || 'N/A'}</td>
-            <td>${s.model_type || 'N/A'}</td>
-            <td><span class="status-${s.status?.toLowerCase() || 'unknown'}">${s.status || 'N/A'}</span></td>
-            <td>${(s.sharpe_ratio || 0).toFixed(2)}</td>
-            <td>${(s.max_drawdown || 0).toFixed(2)}%</td>
-        `;
-    });
-}
-
-function buildEquityChart(period) {
-    const d = chartData[period];
-    const ctx = document.getElementById('equityChart').getContext('2d');
-    if (equityChart) equityChart.destroy();
-    equityChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: d.labels,
-            datasets: [
-                { label: 'Portfolio Return %', data: d.equity, borderColor: '#ff9900', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false },
-                { label: 'Benchmark (SPY)', data: d.benchmark, borderColor: '#3399ff', borderWidth: 1, borderDash: [4,4], pointRadius: 0, tension: 0.3, fill: false }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, animation: false,
-            plugins: { legend: { display: true, position: 'bottom', labels: { color: '#666', font: { family: 'Consolas', size: 10 }, boxWidth: 20, padding: 8 } } },
-            scales: {
-                x: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 } } },
-                y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, callback: v => v.toFixed(2)+'%' } }
-            }
-        }
-    });
-}
-
-function buildDDChart() {
-    const d = ddData[currentPeriod];
-    const ctx = document.getElementById('drawdownChart').getContext('2d');
-    if (ddChart) ddChart.destroy();
-    ddChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: chartData[currentPeriod].labels,
-            datasets: [{ label: 'Drawdown %', data: d, borderColor: '#ff0000', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: { target: 'origin', above: 'rgba(255,0,0,0.05)' } }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, animation: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 } } },
-                y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 }, callback: v => v+'%' }, max: 0 }
-            }
-        }
-    });
-}
-
-function setChartPeriod(period, btn) {
-    currentPeriod = period;
-    document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    buildEquityChart(period);
-    buildDDChart();
-}
-
-function updateTime() { document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString(); }
-
-function toggleResize(sectionId) {
-    const section = document.querySelector(`[data-section="${sectionId}"]`);
-    const btn = section?.querySelector('.resize-btn');
-    if (!section) return;
-
-    const states = ['normal', 'minimized', 'expanded'];
-    const currentState = section.dataset.resizeState || 'normal';
-    const nextState = states[(states.indexOf(currentState) + 1) % states.length];
-
-    section.classList.remove('minimized', 'expanded');
-    if (nextState === 'minimized') {
-        section.classList.add('minimized');
-        if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
-    } else if (nextState === 'expanded') {
-        section.classList.add('expanded');
-        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
-        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
-        if (sectionId === 'dd-chart') buildDDChart();
-    } else if (btn) {
-        btn.textContent = '⊟';
-        btn.title = 'Minimize';
-        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
-        if (sectionId === 'dd-chart') buildDDChart();
-    }
-
-    section.dataset.resizeState = nextState;
-    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
-    resizeStates[sectionId] = nextState;
-    localStorage.setItem('resizeStates', JSON.stringify(resizeStates));
-}
-
-function loadResizeStates() {
-    const resizeStates = JSON.parse(localStorage.getItem('resizeStates') || '{}');
-    Object.entries(resizeStates).forEach(([sectionId, state]) => {
-        const section = document.querySelector(`[data-section="${sectionId}"]`);
-        const btn = section?.querySelector('.resize-btn');
-        if (!section) return;
-        section.dataset.resizeState = state;
-        if (state === 'minimized') {
-            section.classList.add('minimized');
-            if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
-        } else if (state === 'expanded') {
-            section.classList.add('expanded');
-            if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
-        }
-    });
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function formatCurrency(v) { return '$' + Number(v).toLocaleString(); }
-function formatPercent(v, d = 2) { const s = v > 0 ? '+' : ''; return s + Number(v).toFixed(d) + '%'; }
-function getColorClass(v) { return v > 0 ? 'positive' : v < 0 ? 'negative' : 'neutral'; }
-
-// ── UI updaters ───────────────────────────────────────────────────────────────
-function updateAlertBar() {
-    const alertBar = document.querySelector('.alert-bar');
-    const worstStrategy = portfolioData.strategies
-        .filter(s => s.status === 'ACTIVE' && s.sharpe !== null)
-        .sort((a, b) => a.sharpe - b.sharpe)[0];
-    if (portfolioData.totalReturn > 0) {
-        alertBar.style.cssText = 'background:var(--green-a10);border-color:var(--green-a20);color:#00cc44;';
-        alertBar.innerHTML = `<span>&#10003;</span> <strong>Sistema operativo:</strong> Portfolio in utile (${formatPercent(portfolioData.totalReturn)}). Max DD: ${portfolioData.maxDrawdown}% — soglia: ${portfolioData.maxDrawdownLimit}%.${worstStrategy && worstStrategy.sharpe < 0 ? ' ' + worstStrategy.name + ' in monitoraggio.' : ''}`;
-    } else if (worstStrategy && worstStrategy.sharpe < 0) {
-        alertBar.style.cssText = 'background:var(--yellow-a05);border-color:var(--yellow-a30);color:var(--yellow);';
-        alertBar.innerHTML = `<span>&#9888;</span> <strong>Attenzione:</strong> Sharpe negativo (${worstStrategy.sharpe}) su ${worstStrategy.name}. Max DD: ${worstStrategy.maxDD}% — soglia: 15%.`;
-    }
-}
-
-function updateTicker() {
-    const ticker = document.querySelector('[data-section="ticker"]');
-    const active = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
-    ticker.innerHTML = `
-        <button class="resize-btn" onclick="toggleResize('ticker')" title="Minimize/Expand">⊟</button>
-        <div class="ticker-group">
-            <div class="ticker-item"><span class="ticker-label">PORTFOLIO VALUE</span><span class="ticker-value">${formatCurrency(portfolioData.portfolioValue)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">TOTAL CAPITAL</span><span class="ticker-value">${formatCurrency(portfolioData.totalCapital)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">TOTAL RETURN</span><span class="ticker-value ${getColorClass(portfolioData.totalReturn)}">${formatPercent(portfolioData.totalReturn)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">DAILY P&amp;L %</span><span class="ticker-value ${getColorClass(portfolioData.dailyPnlPercent)}">${formatPercent(portfolioData.dailyPnlPercent)}</span></div>
-        </div>
-        <div class="ticker-group">
-            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SHARPE</span><span class="ticker-value ${getColorClass(portfolioData.portfolioSharpe - 1)}">${portfolioData.portfolioSharpe.toFixed(2)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">PORTFOLIO SORTINO</span><span class="ticker-value ${getColorClass(portfolioData.portfolioSortino - 1)}">${portfolioData.portfolioSortino.toFixed(2)}</span></div>
-            <div class="ticker-item"><span class="ticker-label">MAX DD</span><span class="ticker-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</span></div>
-            <div class="ticker-item"><span class="ticker-label">ACTIVE STRATEGIES</span><span class="ticker-value">${active}/${portfolioData.strategies.length}</span></div>
-        </div>`;
-}
-
-function updatePortfolioAllocation() {
-    const container = document.querySelector('[data-section="allocation"] > div:last-child');
-    container.innerHTML = portfolioData.strategies
-        .filter(s => s.status === 'ACTIVE')
-        .map(s => {
-            const pct = ((s.capital / portfolioData.totalCapital) * 100).toFixed(1);
-            return `<div style="background:var(--bg-secondary);border:1px solid var(--border);padding:8px;">
-                <div style="color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;">${s.name}</div>
-                <div style="color:var(--text-muted);font-size:9px;">Capital: ${formatCurrency(s.capital)} (${pct}%)</div>
-                <div class="${getColorClass(s.returnPercent)}" style="font-size:11px;margin-top:2px;">Return: ${formatPercent(s.returnPercent)}</div>
-            </div>`;
-        }).join('');
-}
-
-function updateStatsRow() {
-    const statsRow = document.querySelector('[data-section="stats"]');
-    const totalPnlDollar = Math.round((portfolioData.totalCapital * portfolioData.totalReturn) / 100);
-    statsRow.innerHTML = `
-        <div class="stat-box"><div class="stat-box-label">Portfolio Return</div><div class="stat-box-value ${getColorClass(portfolioData.totalReturn)}">${formatPercent(portfolioData.totalReturn)}</div><div class="stat-box-sub">${formatCurrency(totalPnlDollar)} total</div></div>
-        <div class="stat-box"><div class="stat-box-label">Daily Return</div><div class="stat-box-value ${getColorClass(portfolioData.dailyPnlPercent)}">${formatPercent(portfolioData.dailyPnlPercent)}</div><div class="stat-box-sub">${formatCurrency(portfolioData.dailyPnlDollar)} today</div></div>
-        <div class="stat-box"><div class="stat-box-label">Avg Win Rate</div><div class="stat-box-value neutral">${portfolioData.avgWinRate.toFixed(1)}%</div><div class="stat-box-sub">across strategies</div></div>
-        <div class="stat-box"><div class="stat-box-label">Portfolio Sharpe</div><div class="stat-box-value ${getColorClass(portfolioData.portfolioSharpe - 1)}">${portfolioData.portfolioSharpe.toFixed(2)}</div><div class="stat-box-sub">weighted avg</div></div>
-        <div class="stat-box"><div class="stat-box-label">Portfolio Sortino</div><div class="stat-box-value ${getColorClass(portfolioData.portfolioSortino - 1)}">${portfolioData.portfolioSortino.toFixed(2)}</div><div class="stat-box-sub">weighted avg</div></div>
-        <div class="stat-box"><div class="stat-box-label">Max DD (Portfolio)</div><div class="stat-box-value negative">${portfolioData.maxDrawdown.toFixed(1)}%</div><div class="stat-box-sub">limit: ${portfolioData.maxDrawdownLimit}%</div></div>
-        <div class="stat-box"><div class="stat-box-label">Correlation</div><div class="stat-box-value neutral">${portfolioData.correlation.toFixed(2)}</div><div class="stat-box-sub">avg pairwise</div></div>
-        <div class="stat-box"><div class="stat-box-label">Diversification</div><div class="stat-box-value positive">${portfolioData.diversification.toFixed(2)}</div><div class="stat-box-sub">ratio σ_p / weighted σ</div></div>`;
-}
-
-function updateStrategyTable() {
-    const tbody = document.getElementById('strategyTableBody');
-    tbody.innerHTML = portfolioData.strategies.map(s => {
-        if (s.status === 'ACTIVE') {
-            const pct = ((s.capital / portfolioData.totalCapital) * 100).toFixed(1);
-            return `<tr>
-                <td style="color:var(--text-primary)">${s.name}</td>
-                <td>${s.type}</td>
-                <td style="color:var(--orange)">${formatCurrency(s.capital)}</td>
-                <td>${pct}%</td>
-                <td class="${getColorClass(s.returnPercent)}">${formatPercent(s.returnPercent)}</td>
-                <td class="${getColorClass(s.winRate - 50)}">${s.winRate.toFixed(1)}%</td>
-                <td class="${getColorClass(s.sharpe)}">${s.sharpe.toFixed(2)}</td>
-                <td class="${s.maxDD > 2 ? 'negative' : ''}">${s.maxDD.toFixed(1)}%</td>
-                <td>${s.trades}</td>
-                <td><span class="badge badge-approved">${s.status}</span></td></tr>`;
-        }
-        return `<tr>
-            <td style="color:var(--text-primary)">${s.name}</td>
-            <td>${s.type}</td>
-            <td colspan="7" style="color:var(--text-muted)">— In testing —</td>
-            <td><span class="badge badge-testing">${s.status}</span></td></tr>`;
+    const counts = ov.counts || {};
+    const stages = [
+      ['Research','draft'],
+      ['Model','backtest_pending'],
+      ['Strategy','validation_pending'],
+      ['Validate','approved']
+    ];
+    const health = document.getElementById('pipelineHealth');
+    health.innerHTML = stages.map(([label,key])=>{
+      const val = counts[key] || 0;
+      const cls = val===0 ? 'warn' : 'ok';
+      return `<div class="stage"><div>${label}</div><div class="num ${cls}">${val}</div><div style="color:var(--text-muted)">${key}</div></div>`;
     }).join('');
-    const activeCount = portfolioData.strategies.filter(s => s.status === 'ACTIVE').length;
-    const meta = document.getElementById('strategyTableMeta');
-    if (meta) meta.textContent = `${activeCount} active | Total capital: ${formatCurrency(portfolioData.totalCapital)}`;
+
+    document.getElementById('executionMetrics').innerHTML = `
+      <div>Portfolio Value: <b>$${Number(perf.current_equity || 0).toLocaleString()}</b></div>
+      <div>Total Return: <b>${((perf.total_return || 0)*100).toFixed(2)}%</b></div>
+      <div>Approved Strategies: <b>${counts.approved || 0}</b></div>
+      <div>Deployed Strategies: <b>${counts.deployed || 0}</b></div>
+    `;
+
+    const hrCount = ov.human_review_count || 0;
+    document.getElementById('humanReviewBox').textContent = hrCount > 0
+      ? `⚠️ ${hrCount} strategia/e richiedono revisione umana.`
+      : 'Nessuna strategia in human_review.';
+
+    const rows = (ov.recent_events || []).slice(0,10).map(e=>`<tr><td>${String(e.timestamp||'').slice(11,19)}</td><td>${e.agent||'-'}</td><td>${e.status||'-'}</td><td>${e.message||''}</td></tr>`).join('');
+    document.getElementById('eventRows').innerHTML = rows || '<tr><td colspan="4">Nessun evento.</td></tr>';
+  }catch(err){
+    console.error(err);
+  }
 }
-
-function updateBottombar() {
-    const bottombar = document.querySelector('.bottombar > div:first-child');
-    bottombar.innerHTML = `
-        <span>CONN: <span style="color:var(--green)">CONNECTED</span></span>
-        <span>MODE: <span style="color:var(--orange)">PAPER</span></span>
-        <span>POSITIONS: <span style="color:var(--text-secondary)">${portfolioData.openPositions} open</span></span>
-        <span>RESEARCH: <span style="color:var(--blue)">${portfolioData.papersIndexed} papers indexed</span></span>`;
-}
-
-// ── Sidebar & resize ──────────────────────────────────────────────────────────
-function toggleSidebar() {
-    const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed', isCollapsed);
-}
-
-function toggleResize(sectionId) {
-    const section = document.querySelector(`[data-section="${sectionId}"]`);
-    if (!section) return;
-    const btn = section.querySelector('.resize-btn');
-    const states = ['normal', 'minimized', 'expanded'];
-    const next = states[(states.indexOf(section.dataset.resizeState || 'normal') + 1) % states.length];
-    section.classList.remove('minimized', 'expanded');
-    if (next === 'minimized') { section.classList.add('minimized'); if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; } }
-    else if (next === 'expanded') { section.classList.add('expanded'); if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; } }
-    else { if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; } }
-    if (next !== 'minimized') {
-        if (sectionId === 'equity-chart') buildEquityChart(currentPeriod);
-        if (sectionId === 'dd-chart') buildDDChart();
-    }
-    section.dataset.resizeState = next;
-    const states_ = JSON.parse(localStorage.getItem('resizeStates') || '{}');
-    states_[sectionId] = next;
-    localStorage.setItem('resizeStates', JSON.stringify(states_));
-}
-
-function loadResizeStates() {
-    const saved = JSON.parse(localStorage.getItem('resizeStates') || '{}');
-    Object.entries(saved).forEach(([id, state]) => {
-        const section = document.querySelector(`[data-section="${id}"]`);
-        const btn = section?.querySelector('.resize-btn');
-        if (!section) return;
-        section.dataset.resizeState = state;
-        if (state === 'minimized') { section.classList.add('minimized'); if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; } }
-        else if (state === 'expanded') { section.classList.add('expanded'); }
-    });
-}
-
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
-if (localStorage.getItem('sidebarCollapsed') === 'true') {
-    document.querySelector('.terminal').classList.add('sidebar-collapsed');
-}
-
-updateAlertBar();
-updateTicker();
-updatePortfolioAllocation();
-updateStatsRow();
-updateStrategyTable();
-updateBottombar();
-buildEquityChart('1D');
-buildDDChart();
-setInterval(updateTime, 1000);
-updateTime();
-loadResizeStates();
-
-// Hydrate with real data from API
-hydrateChartDataFromApi();
+loadOverview();
+setInterval(loadOverview, 10000);
 </script>
 </body>
 </html>
