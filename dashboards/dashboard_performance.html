@@ -299,13 +299,18 @@ function switchTab(id){
 // Equity: initial=$10,000, current=$10,127 (+1.27%), peak=$10,255, max DD=1.8%
 // (10,255 - 10,066) / 10,255 = 1.84% ≈ 1.8% max DD
 
-// Fetch performance data from API (with fallback)
+// Fetch equity curve from API for a given period and map to eqData format
 async function fetchPerformanceData(period) {
+    // Map tab period names to the equity-curve API parameter (1D|1W|1M|3M|6M|1Y)
+    const periodMap = {'5m':'1W','15m':'1W','1h':'1M','4h':'1M','1W':'1W','1M':'1M','3M':'3M'};
+    const apiPeriod = periodMap[period] || '1M';
     try {
-        const response = await fetch((window.TRADING_API_BASE||'') + `/api/performance?period=${period}`);
+        const response = await fetch((window.TRADING_API_BASE||'') + `/api/equity-curve?period=${apiPeriod}`);
         if (response.ok) {
             const data = await response.json();
-            return data;
+            if (data.labels && data.equity && data.labels.length > 0) {
+                return { labels: data.labels, eq: data.equity, bm: data.benchmark || [] };
+            }
         }
     } catch(e) {
         console.log('API unavailable, using static data');
@@ -379,6 +384,76 @@ function buildStaticCharts(){
 
 buildEqChart('1W');
 buildStaticCharts();
+
+// ── KPI hydration from /dashboard/summary ─────────────────────────────────
+function updateStatBoxByLabel(label, value, cls) {
+    document.querySelectorAll('.stat-box').forEach(box => {
+        const lbl = box.querySelector('.stat-box-label');
+        if (lbl && lbl.textContent.trim() === label) {
+            const val = box.querySelector('.stat-box-value');
+            if (val) { val.textContent = value; if (cls) val.className = 'stat-box-value ' + cls; }
+        }
+    });
+}
+
+async function hydratePerformanceKPIs() {
+    try {
+        const [summaryResp, riskResp] = await Promise.all([
+            fetch((window.TRADING_API_BASE||'') + '/dashboard/summary'),
+            fetch((window.TRADING_API_BASE||'') + '/api/risk/summary'),
+        ]);
+        if (summaryResp.ok) {
+            const s = await summaryResp.json();
+            if (s.total_trades > 0) updateStatBoxByLabel('Total Trades', s.total_trades, 'neutral');
+            if (s.sharpe_ratio) updateStatBoxByLabel('Sharpe Ratio', parseFloat(s.sharpe_ratio).toFixed(2), s.sharpe_ratio >= 0 ? 'positive' : 'negative');
+        }
+        if (riskResp.ok) {
+            const r = await riskResp.json();
+            if (r.max_drawdown_pct != null) updateStatBoxByLabel('Max DD', parseFloat(r.max_drawdown_pct).toFixed(1) + '%', 'neutral');
+        }
+    } catch(e) {}
+}
+
+// ── Trade log hydration from /api/trades ──────────────────────────────────
+async function hydrateTradeLog() {
+    try {
+        const resp = await fetch((window.TRADING_API_BASE||'') + '/api/trades?limit=50');
+        if (!resp.ok) return;
+        const { trades, count } = await resp.json();
+        if (!trades || trades.length === 0) return;
+
+        const tradeTab = document.querySelector('#tab-trades .card-title span:last-child');
+        if (tradeTab) tradeTab.textContent = count + ' trades';
+
+        const footer = document.querySelector('.bottombar div:first-child');
+        if (footer) footer.textContent = `TOTAL TRADES: ${count} | Loaded from DB`;
+
+        const tbody = document.querySelector('#tab-trades tbody');
+        if (!tbody) return;
+        tbody.innerHTML = trades.map((t, i) => {
+            const num = String(count - i).padStart(3, '0');
+            const date = (t.timestamp || '').slice(0, 10);
+            const model = (t.model_name || '').replace('Agent', '').slice(0, 6);
+            const action = (t.action || '').toUpperCase();
+            const actionCls = action === 'BUY' ? 'positive' : 'negative';
+            const price = t.price ? '$' + parseFloat(t.price).toFixed(2) : '—';
+            const qty   = t.quantity ? parseFloat(t.quantity).toFixed(2) : '—';
+            return `<tr>
+                <td style="color:var(--text-muted)">${num}</td>
+                <td>${date}</td>
+                <td>${model}</td>
+                <td style="color:var(--text-primary)">${t.symbol || '—'}</td>
+                <td class="${actionCls}">${action}</td>
+                <td>${price}</td><td>—</td>
+                <td>${qty}</td><td>—</td><td>—</td><td>—</td>
+            </tr>`;
+        }).join('');
+    } catch(e) {}
+}
+
+hydratePerformanceKPIs();
+hydrateTradeLog();
+
         function toggleSidebar() {
             const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);

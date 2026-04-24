@@ -236,7 +236,7 @@ function buildLiveChart() {
 
 // ── Load equity curve from DB ──────────────────────────────────────────────
 function loadEquityCurve() {
-    fetch('/api/equity-curve?period=7d')
+    fetch('/api/equity-curve?period=1W')
         .then(r => r.json())
         .then(data => {
             const vals = data.values || data.equity || [];
@@ -366,17 +366,47 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     document.querySelector('.terminal').classList.add('sidebar-collapsed');
 }
 
+// ── Load alerts from risk summary ─────────────────────────────────────────
+function loadAlerts() {
+    fetch('/api/risk/summary')
+        .then(r => r.json())
+        .then(data => {
+            const card = document.querySelector('.alert-card');
+            if (!card) return;
+            const alerts = [];
+            if (data.max_drawdown_pct > 0) {
+                const ddPct = parseFloat(data.max_drawdown_pct);
+                if (ddPct > 3) alerts.push({color:'var(--red)', msg:`Max Drawdown: ${ddPct.toFixed(1)}% — above 3% threshold`});
+                else if (ddPct > 1.5) alerts.push({color:'var(--yellow)', msg:`Max Drawdown: ${ddPct.toFixed(1)}% — monitoring`});
+            }
+            if (data.sharpe_ratio != null && data.sharpe_ratio < 0) {
+                alerts.push({color:'var(--red)', msg:`Portfolio Sharpe negative (${data.sharpe_ratio.toFixed(2)}) — performance review needed`});
+            }
+            if (data.volatility_annual_pct > 30) {
+                alerts.push({color:'var(--yellow)', msg:`Annualised volatility ${data.volatility_annual_pct.toFixed(1)}% — elevated regime`});
+            }
+            if (alerts.length === 0) {
+                alerts.push({color:'var(--green)', msg:'All risk metrics within limits'});
+            }
+            card.innerHTML = '<div class="alert-title">&#9888; ACTIVE ALERTS</div>' +
+                alerts.map(a => `<div class="alert-item"><span class="alert-dot" style="background:${a.color}"></span>${a.msg}</div>`).join('');
+        })
+        .catch(() => {});
+}
+
 // ── Bootstrap ──────────────────────────────────────────────────────────────
 buildLiveChart();
 loadEquityCurve();
 loadPositions();
 loadAgentLogs();
+loadAlerts();
 addLog('success', '[System]', 'Live monitor started');
 
 setInterval(tick_, 2000);
 setInterval(loadEquityCurve, 60000);   // refresh equity curve every 60s
 setInterval(loadAgentLogs,   30000);   // refresh logs every 30s
 setInterval(loadPositions,   60000);   // refresh positions every 60s
+setInterval(loadAlerts,     300000);   // refresh alerts every 5 min
 tick_();
 </script>
 </body>
