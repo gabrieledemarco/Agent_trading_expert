@@ -336,47 +336,56 @@ new Chart(document.getElementById('stressChart').getContext('2d'),{type:'bar',da
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.querySelector('.terminal').classList.add('sidebar-collapsed');
         }
-        
-        // Hydrate with real data from API
-        hydrateRiskFromApi();
-        
-        async function hydrateRiskFromApi() {
-            try {
-                const response = await fetch((window.TRADING_API_BASE||'') + '/api/risk/summary');
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Update VaR/CVaR stat boxes
-                    const varEl = document.querySelector('.stat-box:nth-child(1) .stat-value');
-                    const cvarEl = document.querySelector('.stat-box:nth-child(2) .stat-value');
-                    
-                    if (varEl && data.var_95 !== null) {
-                        const equity = 10000; // Assume base equity
-                        const varDollar = Math.abs(data.var_95) * equity;
-                        varEl.textContent = '$' + Math.round(varDollar);
-                        varEl.nextElementSibling.textContent = (data.var_95 * 100).toFixed(2) + '% of equity';
-                    }
-                    
-                    if (cvarEl && data.cvar_95 !== null) {
-                        const equity = 10000;
-                        const cvarDollar = Math.abs(data.cvar_95) * equity;
-                        cvarEl.textContent = '$' + Math.round(cvarDollar);
-                    }
-                }
-            } catch (err) {
-                console.log('Using fallback risk data:', err.message);
-                showDbBanner('Errore connessione risk database: ' + err.message);
+
+// ── Hydrate risk stats from /api/risk/summary ─────────────────────────────
+function updateRiskStat(labelFragment, value, cls) {
+    document.querySelectorAll('.stats-row .stat-box').forEach(box => {
+        const lbl = box.querySelector('.stat-label');
+        if (lbl && lbl.textContent.includes(labelFragment)) {
+            const val = box.querySelector('.stat-value');
+            if (val) {
+                val.textContent = value;
+                if (cls) val.className = 'stat-value ' + cls;
             }
         }
-        
-        function showDbBanner(message) {
-            console.error('🔴 ' + message);
-            const errorDiv = document.getElementById('dbError') || document.createElement('div');
-            errorDiv.id = 'dbError';
-            errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#220000;border:2px solid #ff4444;padding:20px;border-radius:8px;color:#ff6666;font-family:Consolas,monospace;z-index:9999;';
-            errorDiv.innerHTML = '<h3>🔴 DATABASE ERROR</h3><p>' + message + '</p><p style="font-size:12px;color:#888;">Verifica che DATABASE_URL sia configurato in Render</p>';
-            document.body.appendChild(errorDiv);
+    });
+}
+
+async function hydrateRiskFromApi() {
+    try {
+        const resp = await fetch('/api/risk/summary');
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        // data.var_95 is already in dollars — do NOT multiply by equity
+        if (data.var_95 > 0) {
+            const pct = data.current_equity > 0
+                ? ((data.var_95 / data.current_equity) * 100).toFixed(2)
+                : '—';
+            updateRiskStat('VaR', '$' + parseFloat(data.var_95).toFixed(0), 'negative');
+            const varBox = [...document.querySelectorAll('.stats-row .stat-box')]
+                .find(b => b.querySelector('.stat-label')?.textContent.includes('VaR (95'));
+            if (varBox) {
+                const sub = varBox.querySelector('.stat-sub');
+                if (sub) sub.textContent = pct + '% of equity';
+            }
         }
+        if (data.cvar_95 > 0) {
+            updateRiskStat('CVaR', '$' + parseFloat(data.cvar_95).toFixed(0), 'negative');
+        }
+        if (data.max_drawdown_pct != null) {
+            const dd = parseFloat(data.max_drawdown_pct);
+            updateRiskStat('Max Drawdown', dd.toFixed(1) + '%', dd > 3 ? 'negative' : 'warn');
+        }
+        if (data.volatility_annual_pct != null) {
+            updateRiskStat('Ann. Volatility', parseFloat(data.volatility_annual_pct).toFixed(1) + '%', 'neutral');
+        }
+    } catch(e) {
+        console.warn('Risk hydration failed:', e.message);
+    }
+}
+
+hydrateRiskFromApi();
 </script>
 </body>
 </html>

@@ -462,62 +462,73 @@ function showDetail(p) {
     detail.appendChild(actSec);
 }
 
-function simulateResearchRun() {
-    const btn = document.querySelector('.btn');
+async function simulateResearchRun() {
+    const btn = document.querySelector('.topbar-actions .btn');
     btn.textContent = '... Searching arXiv';
     btn.disabled = true;
-    setTimeout(() => {
-        btn.textContent = '&#9654; Run Research';
-        btn.disabled = false;
-        btn.innerHTML = '&#9654; Run Research';
-    }, 2000);
+    try {
+        const resp = await fetch('/api/agents/research/run', {method: 'POST'});
+        if (resp.ok) {
+            btn.innerHTML = '&#10003; Research Started';
+            setTimeout(() => { btn.disabled = false; btn.innerHTML = '&#9654; Run Research'; }, 4000);
+        } else {
+            btn.textContent = '✗ Failed';
+            setTimeout(() => { btn.disabled = false; btn.innerHTML = '&#9654; Run Research'; }, 3000);
+        }
+    } catch(e) {
+        btn.textContent = '✗ No Connection';
+        setTimeout(() => { btn.disabled = false; btn.innerHTML = '&#9654; Run Research'; }, 3000);
+    }
+}
+
+// ── Hydrate papers from Neon DB ────────────────────────────────────────────
+function parseCategories(cats) {
+    if (!cats) return [];
+    if (Array.isArray(cats)) return cats;
+    try { return JSON.parse(cats.replace(/'/g, '"')); } catch(e) {}
+    return cats.split(',').map(s => s.replace(/[\[\]'"\s]/g, '').trim()).filter(Boolean);
+}
+
+async function hydrateResearchFromApi() {
+    try {
+        const resp = await fetch('/research?limit=50');
+        if (!resp.ok) return;
+        const { papers } = await resp.json();
+        if (!papers || papers.length === 0) return;
+
+        // Update stat boxes
+        const statVals = document.querySelectorAll('.stat-mini-value');
+        if (statVals[0]) statVals[0].textContent = papers.length;
+
+        // Build PAPERS objects from DB rows
+        const apiPapers = papers.map(p => ({
+            id:       p.paper_id || String(p.id || 'N/A'),
+            date:     (p.published || '').slice(0, 7),
+            indexed:  p.found_date || '',
+            title:    p.title || 'Untitled',
+            abstract: p.abstract || '',
+            tags:     parseCategories(p.categories),
+            relevance: Math.min(100, Math.round((p.relevance_score || 0) * 100)) || 50,
+            status:   'pending',
+            model:    null,
+            metrics:  {sharpeIS:'—',sharpeLive:'—',winRateIS:'—',winRateLive:'—',ddIS:'—',ddLive:'—'},
+            authors:  p.authors || 'N/A',
+            venue:    'arXiv',
+        }));
+
+        PAPERS.length = 0;
+        apiPapers.forEach(p => PAPERS.push(p));
+        renderList();
+        if (PAPERS.length > 0) showDetail(PAPERS[0]);
+    } catch(e) {
+        console.warn('Research hydration failed:', e.message);
+    }
 }
 
 renderList();
 showDetail(PAPERS[0]);
-
-// Hydrate with real data from API
 hydrateResearchFromApi();
-
-async function hydrateResearchFromApi() {
-    try {
-        const response = await fetch((window.TRADING_API_BASE||'') + '/research?limit=50');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.papers && data.papers.length > 0) {
-                // Replace PAPERS with real data
-                PAPERS.length = 0;
-                data.papers.forEach(p => {
-                    PAPERS.push({
-                        id: p.id || 'N/A',
-                        title: p.title || 'Untitled',
-                        authors: p.authors || 'Unknown',
-                        published: p.published || '',
-                        categories: p.categories || '',
-                        abstract: p.abstract || '',
-                        pdf_url: p.pdf_url || ''
-                    });
-                });
-                renderList();
-                showDetail(PAPERS[0]);
-            }
-        }
-    } catch (err) {
-        console.log('Using fallback research data:', err.message);
-        showDbBanner('Errore connessione research database: ' + err.message);
-    }
-}
-
-function showDbBanner(message) {
-    console.error('🔴 ' + message);
-    const errorDiv = document.getElementById('dbError') || document.createElement('div');
-    errorDiv.id = 'dbError';
-    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#220000;border:2px solid #ff4444;padding:20px;border-radius:8px;color:#ff6666;font-family:Consolas,monospace;z-index:9999;';
-    errorDiv.innerHTML = '<h3>🔴 DATABASE ERROR</h3><p>' + message + '</p><p style="font-size:12px;color:#888;">Verifica che DATABASE_URL sia configurato in Render</p>';
-    document.body.appendChild(errorDiv);
-}
-
-function toggleSidebar() {
+        function toggleSidebar() {
             const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);
         }
