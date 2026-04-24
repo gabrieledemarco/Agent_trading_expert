@@ -649,35 +649,33 @@ async def get_risk_summary():
 @app.get("/api/agents/status")
 async def get_agents_status():
     """Stato corrente di tutti gli agenti (ultimo log per ciascuno, con duration/records)."""
-    # Canonical class names and all aliases that map to them
-    _CANONICAL = {
-        "research":           "ResearchAgent",
-        "researchagent":      "ResearchAgent",
-        "spec":               "SpecAgent",
-        "specagent":          "SpecAgent",
-        "ml_engineer":        "MLEngineerAgent",
-        "mlengineeer":        "MLEngineerAgent",
-        "mlenginearagent":    "MLEngineerAgent",
-        "mlengineeeragent":   "MLEngineerAgent",
-        "mlengineerage nt":   "MLEngineerAgent",
-        "mlengineeeragent":   "MLEngineerAgent",
-        "ml engineer":        "MLEngineerAgent",
-        "mlengineera gent":   "MLEngineerAgent",
-        "mlengineeragent":    "MLEngineerAgent",
-        "validation":         "ValidationAgent",
-        "validationagent":    "ValidationAgent",
-        "improvement":        "ImprovementAgent",
-        "improvementagent":   "ImprovementAgent",
-        "trading":            "TradingExecutorAgent",
-        "tradingexecutor":    "TradingExecutorAgent",
+    # Keys are pre-normalised (lowercase, no spaces, no underscores) so the
+    # lookup works regardless of how the caller spells the name.
+    _CANONICAL_RAW = {
+        "research":             "ResearchAgent",
+        "researchagent":        "ResearchAgent",
+        "spec":                 "SpecAgent",
+        "specagent":            "SpecAgent",
+        "mlengineer":           "MLEngineerAgent",
+        "mlengineeer":          "MLEngineerAgent",
+        "mlengineeragent":      "MLEngineerAgent",
+        "validation":           "ValidationAgent",
+        "validationagent":      "ValidationAgent",
+        "improvement":          "ImprovementAgent",
+        "improvementagent":     "ImprovementAgent",
+        "trading":              "TradingExecutorAgent",
+        "tradingexecutor":      "TradingExecutorAgent",
         "tradingexecutoragent": "TradingExecutorAgent",
-        "monitoring":         "MonitoringAgent",
-        "monitoringagent":    "MonitoringAgent",
-        "chat":               "ChatAgent",
-        "chatagent":          "ChatAgent",
-        "pipeline":           "PipelineOrchestrator",
+        "monitoring":           "MonitoringAgent",
+        "monitoringagent":      "MonitoringAgent",
+        "chat":                 "ChatAgent",
+        "chatagent":            "ChatAgent",
+        "pipeline":             "PipelineOrchestrator",
         "pipelineorchestrator": "PipelineOrchestrator",
     }
+    # Pre-normalise keys once at call time
+    _CANONICAL = {k.lower().replace(" ", "").replace("_", ""): v
+                  for k, v in _CANONICAL_RAW.items()}
     _KNOWN = [
         "ResearchAgent", "SpecAgent", "MLEngineerAgent", "ValidationAgent",
         "ImprovementAgent", "TradingExecutorAgent", "MonitoringAgent",
