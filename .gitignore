@@ -71,3 +71,6 @@ Thumbs.db
 # MLflow
 mlruns/
 mlartifacts/
+
+# Claude Code agent worktrees
+.claude/worktrees/
