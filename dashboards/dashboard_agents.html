@@ -153,7 +153,7 @@
         </div>
         <div class="log-panel resizable-section" data-section="log-panel">
             <div class="log-title">
-                <span>AGENT ACTIVITY LOG — LAST 30</span>
+                <span>AGENT ACTIVITY LOG</span>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span>
                     <button class="resize-btn" onclick="toggleResize('log-panel')" title="Minimize/Expand">⊟</button>
@@ -301,7 +301,7 @@ function loadAgentStatus() {
 // ── Fetch activity log ─────────────────────────────────────────────────────
 
 function loadActivityLog() {
-    fetch('/dashboard/agent-activity?limit=30')
+    fetch('/dashboard/agent-activity?limit=500')
         .then(r => r.json())
         .then(data => {
             const logs = data.activities || [];
