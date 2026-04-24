@@ -406,35 +406,54 @@ async def get_v2_orchestration_metrics():
 
 @app.get("/api/pipeline/overview")
 async def pipeline_overview():
-    """Aggregated V2 pipeline snapshot for overview dashboards."""
-    try:
-        strategies = get_db().get_strategies_v2(limit=500)
-        logs = get_db().get_agent_logs(limit=20)
-    except Exception as e:
-        logger.error(f"Error reading pipeline overview: {e}", exc_info=True)
-        raise HTTPException(status_code=503, detail="Database unavailable")
+    """Aggregated pipeline snapshot — per-stage counts + recent agent events."""
+    db = get_db()
 
+    # Query each counter independently so a missing table never blocks the whole response
+    def _safe_count(fn, *args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            logger.warning("pipeline_overview: count failed — %s", exc)
+            return None
+
+    summary   = _safe_count(db.get_dashboard_summary)
+    strategies = _safe_count(db.get_strategies_v2, limit=500) or []
+    logs       = _safe_count(db.get_agent_logs, limit=20) or []
+
+    # Stage counts from dashboard_summary (legacy pipeline: research→specs→models→validated)
+    stage_counts: dict = {}
+    if summary:
+        stage_counts = {
+            "research":  summary.get("research_papers", 0),
+            "specs":     summary.get("specs_created", 0),
+            "models":    summary.get("models_implemented", 0),
+            "validated": summary.get("models_validated", 0),
+        }
+
+    # V2 strategy counts by status (draft/approved/human_review/…)
     by_status: dict[str, int] = {}
-    for strategy in strategies:
-        status = str(strategy.get("status", "draft"))
-        by_status[status] = by_status.get(status, 0) + 1
+    for s in strategies:
+        st = str(s.get("status", "draft"))
+        by_status[st] = by_status.get(st, 0) + 1
 
     recent_events = [
         {
             "timestamp": row.get("timestamp"),
-            "agent": row.get("agent_name"),
-            "status": row.get("status"),
-            "message": row.get("message"),
+            "agent":     row.get("agent_name"),
+            "status":    row.get("status"),
+            "message":   row.get("message"),
         }
         for row in logs
     ]
 
     return {
-        "generated_at": datetime.utcnow().isoformat(),
-        "counts": by_status,
-        "total_strategies": len(strategies),
+        "generated_at":       datetime.utcnow().isoformat(),
+        "counts":             stage_counts or by_status,
+        "by_status":          by_status,
+        "total_strategies":   len(strategies),
         "human_review_count": by_status.get("human_review", 0),
-        "recent_events": recent_events,
+        "recent_events":      recent_events,
     }
 
 
@@ -630,25 +649,75 @@ async def get_risk_summary():
 @app.get("/api/agents/status")
 async def get_agents_status():
     """Stato corrente di tutti gli agenti (ultimo log per ciascuno, con duration/records)."""
+    # Canonical class names and all aliases that map to them
+    _CANONICAL = {
+        "research":           "ResearchAgent",
+        "researchagent":      "ResearchAgent",
+        "spec":               "SpecAgent",
+        "specagent":          "SpecAgent",
+        "ml_engineer":        "MLEngineerAgent",
+        "mlengineeer":        "MLEngineerAgent",
+        "mlenginearagent":    "MLEngineerAgent",
+        "mlengineeeragent":   "MLEngineerAgent",
+        "mlengineerage nt":   "MLEngineerAgent",
+        "mlengineeeragent":   "MLEngineerAgent",
+        "ml engineer":        "MLEngineerAgent",
+        "mlengineera gent":   "MLEngineerAgent",
+        "mlengineeragent":    "MLEngineerAgent",
+        "validation":         "ValidationAgent",
+        "validationagent":    "ValidationAgent",
+        "improvement":        "ImprovementAgent",
+        "improvementagent":   "ImprovementAgent",
+        "trading":            "TradingExecutorAgent",
+        "tradingexecutor":    "TradingExecutorAgent",
+        "tradingexecutoragent": "TradingExecutorAgent",
+        "monitoring":         "MonitoringAgent",
+        "monitoringagent":    "MonitoringAgent",
+        "chat":               "ChatAgent",
+        "chatagent":          "ChatAgent",
+        "pipeline":           "PipelineOrchestrator",
+        "pipelineorchestrator": "PipelineOrchestrator",
+    }
+    _KNOWN = [
+        "ResearchAgent", "SpecAgent", "MLEngineerAgent", "ValidationAgent",
+        "ImprovementAgent", "TradingExecutorAgent", "MonitoringAgent",
+        "ChatAgent", "PipelineOrchestrator",
+    ]
+
+    def _canonical(name: str) -> str:
+        return _CANONICAL.get(name.lower().replace(" ", "").replace("_", ""), name)
+
     try:
-        agents = get_db().get_agent_status()
-        known = [
-            "ResearchAgent", "SpecAgent", "MLEngineerAgent", "ValidationAgent",
-            "ImprovementAgent", "TradingExecutorAgent", "MonitoringAgent",
-            "ChatAgent", "PipelineOrchestrator",
-        ]
-        seen = {a["agent_name"] for a in agents}
-        for name in known:
-            if name not in seen:
-                agents.append({
-                    "agent_name": name, "last_run": None, "last_status": "never_run",
-                    "last_message": "No activity recorded", "duration_ms": 0,
-                    "records_written": 0, "error_detail": None,
-                })
-        return {"agents": agents, "count": len(agents)}
+        raw = get_db().get_agent_status()
     except Exception as e:
         logger.error(f"Error getting agent status: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Database unavailable")
+
+    # Merge rows with the same canonical name — keep the most recent run
+    merged: dict[str, dict] = {}
+    for row in raw:
+        canon = _canonical(row["agent_name"])
+        row["agent_name"] = canon
+        prev = merged.get(canon)
+        if prev is None or (row.get("last_run") or "") > (prev.get("last_run") or ""):
+            merged[canon] = row
+
+    # Add known agents that produced no logs yet
+    for name in _KNOWN:
+        if name not in merged:
+            merged[name] = {
+                "agent_name": name, "last_run": None, "last_status": "never_run",
+                "last_message": "No activity recorded", "duration_ms": 0,
+                "records_written": 0, "error_detail": None,
+            }
+
+    agents = list(merged.values())
+    # Sort: active/running first, then by last_run descending
+    agents.sort(key=lambda a: (
+        0 if a.get("last_status") in ("running", "active") else 1,
+        -(len(a.get("last_run") or "")),
+    ))
+    return {"agents": agents, "count": len(agents)}
 
 
 @app.get("/api/agent-status")
@@ -758,34 +827,6 @@ async def get_pipeline_status():
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-
-@app.get("/api/pipeline/overview")
-async def get_pipeline_overview():
-    """Pipeline overview for the Overview dashboard (index.html)."""
-    try:
-        summary = get_db().get_dashboard_summary()
-        logs = get_db().get_agent_logs(limit=10)
-        return {
-            "counts": {
-                "research":  summary.get("research_papers", 0),
-                "specs":     summary.get("specs_created", 0),
-                "models":    summary.get("models_implemented", 0),
-                "validated": summary.get("models_validated", 0),
-            },
-            "human_review_count": 0,
-            "recent_events": [
-                {
-                    "agent":     log.get("agent_name"),
-                    "status":    log.get("status"),
-                    "message":   log.get("message"),
-                    "timestamp": log.get("timestamp"),
-                }
-                for log in logs
-            ],
-        }
-    except Exception as e:
-        logger.error(f"Error getting pipeline overview: {e}", exc_info=True)
-        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 if __name__ == "__main__":
