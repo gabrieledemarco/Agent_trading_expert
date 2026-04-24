@@ -57,6 +57,7 @@ trading_logs/*.jsonl
 # Environment
 .env
 .env.local
+.env.render
 
 # Logs
 *.log
