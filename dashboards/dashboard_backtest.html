@@ -432,13 +432,14 @@ function fmt(v, type='pct') {
   return v;
 }
 
-// Initialize all tables and charts
+// Initialize all tables and charts, then hydrate from DB
 document.addEventListener('DOMContentLoaded', function() {
   buildOverviewTable();
   buildTestMatrix();
   buildMCTable();
   buildRejectedTable();
   buildCharts();
+  hydrateBacktestFromApi();
 });
 
 function buildOverviewTable() {
@@ -653,6 +654,69 @@ function updateDetail(modelId) {
 
 function toggleSidebar() {
   document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
+}
+
+// ── Hydrate from /api/backtest/results ────────────────────────────────────
+async function hydrateBacktestFromApi() {
+  try {
+    const resp = await fetch('/api/backtest/results');
+    if (!resp.ok) return;
+    const { results } = await resp.json();
+    if (!results || results.length === 0) return;
+
+    // Update MODELS status/sharpe/risk from DB using best-effort name matching
+    results.forEach(r => {
+      const dbName = (r.name || '').toLowerCase();
+      const match = MODELS.find(m =>
+        dbName.includes(m.id.toLowerCase()) ||
+        m.name.toLowerCase().split(' ').some(w => w.length > 4 && dbName.includes(w))
+      );
+      if (!match) return;
+      if (r.status) match.status = r.status.toUpperCase();
+      if (r.sharpe_ratio != null && r.sharpe_ratio !== 0) match.risk.sharpe = r.sharpe_ratio;
+      if (r.risk_level && r.risk_level !== 'UNKNOWN') match.risk.riskScore = r.risk_level;
+      if (r.robustness && r.robustness !== 'UNKNOWN') match.robust.score = r.robustness;
+    });
+
+    // Recompute aggregate stats
+    const approved = MODELS.filter(m => m.status === 'APPROVED').length;
+    const rejected = MODELS.filter(m => m.status === 'REJECTED').length;
+    const approvedSharpes = MODELS.filter(m => m.status === 'APPROVED').map(m => m.risk.sharpe);
+    const bestSharpe = approvedSharpes.length ? Math.max(...approvedSharpes) : 0;
+    const approvedWinRates = MODELS.filter(m => m.status === 'APPROVED').map(m => m.risk.wr);
+    const avgWinRate = approvedWinRates.length
+      ? (approvedWinRates.reduce((a, b) => a + b, 0) / approvedWinRates.length * 100).toFixed(1)
+      : '—';
+
+    const statBoxes = document.querySelectorAll('.stats-row .stat-box');
+    function setStat(idx, val, cls) {
+      const v = statBoxes[idx]?.querySelector('.stat-value');
+      if (!v) return;
+      v.textContent = val;
+      if (cls) v.className = 'stat-value ' + cls;
+    }
+    setStat(0, results.length, 'neutral');
+    setStat(1, approved, 'positive');
+    setStat(2, rejected, 'negative');
+    setStat(3, bestSharpe.toFixed(3), bestSharpe >= 0 ? 'positive' : 'negative');
+    setStat(4, avgWinRate + '%', 'neutral');
+
+    // Also refresh the model select dropdown with DB models
+    const sel = document.getElementById('modelSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">All Models</option>' +
+        MODELS.map(m => `<option value="${m.id}">${m.name} (${m.status})</option>`).join('');
+    }
+
+    // Re-render tables and charts with updated MODELS data
+    buildOverviewTable();
+    buildTestMatrix();
+    buildMCTable();
+    buildRejectedTable();
+    buildCharts();
+  } catch(e) {
+    console.warn('Backtest hydration failed:', e.message);
+  }
 }
 </script>
 </body>

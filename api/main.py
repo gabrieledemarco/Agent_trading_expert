@@ -61,8 +61,8 @@ def _run_trading_loop():
             agent = TradingExecutorAgent(paper_trading=True)
             agent.run_trading_loop(
                 symbols=["AAPL", "MSFT", "GOOG"],
-                interval_seconds=300,
-                max_iterations=1,  # 1 iterazione per ciclo, poi sleep
+                interval_seconds=0,  # outer loop already sleeps 300s; avoid double wait
+                max_iterations=1,
             )
         except Exception as e:
             logger.warning(f"Trading cycle failed: {e}")
@@ -551,6 +551,35 @@ async def get_pipeline_status():
         return PipelineOrchestrator().get_pipeline_status()
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+
+@app.get("/api/pipeline/overview")
+async def get_pipeline_overview():
+    """Pipeline overview for the Overview dashboard (index.html)."""
+    try:
+        summary = get_db().get_dashboard_summary()
+        logs = get_db().get_agent_logs(limit=10)
+        return {
+            "counts": {
+                "research":  summary.get("research_papers", 0),
+                "specs":     summary.get("specs_created", 0),
+                "models":    summary.get("models_implemented", 0),
+                "validated": summary.get("models_validated", 0),
+            },
+            "human_review_count": 0,
+            "recent_events": [
+                {
+                    "agent":     log.get("agent_name"),
+                    "status":    log.get("status"),
+                    "message":   log.get("message"),
+                    "timestamp": log.get("timestamp"),
+                }
+                for log in logs
+            ],
+        }
+    except Exception as e:
+        logger.error(f"Error getting pipeline overview: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 if __name__ == "__main__":
