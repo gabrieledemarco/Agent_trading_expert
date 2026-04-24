@@ -649,25 +649,75 @@ async def get_risk_summary():
 @app.get("/api/agents/status")
 async def get_agents_status():
     """Stato corrente di tutti gli agenti (ultimo log per ciascuno, con duration/records)."""
+    # Canonical class names and all aliases that map to them
+    _CANONICAL = {
+        "research":           "ResearchAgent",
+        "researchagent":      "ResearchAgent",
+        "spec":               "SpecAgent",
+        "specagent":          "SpecAgent",
+        "ml_engineer":        "MLEngineerAgent",
+        "mlengineeer":        "MLEngineerAgent",
+        "mlenginearagent":    "MLEngineerAgent",
+        "mlengineeeragent":   "MLEngineerAgent",
+        "mlengineerage nt":   "MLEngineerAgent",
+        "mlengineeeragent":   "MLEngineerAgent",
+        "ml engineer":        "MLEngineerAgent",
+        "mlengineera gent":   "MLEngineerAgent",
+        "mlengineeragent":    "MLEngineerAgent",
+        "validation":         "ValidationAgent",
+        "validationagent":    "ValidationAgent",
+        "improvement":        "ImprovementAgent",
+        "improvementagent":   "ImprovementAgent",
+        "trading":            "TradingExecutorAgent",
+        "tradingexecutor":    "TradingExecutorAgent",
+        "tradingexecutoragent": "TradingExecutorAgent",
+        "monitoring":         "MonitoringAgent",
+        "monitoringagent":    "MonitoringAgent",
+        "chat":               "ChatAgent",
+        "chatagent":          "ChatAgent",
+        "pipeline":           "PipelineOrchestrator",
+        "pipelineorchestrator": "PipelineOrchestrator",
+    }
+    _KNOWN = [
+        "ResearchAgent", "SpecAgent", "MLEngineerAgent", "ValidationAgent",
+        "ImprovementAgent", "TradingExecutorAgent", "MonitoringAgent",
+        "ChatAgent", "PipelineOrchestrator",
+    ]
+
+    def _canonical(name: str) -> str:
+        return _CANONICAL.get(name.lower().replace(" ", "").replace("_", ""), name)
+
     try:
-        agents = get_db().get_agent_status()
-        known = [
-            "ResearchAgent", "SpecAgent", "MLEngineerAgent", "ValidationAgent",
-            "ImprovementAgent", "TradingExecutorAgent", "MonitoringAgent",
-            "ChatAgent", "PipelineOrchestrator",
-        ]
-        seen = {a["agent_name"] for a in agents}
-        for name in known:
-            if name not in seen:
-                agents.append({
-                    "agent_name": name, "last_run": None, "last_status": "never_run",
-                    "last_message": "No activity recorded", "duration_ms": 0,
-                    "records_written": 0, "error_detail": None,
-                })
-        return {"agents": agents, "count": len(agents)}
+        raw = get_db().get_agent_status()
     except Exception as e:
         logger.error(f"Error getting agent status: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Database unavailable")
+
+    # Merge rows with the same canonical name — keep the most recent run
+    merged: dict[str, dict] = {}
+    for row in raw:
+        canon = _canonical(row["agent_name"])
+        row["agent_name"] = canon
+        prev = merged.get(canon)
+        if prev is None or (row.get("last_run") or "") > (prev.get("last_run") or ""):
+            merged[canon] = row
+
+    # Add known agents that produced no logs yet
+    for name in _KNOWN:
+        if name not in merged:
+            merged[name] = {
+                "agent_name": name, "last_run": None, "last_status": "never_run",
+                "last_message": "No activity recorded", "duration_ms": 0,
+                "records_written": 0, "error_detail": None,
+            }
+
+    agents = list(merged.values())
+    # Sort: active/running first, then by last_run descending
+    agents.sort(key=lambda a: (
+        0 if a.get("last_status") in ("running", "active") else 1,
+        -(len(a.get("last_run") or "")),
+    ))
+    return {"agents": agents, "count": len(agents)}
 
 
 @app.get("/api/agent-status")
