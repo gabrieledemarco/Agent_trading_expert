@@ -115,31 +115,7 @@
         </div>
     </header>
 
-    <nav class="sidebar">
-        <div class="sidebar-section">
-            <div class="sidebar-title">Dashboard</div>
-            <a href="index.html" class="sidebar-item"><span>◉</span> Overview</a>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title">Analisi</div>
-            <a href="dashboard_performance.html" class="sidebar-item"><span>▣</span> Performance</a>
-            <a href="dashboard_live.html" class="sidebar-item"><span>▶</span> Live Monitor</a>
-            <a href="dashboard_research.html" class="sidebar-item"><span>◈</span> Research <span class="badge">6</span></a>
-            <a href="dashboard_backtest.html" class="sidebar-item"><span>◎</span> Backtest</a>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title">Strategie</div>
-            <a href="strategy.html" class="sidebar-item"><span>◆</span> Strategies <span class="badge">4</span></a>
-            <a href="dashboard_risk.html" class="sidebar-item"><span>◐</span> Risk Mgmt</a>
-            <a href="dashboard_documentation.html" class="sidebar-item"><span>▤</span> Docs</a>
-        </div>
-        <div class="sidebar-section">
-            <div class="sidebar-title">Sistema</div>
-            <a href="dashboard_agents.html" class="sidebar-item active"><span>▧</span> Agents <span class="badge">2</span></a>
-            <a href="dashboard_with_chat.html" class="sidebar-item"><span>▨</span> Chat</a>
-        </div>
-        <div class="status-indicator"><span class="status-dot"></span> SYSTEM ACTIVE</div>
-    </nav>
+    <nav class="sidebar"></nav>
 
     <main class="main">
         <div class="resizable-section" data-section="agents-grid" style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
@@ -420,5 +396,6 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     document.querySelector('.terminal').classList.add('sidebar-collapsed');
 }
 </script>
+<script src="nav.js"></script>
 </body>
 </html>

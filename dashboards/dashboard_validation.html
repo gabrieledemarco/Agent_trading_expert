@@ -1,1 +1,191 @@
-<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Validation</title><link rel="stylesheet" href="colors_and_type.css"><style>body{margin:0;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);padding:12px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:10px}.panel{background:var(--bg-secondary);border:1px solid var(--border);padding:10px}.title{color:var(--orange);font-size:11px;text-transform:uppercase;margin-bottom:8px}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid var(--border);text-align:left}th{font-size:10px;color:var(--text-muted)}</style></head><body><h2 style="margin:0 0 10px;color:var(--text-primary)">Validation — L1-L5</h2><div class="grid"><div class="panel"><div class="title">Queue</div><table><thead><tr><th>Strategy</th><th>Status</th><th>Retry</th></tr></thead><tbody id="vrows"></tbody></table></div><div class="panel"><div class="title">Feedback Loop</div><div>Le strategie con status <b>warning/rejected</b> rientrano in backtest fino a 3 retry.</div><div style="margin-top:8px;color:var(--text-muted)">Oltre soglia: <b>human_review</b>.</div></div></div><script>async function load(){const r=await fetch('/internal/v2/strategies?limit=100');const d=await r.json();const rows=(d.strategies||[]).filter(s=>['validation_pending','warning','rejected','human_review','approved'].includes(s.status)).map(s=>`<tr><td>${s.name}</td><td>${s.status}</td><td>${s.retry_count||0}</td></tr>`).join('');document.getElementById('vrows').innerHTML=rows||'<tr><td colspan="3">Nessuna strategia.</td></tr>';};load();setInterval(load,12000);</script></body></html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Validation | Agent Trading</title>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+    .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns .3s ease;}
+    .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
+    .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+    .topbar-left{display:flex;align-items:center;gap:12px;}
+    .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:6px 10px;font-size:14px;font-family:var(--font);transition:all .2s;}
+    .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
+    .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+    .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+    .topbar-actions{display:flex;gap:6px;}
+    .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--font);}
+    .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+    .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:scroll;}
+    .sidebar-section{margin-bottom:10px;}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;transition:opacity .2s;}
+    .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
+    .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all .2s;}
+    .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;gap:0;}
+    .sidebar-item:hover{background:var(--bg-tertiary);}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;}
+    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
+    .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+
+    .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:8px;}
+    .kpi{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
+    .kpi-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
+    .kpi-value{font-size:16px;font-weight:bold;color:var(--text-primary);}
+    .layout{display:grid;grid-template-columns:2fr 1fr;gap:8px;}
+    .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;}
+    .card-title{color:var(--orange);font-size:11px;font-weight:bold;margin-bottom:8px;text-transform:uppercase;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;font-weight:normal;}
+    td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
+    tr:hover{background:var(--bg-tertiary);}
+    .badge{padding:2px 6px;border-radius:2px;font-size:9px;}
+    .badge-approved{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .badge-rejected{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+    .badge-warning{background:rgba(255,204,0,.1);color:var(--yellow);border:1px solid var(--yellow-a30);}
+    .badge-human_review{background:rgba(255,204,0,.2);color:var(--yellow);border:1px solid var(--yellow-a30);}
+    .badge-validation_pending,.badge-backtest_pending,.badge-backtest_running{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
+    .badge-draft{background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border);}
+    .info-box{padding:10px;border:1px solid var(--border);background:var(--bg-primary);margin-bottom:8px;font-size:11px;line-height:1.6;}
+    .info-box .hl{color:var(--orange);font-weight:bold;}
+    .warn-box{padding:10px;border:1px solid var(--yellow-a30);background:rgba(255,204,0,.05);margin-bottom:8px;font-size:11px;}
+    ::-webkit-scrollbar{width:8px;height:8px;}
+    ::-webkit-scrollbar-track{background:var(--bg-primary);}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  </style>
+</head>
+<body>
+<div class="terminal">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-brand"><span>TA</span> VALIDATION — L1–L5</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn" onclick="load()">↻ Refresh</button>
+      <button class="btn" onclick="runPhase()">▶ Run Validation</button>
+    </div>
+  </header>
+
+  <nav class="sidebar"></nav>
+
+  <main class="main">
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value" id="kpiTotal">—</div></div>
+      <div class="kpi"><div class="kpi-label">Approved</div><div class="kpi-value" style="color:var(--green)" id="kpiApproved">—</div></div>
+      <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-value" style="color:var(--blue)" id="kpiPending">—</div></div>
+      <div class="kpi"><div class="kpi-label">Warning</div><div class="kpi-value" style="color:var(--yellow)" id="kpiWarning">—</div></div>
+      <div class="kpi"><div class="kpi-label">Human Review</div><div class="kpi-value" style="color:var(--yellow)" id="kpiHuman">—</div></div>
+    </div>
+
+    <div class="layout">
+      <div>
+        <div class="card">
+          <div class="card-title">Validation Queue</div>
+          <table>
+            <thead><tr><th>Strategy</th><th>Status</th><th>Retry</th><th>Updated</th></tr></thead>
+            <tbody id="vrows"><tr><td colspan="4" style="color:var(--text-muted)">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title">Validation Levels (L1–L5)</div>
+          <div class="info-box">
+            <div><span class="hl">L1</span> Code Quality — syntax, pylint score ≥ 8</div>
+            <div><span class="hl">L2</span> No Critical Anomalies — architecture match</div>
+            <div><span class="hl">L3</span> Academic Consistency — arXiv paper match</div>
+            <div><span class="hl">L4</span> Positive Sharpe — Sharpe ratio ≥ 0</div>
+            <div><span class="hl">L5</span> MC Robustness — Prob(Return&gt;0) ≥ 50%</div>
+          </div>
+          <div class="card-title" style="margin-top:8px;">Feedback Loop</div>
+          <div class="info-box">
+            Strategies with <span class="hl">warning/rejected</span> status re-enter backtest (up to 3 retries).
+            <div style="margin-top:6px;color:var(--yellow)">Beyond threshold → <span class="hl">human_review</span></div>
+          </div>
+        </div>
+        <div class="card" id="humanReviewCard" style="display:none;">
+          <div class="card-title" style="color:var(--yellow)">⚠ Human Review Required</div>
+          <div id="humanReviewList"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bottombar">
+    <div>ValidationAgent | L1–L5 checks · auto-refresh 12s</div>
+    <div>Agent Trading Expert — V2</div>
+  </footer>
+</div>
+
+<script>
+const TRACKED = ['validation_pending','backtest_pending','backtest_running','warning','rejected','human_review','approved'];
+
+function badgeClass(s) {
+  return 'badge-' + (s || 'draft').toLowerCase().replace(/[^a-z_]/g, '');
+}
+
+async function load() {
+  try {
+    const r = await fetch('/internal/v2/strategies?limit=100');
+    const d = await r.json();
+    const strategies = (d.strategies || []).filter(s => TRACKED.includes(s.status));
+
+    let approved = 0, pending = 0, warning = 0, human = 0;
+    const humanList = [];
+
+    const rows = strategies.map(s => {
+      const st = s.status || 'draft';
+      if (st === 'approved') approved++;
+      else if (st.includes('pending') || st.includes('running')) pending++;
+      else if (st === 'warning') warning++;
+      else if (st === 'human_review') { human++; humanList.push(s.name); }
+      return `<tr>
+        <td>${s.name || s.id || '—'}</td>
+        <td><span class="badge ${badgeClass(st)}">${st}</span></td>
+        <td>${s.retry_count || 0}</td>
+        <td>${String(s.updated_at || '').slice(0, 16)}</td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('vrows').innerHTML = rows || '<tr><td colspan="4" style="color:var(--text-muted)">No strategies in validation pipeline.</td></tr>';
+    document.getElementById('kpiTotal').textContent = strategies.length;
+    document.getElementById('kpiApproved').textContent = approved;
+    document.getElementById('kpiPending').textContent = pending;
+    document.getElementById('kpiWarning').textContent = warning;
+    document.getElementById('kpiHuman').textContent = human;
+
+    const hrCard = document.getElementById('humanReviewCard');
+    if (human > 0) {
+      hrCard.style.display = 'block';
+      document.getElementById('humanReviewList').innerHTML = humanList.map(n => `<div style="padding:4px 0;border-bottom:1px solid var(--border);color:var(--yellow)">⚠ ${n}</div>`).join('');
+    } else {
+      hrCard.style.display = 'none';
+    }
+  } catch (e) {
+    document.getElementById('vrows').innerHTML = '<tr><td colspan="4" style="color:var(--red)">Error loading data.</td></tr>';
+  }
+}
+
+async function runPhase() {
+  try {
+    await fetch('/api/pipeline/run/validation', { method: 'POST' });
+    alert('Validation phase started in background.');
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+load();
+setInterval(load, 12000);
+</script>
+<script src="nav.js"></script>
+</body>
+</html>
