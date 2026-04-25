@@ -7,9 +7,16 @@
   <link rel="stylesheet" href="colors_and_type.css" />
   <style>
     *{box-sizing:border-box}body{margin:0;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px}
-    .layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}.sidebar{border-right:1px solid var(--border);background:var(--bg-secondary);padding:12px}
-    .brand{color:var(--orange);font-weight:700;margin-bottom:12px}.cluster{font-size:10px;color:var(--text-muted);margin:12px 0 6px;text-transform:uppercase}
-    .item{display:block;color:var(--text-secondary);text-decoration:none;padding:6px;border-radius:4px}.item:hover,.item.active{background:var(--bg-tertiary);color:var(--orange)}
+    .layout{display:grid;grid-template-columns:190px 1fr;min-height:100vh}
+    .sidebar{border-right:1px solid var(--border);background:var(--bg-secondary);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto}
+    .sidebar-section{margin-bottom:10px}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+    .sidebar-item{padding:6px 12px;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px}
+    .sidebar-item:hover{background:var(--bg-tertiary)}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange)}
+    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px}
+    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
     .main{padding:12px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.status{font-size:11px;color:var(--text-muted)}
     .grid{display:grid;gap:10px;grid-template-columns:repeat(12,1fr)}.card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px}
     .title{color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase}
@@ -22,21 +29,7 @@
 </head>
 <body>
 <div class="layout">
-  <aside class="sidebar">
-    <div class="brand">AGENT TRADING EXPERT — V2</div>
-    <div class="cluster">Pipeline</div>
-    <a class="item active" href="index.html">◉ Overview</a>
-    <a class="item" href="dashboard_pipeline.html">◎ Pipeline</a>
-    <a class="item" href="dashboard_research.html">◈ Research</a>
-    <a class="item" href="dashboard_models.html">◐ Models</a>
-    <a class="item" href="strategy.html">◑ Strategies</a>
-    <a class="item" href="dashboard_validation.html">◒ Validation</a>
-    <a class="item" href="dashboard_execution.html">◓ Execution</a>
-    <a class="item" href="dashboard_agents.html">◔ Monitoring</a>
-    <div class="cluster">Tools</div>
-    <a class="item" href="dashboard_with_chat.html">◆ Chat</a>
-    <a class="item" href="dashboard_documentation.html">◇ Docs</a>
-  </aside>
+  <nav class="sidebar"></nav>
   <main class="main">
     <div class="top">
       <h2 style="margin:0;color:var(--text-primary)">Overview — Pipeline Health</h2>
@@ -113,5 +106,6 @@ async function loadOverview(){
 loadOverview();
 setInterval(loadOverview, 10000);
 </script>
+<script src="nav.js"></script>
 </body>
 </html>

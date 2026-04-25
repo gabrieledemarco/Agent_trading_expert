@@ -1,3 +1,154 @@
-<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Models</title><link rel="stylesheet" href="colors_and_type.css"><style>body{margin:0;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);padding:12px}table{width:100%;border-collapse:collapse;background:var(--bg-secondary);border:1px solid var(--border)}th,td{padding:8px;border-bottom:1px solid var(--border);text-align:left}th{font-size:10px;color:var(--text-muted)}</style></head><body><h2 style="margin:0 0 10px;color:var(--text-primary)">Models — ML Engine</h2><table><thead><tr><th>ID</th><th>Architecture</th><th>Directional Acc.</th><th>R²</th><th>Status</th></tr></thead><tbody id="rows"><tr><td colspan="5">Caricamento…</td></tr></tbody></table><script>
-async function load(){try{const r=await fetch('/models');const d=await r.json();const rows=(d.models||[]).map(m=>`<tr><td>${m.id||'-'}</td><td>${m.model_type||m.architecture||'-'}</td><td>${m.directional_accuracy??'-'}</td><td>${m.r2_score??'-'}</td><td>${m.status||'-'}</td></tr>`).join('');document.getElementById('rows').innerHTML=rows||'<tr><td colspan="5">Nessun modello.</td></tr>';}catch(e){document.getElementById('rows').innerHTML='<tr><td colspan="5">Errore caricamento.</td></tr>';}}
-load();</script></body></html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Models | Agent Trading</title>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+    .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns .3s ease;}
+    .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
+    .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+    .topbar-left{display:flex;align-items:center;gap:12px;}
+    .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:6px 10px;font-size:14px;font-family:var(--font);transition:all .2s;}
+    .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
+    .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+    .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+    .topbar-actions{display:flex;gap:6px;}
+    .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--font);}
+    .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+    .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:scroll;}
+    .sidebar-section{margin-bottom:10px;}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;transition:opacity .2s;}
+    .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
+    .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all .2s;}
+    .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;gap:0;}
+    .sidebar-item:hover{background:var(--bg-tertiary);}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;}
+    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
+    .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+
+    .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;}
+    .kpi{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
+    .kpi-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
+    .kpi-value{font-size:16px;font-weight:bold;color:var(--text-primary);}
+    .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;}
+    .card-title{color:var(--orange);font-size:11px;font-weight:bold;margin-bottom:8px;text-transform:uppercase;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;font-weight:normal;}
+    td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
+    tr:hover{background:var(--bg-tertiary);}
+    .badge{padding:2px 6px;border-radius:2px;font-size:9px;}
+    .badge-approved{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .badge-rejected{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+    .badge-pending{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
+    .badge-draft{background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border);}
+    ::-webkit-scrollbar{width:8px;height:8px;}
+    ::-webkit-scrollbar-track{background:var(--bg-primary);}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  </style>
+</head>
+<body>
+<div class="terminal">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-brand"><span>TA</span> MODELS — ML ENGINE</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn" onclick="load()">↻ Refresh</button>
+    </div>
+  </header>
+
+  <nav class="sidebar"></nav>
+
+  <main class="main">
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total Models</div><div class="kpi-value" id="kpiTotal">—</div></div>
+      <div class="kpi"><div class="kpi-label">Approved</div><div class="kpi-value" style="color:var(--green)" id="kpiApproved">—</div></div>
+      <div class="kpi"><div class="kpi-label">Rejected</div><div class="kpi-value" style="color:var(--red)" id="kpiRejected">—</div></div>
+      <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-value" style="color:var(--blue)" id="kpiPending">—</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">ML Models Registry</div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Architecture</th><th>Directional Acc.</th>
+            <th>R²</th><th>Sharpe</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="6" style="color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer class="bottombar">
+    <div>ML Engine | Model Registry</div>
+    <div>Agent Trading Expert — V2</div>
+  </footer>
+</div>
+
+<script>
+function badgeClass(status) {
+  if (!status) return 'badge-draft';
+  const s = status.toLowerCase();
+  if (s.includes('approv')) return 'badge-approved';
+  if (s.includes('reject') || s.includes('fail')) return 'badge-rejected';
+  if (s.includes('pend') || s.includes('running') || s.includes('valid')) return 'badge-pending';
+  return 'badge-draft';
+}
+
+async function load() {
+  try {
+    const [mResp, sResp] = await Promise.all([
+      fetch('/models').then(r => r.json()),
+      fetch('/api/backtest/results').then(r => r.json()),
+    ]);
+
+    const models = mResp.models || [];
+    const backtest = sResp.results || [];
+
+    const allModels = models.length > 0 ? models : backtest;
+
+    let approved = 0, rejected = 0, pending = 0;
+    const rows = allModels.map(m => {
+      const status = (m.status || 'draft').toLowerCase();
+      if (status.includes('approv')) approved++;
+      else if (status.includes('reject') || status.includes('fail')) rejected++;
+      else pending++;
+      const acc = m.directional_accuracy != null ? (m.directional_accuracy * 100).toFixed(1) + '%' : (m.validation_date ? '—' : '—');
+      const r2 = m.r2_score != null ? m.r2_score.toFixed(3) : '—';
+      const sharpe = m.sharpe_ratio != null ? Number(m.sharpe_ratio).toFixed(3) : '—';
+      return `<tr>
+        <td>${m.id || m.name || '—'}</td>
+        <td>${m.model_type || m.architecture || '—'}</td>
+        <td>${acc}</td>
+        <td>${r2}</td>
+        <td>${sharpe}</td>
+        <td><span class="badge ${badgeClass(m.status)}">${m.status || 'draft'}</span></td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('rows').innerHTML = rows || '<tr><td colspan="6" style="color:var(--text-muted)">No models found.</td></tr>';
+    document.getElementById('kpiTotal').textContent = allModels.length;
+    document.getElementById('kpiApproved').textContent = approved;
+    document.getElementById('kpiRejected').textContent = rejected;
+    document.getElementById('kpiPending').textContent = pending;
+  } catch (e) {
+    document.getElementById('rows').innerHTML = '<tr><td colspan="6" style="color:var(--red)">Error loading models.</td></tr>';
+  }
+}
+
+load();
+</script>
+<script src="nav.js"></script>
+</body>
+</html>

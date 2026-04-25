@@ -1,5 +1,174 @@
-<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Pipeline Kanban</title><link rel="stylesheet" href="colors_and_type.css"><style>body{margin:0;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font)}.wrap{padding:12px}.board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.col{background:var(--bg-secondary);border:1px solid var(--border);padding:8px}.card{border:1px solid var(--border);background:var(--bg-primary);padding:6px;margin-bottom:6px}.title{color:var(--orange);font-size:11px;text-transform:uppercase;margin-bottom:6px}</style></head><body><div class="wrap"><h2 style="margin:0 0 10px;color:var(--text-primary)">Pipeline — Kanban View</h2><div class="board" id="board"></div></div><script>
-const columns=['draft','backtest_pending','validation_pending','approved','warning','rejected','human_review','deployed'];
-async function load(){const r=await fetch('/api/pipeline/kanban');const data=await r.json();const map=data.columns||{};document.getElementById('board').innerHTML=columns.map(c=>`<div class="col"><div class="title">${c} (${(map[c]||[]).length})</div>${(map[c]||[]).map(s=>`<div class="card"><b>${s.name}</b><div>retry: ${s.retry_count||0}</div></div>`).join('')||'<div style="color:var(--text-muted)">empty</div>'}</div>`).join('');}
-load();setInterval(load,10000);
-</script></body></html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Pipeline | Agent Trading</title>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+    .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns .3s ease;}
+    .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
+    .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+    .topbar-left{display:flex;align-items:center;gap:12px;}
+    .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:6px 10px;font-size:14px;font-family:var(--font);transition:all .2s;}
+    .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
+    .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
+    .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
+    .topbar-actions{display:flex;gap:6px;}
+    .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--font);}
+    .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+    .btn-orange{background:var(--orange-a15);border-color:var(--orange);color:var(--orange);}
+    .btn-orange:hover{background:var(--orange);color:#000;}
+    .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:scroll;}
+    .sidebar-section{margin-bottom:10px;}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;transition:opacity .2s;}
+    .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
+    .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all .2s;}
+    .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;gap:0;}
+    .sidebar-item:hover{background:var(--bg-tertiary);}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;}
+    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
+    .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+
+    .phase-actions{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+    .board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;}
+    .col{background:var(--bg-secondary);border:1px solid var(--border);padding:8px;min-height:200px;}
+    .col-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+    .col-title{color:var(--orange);font-size:10px;text-transform:uppercase;font-weight:bold;}
+    .col-count{background:var(--bg-tertiary);color:var(--text-muted);padding:1px 6px;border-radius:2px;font-size:9px;}
+    .kanban-card{border:1px solid var(--border);background:var(--bg-primary);padding:6px;margin-bottom:5px;cursor:default;}
+    .kanban-card:hover{border-color:var(--orange);}
+    .kanban-card-name{font-size:10px;color:var(--text-primary);font-weight:bold;margin-bottom:3px;}
+    .kanban-card-meta{font-size:9px;color:var(--text-muted);}
+    .empty{color:var(--text-muted);font-size:10px;text-align:center;padding:20px 0;}
+    .msg{padding:6px 10px;font-size:10px;border-radius:2px;margin-bottom:8px;}
+    .msg-ok{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .msg-err{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+    ::-webkit-scrollbar{width:8px;height:8px;}
+    ::-webkit-scrollbar-track{background:var(--bg-primary);}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  </style>
+</head>
+<body>
+<div class="terminal">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-brand"><span>TA</span> PIPELINE — KANBAN</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn" onclick="load()">↻ Refresh</button>
+      <button class="btn btn-orange" onclick="runPipeline()">▶ Run Full Pipeline</button>
+    </div>
+  </header>
+
+  <nav class="sidebar"></nav>
+
+  <main class="main">
+    <div class="phase-actions">
+      <span style="color:var(--text-muted);font-size:10px;align-self:center;">Run phase:</span>
+      <button class="btn" onclick="runPhase('research')">Research</button>
+      <button class="btn" onclick="runPhase('spec')">Spec</button>
+      <button class="btn" onclick="runPhase('ml')">ML Train</button>
+      <button class="btn" onclick="runPhase('validation')">Validate</button>
+      <button class="btn" onclick="runPhase('improvement')">Improve</button>
+    </div>
+    <div id="pipelineMsg" style="display:none;"></div>
+
+    <div class="board" id="board"></div>
+  </main>
+
+  <footer class="bottombar">
+    <div id="boardMeta">Pipeline Kanban — auto-refresh 10s</div>
+    <div>Agent Trading Expert — V2</div>
+  </footer>
+</div>
+
+<script>
+const COLUMNS = [
+  'draft', 'backtest_pending', 'backtest_running',
+  'validation_pending', 'approved', 'warning',
+  'rejected', 'human_review',
+];
+
+function colColor(status) {
+  if (status === 'approved') return 'var(--green)';
+  if (status === 'rejected') return 'var(--red)';
+  if (status === 'warning' || status === 'human_review') return 'var(--yellow)';
+  if (status.includes('running') || status.includes('pending')) return 'var(--blue)';
+  return 'var(--orange)';
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/pipeline/kanban');
+    const data = await r.json();
+    const map = data.columns || {};
+    const total = data.count || 0;
+
+    document.getElementById('board').innerHTML = COLUMNS.map(c => {
+      const cards = map[c] || [];
+      const cardHtml = cards.length
+        ? cards.map(s => `
+          <div class="kanban-card">
+            <div class="kanban-card-name">${s.name || s.id || '—'}</div>
+            <div class="kanban-card-meta">retry: ${s.retry_count || 0} · ${String(s.updated_at || '').slice(0, 10)}</div>
+          </div>`).join('')
+        : '<div class="empty">empty</div>';
+      return `
+        <div class="col">
+          <div class="col-header">
+            <div class="col-title" style="color:${colColor(c)}">${c}</div>
+            <div class="col-count">${cards.length}</div>
+          </div>
+          ${cardHtml}
+        </div>`;
+    }).join('');
+
+    document.getElementById('boardMeta').textContent = `Pipeline Kanban — ${total} strategies — auto-refresh 10s`;
+  } catch (e) {
+    document.getElementById('board').innerHTML = '<div style="color:var(--red);padding:8px">Error loading pipeline data.</div>';
+  }
+}
+
+async function runPhase(phase) {
+  showMsg(`Starting phase: ${phase}…`, 'ok');
+  try {
+    const r = await fetch(`/api/pipeline/run/${phase}`, { method: 'POST' });
+    const d = await r.json();
+    showMsg(`✓ Phase "${phase}" started in background.`, 'ok');
+  } catch (e) {
+    showMsg('✗ ' + e.message, 'err');
+  }
+}
+
+async function runPipeline() {
+  showMsg('Starting full pipeline…', 'ok');
+  try {
+    await fetch('/api/pipeline/run', { method: 'POST' });
+    showMsg('✓ Full pipeline started in background.', 'ok');
+  } catch (e) {
+    showMsg('✗ ' + e.message, 'err');
+  }
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('pipelineMsg');
+  el.style.display = 'block';
+  el.className = 'msg msg-' + type;
+  el.textContent = text;
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+load();
+setInterval(load, 10000);
+</script>
+<script src="nav.js"></script>
+</body>
+</html>
