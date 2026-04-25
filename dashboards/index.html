@@ -1,110 +1,366 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agent Trading Expert | Pipeline Overview</title>
-  <link rel="stylesheet" href="colors_and_type.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+  <title>Overview | Agent Trading Expert</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="colors_and_type.css">
   <style>
-    *{box-sizing:border-box}body{margin:0;background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px}
-    .layout{display:grid;grid-template-columns:190px 1fr;min-height:100vh}
-    .sidebar{border-right:1px solid var(--border);background:var(--bg-secondary);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto}
-    .sidebar-section{margin-bottom:10px}
-    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px}
-    .sidebar-item{padding:6px 12px;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px}
-    .sidebar-item:hover{background:var(--bg-tertiary)}
-    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange)}
-    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px}
-    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+    .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns .3s ease;}
+    .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
+    .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;gap:8px;}
+    .topbar-left{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+    .topbar-center{display:flex;align-items:center;gap:16px;overflow:hidden;}
+    .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:5px 9px;font-size:13px;font-family:var(--font);transition:all .2s;}
+    .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
+    .brand{color:var(--orange);font-size:13px;font-weight:bold;white-space:nowrap;}
+    .brand span{background:var(--orange);color:#000;padding:1px 5px;border-radius:2px;font-size:9px;margin-right:4px;}
+    .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+    .sidebar-section{margin-bottom:10px;}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+    .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
+    .sidebar-item{padding:6px 12px;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all .2s;}
+    .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;}
+    .sidebar-item:hover{background:var(--bg-tertiary);}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;}
+    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .main{padding:12px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.status{font-size:11px;color:var(--text-muted)}
-    .grid{display:grid;gap:10px;grid-template-columns:repeat(12,1fr)}.card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px}
-    .title{color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase}
-    .span-12{grid-column:span 12}.span-6{grid-column:span 6}.span-4{grid-column:span 4}
-    .health{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stage{border:1px solid var(--border);padding:8px;background:var(--bg-primary)}
-    .num{font-size:20px;color:var(--text-primary);font-weight:700}.warn{color:var(--yellow)}.bad{color:var(--red)}.ok{color:var(--green)}
-    table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid var(--border);text-align:left}th{font-size:10px;color:var(--text-muted)}
-    .alert{background:var(--red-a10);border:1px solid var(--red-a20);color:var(--red);padding:8px}
+    .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
+    .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+    ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-track{background:var(--bg-primary);} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    .row{display:grid;gap:8px;margin-bottom:8px;}
+    .row-6{grid-template-columns:repeat(6,1fr);}
+    .row-2-1{grid-template-columns:2fr 1fr;}
+    .row-half{grid-template-columns:1fr 1fr;}
+    .card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;}
+    .card-title{color:var(--orange);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:bold;}
+    .kpi{text-align:center;padding:10px 6px;}
+    .kpi-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+    .kpi-value{font-size:18px;font-weight:bold;color:var(--text-primary);line-height:1;}
+    .kpi-sub{color:var(--text-muted);font-size:9px;margin-top:3px;}
+    .positive{color:var(--green);} .negative{color:var(--red);} .neutral{color:var(--orange);}
+    .chart-wrap{position:relative;height:160px;}
+    .period-bar{display:flex;gap:4px;margin-bottom:8px;}
+    .period-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 8px;font-size:9px;cursor:pointer;font-family:var(--font);}
+    .period-btn:hover,.period-btn.active{border-color:var(--orange);color:var(--orange);}
+    .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--font);width:100%;margin-bottom:5px;text-align:left;}
+    .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+    .btn-sm{padding:3px 8px;font-size:9px;width:auto;margin-bottom:0;}
+    .badge{padding:2px 6px;border-radius:2px;font-size:9px;}
+    .badge-ok{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .badge-warn{background:rgba(255,204,0,.1);color:var(--yellow);border:1px solid var(--yellow-a30);}
+    .badge-err{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+    .badge-idle{background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border);}
+    .badge-info{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
+    .funnel{display:flex;gap:6px;align-items:flex-end;}
+    .funnel-stage{flex:1;background:var(--bg-primary);border:1px solid var(--border);padding:6px;text-align:center;min-height:50px;display:flex;flex-direction:column;justify-content:center;}
+    .funnel-stage:hover{border-color:var(--orange);}
+    .funnel-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;}
+    .funnel-count{font-size:20px;font-weight:bold;}
+    .funnel-status{font-size:8px;color:var(--text-muted);margin-top:2px;}
+    .agents-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+    .agent-card{background:var(--bg-primary);border:1px solid var(--border);padding:8px;}
+    .agent-card.running{border-color:var(--green);}
+    .agent-card.error{border-color:var(--red);}
+    .agent-name{font-size:10px;color:var(--text-primary);font-weight:bold;margin-bottom:3px;}
+    .agent-meta{font-size:9px;color:var(--text-muted);}
+    .ticker-item{display:flex;align-items:baseline;gap:5px;font-size:11px;white-space:nowrap;}
+    .ticker-sym{color:var(--text-muted);font-size:9px;}
+    .ticker-price{color:var(--text-primary);font-weight:bold;}
+    .ticker-chg{font-size:9px;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{text-align:left;padding:4px 6px;color:var(--text-muted);border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;font-weight:normal;}
+    td{padding:4px 6px;border-bottom:1px solid var(--bg-tertiary);}
+    tr:hover{background:var(--bg-tertiary);}
+    .hr-box{background:rgba(255,204,0,.05);border:1px solid var(--yellow-a30);color:var(--yellow);padding:8px;font-size:10px;}
+    .pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:bold;}
+    .pill-live{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .pill-paper{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
+    .pill-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 2s infinite;}
   </style>
 </head>
 <body>
-<div class="layout">
+<div class="terminal">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="brand"><span>TA</span> AGENT TRADING EXPERT — V2</div>
+    </div>
+    <div class="topbar-center" id="tickerBar">
+      <div class="ticker-item"><span class="ticker-sym">AAPL</span><span class="ticker-price" id="t-AAPL">—</span><span class="ticker-chg" id="tc-AAPL"></span></div>
+      <div class="ticker-item"><span class="ticker-sym">MSFT</span><span class="ticker-price" id="t-MSFT">—</span><span class="ticker-chg" id="tc-MSFT"></span></div>
+      <div class="ticker-item"><span class="ticker-sym">GOOG</span><span class="ticker-price" id="t-GOOG">—</span><span class="ticker-chg" id="tc-GOOG"></span></div>
+      <div class="ticker-item"><span class="ticker-sym">NVDA</span><span class="ticker-price" id="t-NVDA">—</span><span class="ticker-chg" id="tc-NVDA"></span></div>
+    </div>
+    <div class="topbar-right">
+      <span class="pill pill-paper"><span class="pill-dot"></span>PAPER MODE</span>
+      <span style="font-size:10px;color:var(--text-muted)" id="lastUpdate">—</span>
+    </div>
+  </header>
   <nav class="sidebar"></nav>
   <main class="main">
-    <div class="top">
-      <h2 style="margin:0;color:var(--text-primary)">Overview — Pipeline Health</h2>
-      <div class="status">🟢 LIVE · PAPER MODE · Neon Connected</div>
+    <div class="row row-6">
+      <div class="card kpi">
+        <div class="kpi-label">Portfolio Equity</div>
+        <div class="kpi-value" id="kpi-equity">—</div>
+        <div class="kpi-sub">Current value</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Total Return</div>
+        <div class="kpi-value" id="kpi-return">—</div>
+        <div class="kpi-sub" id="kpi-return-sub">vs inception</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Sharpe Ratio</div>
+        <div class="kpi-value" id="kpi-sharpe">—</div>
+        <div class="kpi-sub">annualised</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Max Drawdown</div>
+        <div class="kpi-value" id="kpi-dd">—</div>
+        <div class="kpi-sub">30-day period</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">VaR 95%</div>
+        <div class="kpi-value" id="kpi-var">—</div>
+        <div class="kpi-sub">daily est.</div>
+      </div>
+      <div class="card kpi">
+        <div class="kpi-label">Active Strategies</div>
+        <div class="kpi-value" id="kpi-strats">—</div>
+        <div class="kpi-sub" id="kpi-strats-sub">approved</div>
+      </div>
     </div>
-
-    <section class="grid">
-      <article class="card span-12">
-        <div class="title">Pipeline Health (24h)</div>
-        <div class="health" id="pipelineHealth"></div>
-      </article>
-
-      <article class="card span-8">
-        <div class="title">Active Execution</div>
-        <div id="executionMetrics">Caricamento…</div>
-      </article>
-
-      <article class="card span-4">
-        <div class="title">Human Review</div>
-        <div id="humanReviewBox" class="alert">Nessuna strategia in human_review.</div>
-      </article>
-
-      <article class="card span-12">
-        <div class="title">Event Stream (ultimi eventi)</div>
-        <table>
-          <thead><tr><th>Time</th><th>Agent</th><th>Status</th><th>Message</th></tr></thead>
-          <tbody id="eventRows"></tbody>
-        </table>
-      </article>
-    </section>
+    <div class="row row-2-1">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div class="card-title" style="margin-bottom:0;">Equity Curve</div>
+          <div class="period-bar">
+            <button class="period-btn" onclick="loadEquity('1D')">1D</button>
+            <button class="period-btn" onclick="loadEquity('1W')">1W</button>
+            <button class="period-btn active" onclick="loadEquity('1M')">1M</button>
+            <button class="period-btn" onclick="loadEquity('3M')">3M</button>
+            <button class="period-btn" onclick="loadEquity('6M')">6M</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <button class="btn" onclick="runPipeline()">▶ Run Full Pipeline</button>
+        <button class="btn" onclick="runResearch()">◈ Run Research Agent</button>
+        <button class="btn" onclick="location.href='dashboard_builder.html'">◆ New Strategy</button>
+        <button class="btn" onclick="location.href='strategy.html'">◑ View Strategies</button>
+        <button class="btn" onclick="location.href='dashboard_backtest.html'">◎ Backtest Analysis</button>
+        <div style="margin-top:10px;" id="actionMsg"></div>
+        <div style="margin-top:10px;">
+          <div class="card-title">Human Review</div>
+          <div id="hrBox" style="font-size:10px;color:var(--text-muted)">Checking…</div>
+        </div>
+      </div>
+    </div>
+    <div class="row row-half">
+      <div class="card">
+        <div class="card-title">Pipeline Stages</div>
+        <div class="funnel" id="pipelineFunnel"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Agent Status</div>
+        <div class="agents-grid" id="agentsGrid"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Live Event Stream</div>
+      <table>
+        <thead><tr><th>Time</th><th>Agent</th><th>Status</th><th>Message</th></tr></thead>
+        <tbody id="eventRows"></tbody>
+      </table>
+    </div>
   </main>
+  <footer class="bottombar">
+    <div id="footerLeft">Agent Trading Expert — V2 · Paper Trading Mode</div>
+    <div id="footerRight">auto-refresh 10s</div>
+  </footer>
 </div>
-
 <script>
-async function loadOverview(){
+'use strict';
+let equityChart = null;
+
+/* ── helpers ── */
+function fmt$(n){ return '$'+Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2}); }
+function fmtPct(n){ return (Number(n||0)*100).toFixed(2)+'%'; }
+function fmtPct2(n){ return Number(n||0).toFixed(2)+'%'; }
+function cls(n){ return Number(n||0)>=0?'positive':'negative'; }
+function showMsg(txt,ok){
+  const el=document.getElementById('actionMsg');
+  el.className='badge '+(ok?'badge-ok':'badge-err');
+  el.textContent=txt;
+  setTimeout(()=>el.textContent='',4000);
+}
+
+/* ── KPI ── */
+async function fetchKPI(){
   try{
-    const [ov, perf] = await Promise.all([
-      fetch('/api/pipeline/overview').then(r=>r.json()),
-      fetch('/dashboard/summary').then(r=>r.json())
+    const [sum,risk]=await Promise.all([
+      fetch('/dashboard/summary').then(r=>r.json()),
+      fetch('/api/risk/summary').then(r=>r.json()),
     ]);
+    const ret=Number(sum.total_return||0);
+    document.getElementById('kpi-equity').textContent=fmt$(sum.current_equity);
+    const retEl=document.getElementById('kpi-return');
+    retEl.textContent=fmtPct(ret);
+    retEl.className='kpi-value '+cls(ret);
+    document.getElementById('kpi-sharpe').textContent=Number(risk.sharpe_ratio||0).toFixed(2);
+    document.getElementById('kpi-dd').textContent='-'+fmtPct2(risk.max_drawdown_pct||0);
+    document.getElementById('kpi-var').textContent=fmt$(risk.var_95);
+    document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString();
+  }catch(e){console.warn('fetchKPI',e);}
+}
 
-    const counts = ov.counts || {};
-    const stages = [
-      ['Research','draft'],
-      ['Model','backtest_pending'],
-      ['Strategy','validation_pending'],
-      ['Validate','approved']
-    ];
-    const health = document.getElementById('pipelineHealth');
-    health.innerHTML = stages.map(([label,key])=>{
-      const val = counts[key] || 0;
-      const cls = val===0 ? 'warn' : 'ok';
-      return `<div class="stage"><div>${label}</div><div class="num ${cls}">${val}</div><div style="color:var(--text-muted)">${key}</div></div>`;
-    }).join('');
-
-    document.getElementById('executionMetrics').innerHTML = `
-      <div>Portfolio Value: <b>$${Number(perf.current_equity || 0).toLocaleString()}</b></div>
-      <div>Total Return: <b>${((perf.total_return || 0)*100).toFixed(2)}%</b></div>
-      <div>Approved Strategies: <b>${counts.approved || 0}</b></div>
-      <div>Deployed Strategies: <b>${counts.deployed || 0}</b></div>
-    `;
-
-    const hrCount = ov.human_review_count || 0;
-    document.getElementById('humanReviewBox').textContent = hrCount > 0
-      ? `⚠️ ${hrCount} strategia/e richiedono revisione umana.`
-      : 'Nessuna strategia in human_review.';
-
-    const rows = (ov.recent_events || []).slice(0,10).map(e=>`<tr><td>${String(e.timestamp||'').slice(11,19)}</td><td>${e.agent||'-'}</td><td>${e.status||'-'}</td><td>${e.message||''}</td></tr>`).join('');
-    document.getElementById('eventRows').innerHTML = rows || '<tr><td colspan="4">Nessun evento.</td></tr>';
-  }catch(err){
-    console.error(err);
+/* ── ticker prices ── */
+const TICKERS=['AAPL','MSFT','GOOG','NVDA'];
+async function fetchTicker(){
+  for(const sym of TICKERS){
+    try{
+      const d=await fetch('/api/price?symbol='+sym).then(r=>r.json());
+      const el=document.getElementById('t-'+sym);
+      if(el) el.textContent='$'+Number(d.price||0).toFixed(2);
+    }catch(_){}
   }
 }
-loadOverview();
-setInterval(loadOverview, 10000);
+
+/* ── equity curve ── */
+async function loadEquity(period='1M'){
+  document.querySelectorAll('.period-btn').forEach(b=>{
+    b.classList.toggle('active',b.textContent===period);
+  });
+  try{
+    const d=await fetch('/api/equity-curve?period='+period).then(r=>r.json());
+    const labels=d.labels||[]; const equity=d.equity||[]; const bench=d.benchmark||[];
+    const cfg={responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#666',font:{size:9}}}},
+      scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#555',font:{size:8},maxTicksLimit:8}},
+              y:{grid:{color:'#1a1a1a'},ticks:{color:'#555',font:{size:8}}}}};
+    if(equityChart) equityChart.destroy();
+    equityChart=new Chart(document.getElementById('equityChart').getContext('2d'),{
+      type:'line',
+      data:{labels,datasets:[
+        {label:'Portfolio',data:equity,borderColor:'#ff9900',backgroundColor:'rgba(255,153,0,.06)',borderWidth:1.5,pointRadius:0,tension:.3},
+        {label:'Benchmark',data:bench,borderColor:'#3399ff',backgroundColor:'transparent',borderWidth:1,pointRadius:0,tension:.3,borderDash:[3,3]},
+      ]},
+      options:cfg,
+    });
+  }catch(e){console.warn('loadEquity',e);}
+}
+
+/* ── actions ── */
+async function runPipeline(){
+  try{ await fetch('/api/pipeline/run',{method:'POST'}); showMsg('✓ Pipeline started',true); }
+  catch(e){ showMsg('✗ '+e.message,false); }
+}
+async function runResearch(){
+  try{ await fetch('/api/agents/research/run',{method:'POST'}); showMsg('✓ Research started',true); }
+  catch(e){ showMsg('✗ '+e.message,false); }
+}
+</script>
+<script>
+/* ── pipeline funnel ── */
+const STAGES=[
+  {key:'research',   label:'Research',  status:'draft'},
+  {key:'model',      label:'Model',     status:'backtest_pending'},
+  {key:'validate',   label:'Validate',  status:'validation_pending'},
+  {key:'approved',   label:'Approved',  status:'approved'},
+  {key:'deployed',   label:'Deployed',  status:'deployed'},
+  {key:'review',     label:'Review',    status:'human_review'},
+  {key:'rejected',   label:'Rejected',  status:'rejected'},
+];
+const STAGE_COLORS={approved:'var(--green)',rejected:'var(--red)',review:'var(--yellow)',deployed:'var(--green)'};
+
+async function fetchPipeline(){
+  try{
+    const d=await fetch('/api/pipeline/overview').then(r=>r.json());
+    const counts=d.counts||{}; const byStatus=d.by_status||{};
+    const merged={...counts,...byStatus};
+    const approved=merged.approved||0; const total=d.total_strategies||0;
+    document.getElementById('kpi-strats').textContent=approved;
+    document.getElementById('kpi-strats-sub').textContent=total+' total strategies';
+    const hrCount=d.human_review_count||0;
+    document.getElementById('hrBox').innerHTML=hrCount>0
+      ?`<span style="color:var(--yellow)">⚠ ${hrCount} str. require human review</span>`
+      :'<span style="color:var(--green)">✓ No pending reviews</span>';
+    document.getElementById('pipelineFunnel').innerHTML=STAGES.map(s=>{
+      const val=merged[s.status]||merged[s.key]||0;
+      const color=STAGE_COLORS[s.key]||'var(--orange)';
+      return `<div class="funnel-stage">
+        <div class="funnel-label">${s.label}</div>
+        <div class="funnel-count" style="color:${color}">${val}</div>
+        <div class="funnel-status">${s.status}</div>
+      </div>`;
+    }).join('');
+  }catch(e){console.warn('fetchPipeline',e);}
+}
+
+/* ── agents ── */
+function agentBadge(status){
+  if(!status||status==='never_run') return '<span class="badge badge-idle">idle</span>';
+  if(status==='running'||status==='active') return '<span class="badge badge-ok">running</span>';
+  if(status==='error'||status==='failed') return '<span class="badge badge-err">error</span>';
+  if(status==='success'||status==='completed') return '<span class="badge badge-ok">ok</span>';
+  return '<span class="badge badge-info">'+status+'</span>';
+}
+async function fetchAgents(){
+  try{
+    const d=await fetch('/api/agents/status').then(r=>r.json());
+    const agents=(d.agents||[]).slice(0,9);
+    document.getElementById('agentsGrid').innerHTML=agents.map(a=>{
+      const isErr=a.last_status==='error'||a.last_status==='failed';
+      const isRun=a.last_status==='running'||a.last_status==='active';
+      const cls=isRun?'running':isErr?'error':'';
+      const lastRun=a.last_run?String(a.last_run).slice(0,16):'never';
+      return `<div class="agent-card ${cls}">
+        <div class="agent-name">${a.agent_name||'—'}</div>
+        <div style="margin-bottom:3px">${agentBadge(a.last_status)}</div>
+        <div class="agent-meta">${lastRun}</div>
+      </div>`;
+    }).join('');
+  }catch(e){console.warn('fetchAgents',e);}
+}
+
+/* ── events ── */
+async function fetchEvents(){
+  try{
+    const d=await fetch('/dashboard/agent-activity?limit=10').then(r=>r.json());
+    const rows=(d.activities||[]).map(e=>{
+      const st=e.status||'—';
+      const color=st==='error'?'var(--red)':st==='success'?'var(--green)':'var(--text-muted)';
+      return `<tr>
+        <td style="color:var(--text-muted)">${String(e.timestamp||'').slice(11,19)}</td>
+        <td>${e.agent_name||'—'}</td>
+        <td style="color:${color}">${st}</td>
+        <td style="color:var(--text-muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.message||''}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('eventRows').innerHTML=rows||'<tr><td colspan="4" style="color:var(--text-muted)">No events yet.</td></tr>';
+  }catch(e){console.warn('fetchEvents',e);}
+}
+
+/* ── init & refresh loop ── */
+async function refreshAll(){
+  await Promise.allSettled([fetchKPI(),fetchPipeline(),fetchAgents(),fetchEvents()]);
+}
+document.addEventListener('DOMContentLoaded',function(){
+  refreshAll();
+  loadEquity('1M');
+  fetchTicker();
+  setInterval(refreshAll,10000);
+  setInterval(fetchTicker,30000);
+});
 </script>
 <script src="nav.js"></script>
 </body>
