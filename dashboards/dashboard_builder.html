@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Strategy Builder | Agent Trading</title>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+    .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns .3s ease;}
+    .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
+    .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+    .topbar-left{display:flex;align-items:center;gap:10px;}
+    .topbar-right{display:flex;align-items:center;gap:8px;}
+    .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:5px 9px;font-size:13px;font-family:var(--font);transition:all .2s;}
+    .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
+    .brand{color:var(--orange);font-size:13px;font-weight:bold;}
+    .brand span{background:var(--orange);color:#000;padding:1px 5px;border-radius:2px;font-size:9px;margin-right:4px;}
+    .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+    .sidebar-section{margin-bottom:10px;}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+    .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
+    .sidebar-item{padding:6px 12px;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all .2s;}
+    .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;}
+    .sidebar-item:hover{background:var(--bg-tertiary);}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;}
+    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
+    .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+    ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-track{background:var(--bg-primary);} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    .wizard-steps{display:flex;align-items:center;gap:0;margin-bottom:12px;background:var(--bg-secondary);border:1px solid var(--border);padding:10px 16px;}
+    .step{display:flex;align-items:center;gap:8px;flex:1;opacity:.4;transition:opacity .2s;}
+    .step.active{opacity:1;}
+    .step.done{opacity:.7;}
+    .step-num{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;flex-shrink:0;}
+    .step.active .step-num{background:var(--orange);color:#000;border-color:var(--orange);}
+    .step.done .step-num{background:var(--green);color:#000;border-color:var(--green);}
+    .step-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
+    .step-sep{width:24px;height:1px;background:var(--border);margin:0 4px;flex-shrink:0;}
+    .builder-layout{display:grid;grid-template-columns:1fr 320px;gap:8px;margin-bottom:8px;}
+    .wizard-panel{display:flex;flex-direction:column;gap:8px;}
+    .preview-panel{display:flex;flex-direction:column;gap:8px;}
+    .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;}
+    .card-title{color:var(--orange);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:bold;}
+    .step-form{display:none;} .step-form.active{display:block;}
+    .field{margin-bottom:10px;}
+    .field label{display:block;color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+    .field input,.field select,.field textarea{width:100%;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:6px 8px;font-family:var(--font);font-size:11px;outline:none;transition:border-color .2s;}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--orange);}
+    .field textarea{resize:vertical;min-height:60px;}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .field-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+    .field input[type=range]{padding:4px 0;cursor:pointer;accent-color:var(--orange);}
+    .range-val{color:var(--orange);font-weight:bold;font-size:11px;margin-left:6px;}
+    .chip-group{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+    .chip{padding:3px 8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-muted);font-size:9px;cursor:pointer;transition:all .15s;user-select:none;}
+    .chip.selected{border-color:var(--orange);color:var(--orange);background:var(--orange-a05);}
+    .wizard-nav{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);}
+    .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:5px 14px;font-size:10px;cursor:pointer;font-family:var(--font);transition:all .2s;}
+    .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+    .btn:disabled{opacity:.4;cursor:not-allowed;}
+    .btn-primary{background:var(--orange);color:#000;border-color:var(--orange);font-weight:bold;}
+    .btn-primary:hover{background:#ffb030;}
+    .btn-sm{padding:3px 8px;font-size:9px;}
+    .json-preview{background:var(--bg-primary);border:1px solid var(--border);padding:10px;font-size:10px;font-family:var(--font);color:var(--text-secondary);overflow-y:auto;white-space:pre;line-height:1.5;flex:1;min-height:200px;}
+    .json-key{color:var(--orange);} .json-str{color:var(--green);} .json-num{color:var(--blue);} .json-bool{color:var(--yellow);}
+    .badge{padding:2px 6px;border-radius:2px;font-size:9px;}
+    .badge-ok{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .badge-err{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+    .badge-warn{background:rgba(255,204,0,.1);color:var(--yellow);border:1px solid var(--yellow-a30);}
+    .badge-info{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
+    .badge-idle{background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border);}
+    .msg{padding:6px 10px;font-size:10px;margin-top:8px;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;font-weight:normal;}
+    td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
+    tr:hover{background:var(--bg-tertiary);}
+    .positive{color:var(--green);} .negative{color:var(--red);}
+    .hint{color:var(--text-muted);font-size:9px;margin-top:3px;}
+  </style>
+</head>
+<body>
+<div class="terminal">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="brand"><span>TA</span> STRATEGY BUILDER</div>
+    </div>
+    <div class="topbar-right">
+      <span style="font-size:10px;color:var(--text-muted)">Design → Backtest → Deploy</span>
+      <button class="btn btn-sm" onclick="resetWizard()">✕ Reset</button>
+    </div>
+  </header>
+  <nav class="sidebar"></nav>
+  <main class="main">
+    <div class="wizard-steps">
+      <div class="step active" id="step-ind-1">
+        <div class="step-num">1</div>
+        <div class="step-label">Define</div>
+      </div>
+      <div class="step-sep"></div>
+      <div class="step" id="step-ind-2">
+        <div class="step-num">2</div>
+        <div class="step-label">Configure</div>
+      </div>
+      <div class="step-sep"></div>
+      <div class="step" id="step-ind-3">
+        <div class="step-num">3</div>
+        <div class="step-label">Review &amp; Submit</div>
+      </div>
+    </div>
+    <div class="builder-layout">
+      <div class="wizard-panel">
+        <div class="card step-form active" id="step-1">
+          <div class="card-title">Step 1 — Define Strategy</div>
+          <div class="field">
+            <label>Strategy Name *</label>
+            <input type="text" id="f-name" placeholder="e.g. Momentum Alpha v1" oninput="updatePreview()">
+            <div class="hint">Unique identifier for this strategy</div>
+          </div>
+          <div class="field">
+            <label>Target Symbols</label>
+            <div class="chip-group" id="chips-symbols">
+              <div class="chip selected" data-val="AAPL">AAPL</div>
+              <div class="chip selected" data-val="MSFT">MSFT</div>
+              <div class="chip" data-val="GOOG">GOOG</div>
+              <div class="chip" data-val="NVDA">NVDA</div>
+              <div class="chip" data-val="AMZN">AMZN</div>
+              <div class="chip" data-val="TSLA">TSLA</div>
+              <div class="chip" data-val="SPY">SPY</div>
+              <div class="chip" data-val="QQQ">QQQ</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Timeframe</label>
+              <select id="f-timeframe" onchange="updatePreview()">
+                <option value="1m">1 Minute</option>
+                <option value="5m">5 Minutes</option>
+                <option value="15m">15 Minutes</option>
+                <option value="1h" selected>1 Hour</option>
+                <option value="4h">4 Hours</option>
+                <option value="1d">Daily</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Model Type</label>
+              <select id="f-model-type" onchange="updatePreview()">
+                <option value="momentum">Momentum</option>
+                <option value="mean_reversion">Mean Reversion</option>
+                <option value="statistical_arbitrage">Statistical Arbitrage</option>
+                <option value="ml_lstm">ML — LSTM</option>
+                <option value="ml_transformer">ML — Transformer</option>
+                <option value="hf_arbitrage">HF Arbitrage</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Description (optional)</label>
+            <textarea id="f-description" placeholder="Describe the strategy logic and hypothesis…" oninput="updatePreview()"></textarea>
+          </div>
+          <div class="wizard-nav">
+            <span></span>
+            <button class="btn btn-primary" onclick="goStep(2)">Next: Configure →</button>
+          </div>
+        </div>
+        <div class="card step-form" id="step-2">
+          <div class="card-title">Step 2 — Configure Risk Parameters</div>
+          <div class="field-row">
+            <div class="field">
+              <label>Max Drawdown (%)</label>
+              <input type="range" id="f-max-dd" min="1" max="30" value="10" oninput="syncRange(this,'max-dd-val');updatePreview()">
+              <span class="range-val" id="max-dd-val">10%</span>
+              <div class="hint">Max tolerated drawdown before stop</div>
+            </div>
+            <div class="field">
+              <label>Position Size (%)</label>
+              <input type="range" id="f-pos-size" min="1" max="100" value="20" oninput="syncRange(this,'pos-size-val');updatePreview()">
+              <span class="range-val" id="pos-size-val">20%</span>
+              <div class="hint">% of portfolio per position</div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Stop Loss (%)</label>
+              <input type="range" id="f-stop-loss" min="0.5" max="20" step="0.5" value="5" oninput="syncRange(this,'stop-loss-val');updatePreview()">
+              <span class="range-val" id="stop-loss-val">5%</span>
+            </div>
+            <div class="field">
+              <label>Take Profit (%)</label>
+              <input type="range" id="f-take-profit" min="1" max="50" step="0.5" value="15" oninput="syncRange(this,'take-profit-val');updatePreview()">
+              <span class="range-val" id="take-profit-val">15%</span>
+            </div>
+          </div>
+          <div class="field-row3">
+            <div class="field">
+              <label>Lookback Period (days)</label>
+              <input type="number" id="f-lookback" value="60" min="5" max="365" oninput="updatePreview()">
+            </div>
+            <div class="field">
+              <label>Rebalance Frequency</label>
+              <select id="f-rebalance" onchange="updatePreview()">
+                <option value="daily">Daily</option>
+                <option value="weekly" selected>Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Execution Mode</label>
+              <select id="f-exec-mode" onchange="updatePreview()">
+                <option value="paper" selected>Paper Trading</option>
+                <option value="live">Live Trading</option>
+              </select>
+            </div>
+          </div>
+          <div class="wizard-nav">
+            <button class="btn" onclick="goStep(1)">← Back</button>
+            <button class="btn btn-primary" onclick="goStep(3)">Next: Review →</button>
+          </div>
+        </div>
+        <div class="card step-form" id="step-3">
+          <div class="card-title">Step 3 — Review &amp; Submit</div>
+          <div id="review-summary" style="margin-bottom:10px;font-size:11px;line-height:1.8;"></div>
+          <div class="field">
+            <label>Validation notes (optional)</label>
+            <textarea id="f-notes" placeholder="Any additional context for the ValidationAgent…" oninput="updatePreview()"></textarea>
+          </div>
+          <div id="submitMsg"></div>
+          <div class="wizard-nav">
+            <button class="btn" onclick="goStep(2)">← Back</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn" onclick="submitStrategy('draft')">Save as Draft</button>
+              <button class="btn btn-primary" onclick="submitStrategy('backtest_pending')">▶ Submit for Backtest</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="preview-panel">
+        <div class="card" style="display:flex;flex-direction:column;height:100%;">
+          <div class="card-title">Live Config Preview</div>
+          <div class="json-preview" id="jsonPreview">{}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="card-title" style="margin-bottom:0;">Existing Strategies</div>
+        <button class="btn btn-sm" onclick="loadStrategies()">↻ Refresh</button>
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Retry</th><th>Updated</th><th>Action</th></tr></thead>
+        <tbody id="strategiesRows"><tr><td colspan="6" style="color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+  <footer class="bottombar">
+    <div>Strategy Builder — Design · Backtest · Deploy</div>
+    <div>Agent Trading Expert — V2</div>
+  </footer>
+</div>
+<script>
+'use strict';
+let currentStep = 1;
+
+/* ── wizard navigation ── */
+function goStep(n) {
+  if (n === 2 && !validateStep1()) return;
+  currentStep = n;
+  [1,2,3].forEach(i => {
+    document.getElementById('step-'+i).classList.toggle('active', i===n);
+    const ind = document.getElementById('step-ind-'+i);
+    ind.classList.remove('active','done');
+    if (i === n) ind.classList.add('active');
+    else if (i < n) ind.classList.add('done');
+  });
+  if (n === 3) renderReviewSummary();
+  updatePreview();
+}
+
+function validateStep1() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('Strategy name is required.'); return false; }
+  const syms = getSelectedChips('chips-symbols');
+  if (!syms.length) { alert('Select at least one symbol.'); return false; }
+  return true;
+}
+
+function resetWizard() {
+  if (!confirm('Reset the form? All unsaved data will be lost.')) return;
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-description').value = '';
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-timeframe').value = '1h';
+  document.getElementById('f-model-type').value = 'momentum';
+  document.getElementById('f-max-dd').value = 10;
+  document.getElementById('f-pos-size').value = 20;
+  document.getElementById('f-stop-loss').value = 5;
+  document.getElementById('f-take-profit').value = 15;
+  document.getElementById('f-lookback').value = 60;
+  document.getElementById('f-rebalance').value = 'weekly';
+  document.getElementById('f-exec-mode').value = 'paper';
+  document.querySelectorAll('#chips-symbols .chip').forEach((c,i) => c.classList.toggle('selected', i<2));
+  syncRange(document.getElementById('f-max-dd'),'max-dd-val');
+  syncRange(document.getElementById('f-pos-size'),'pos-size-val');
+  syncRange(document.getElementById('f-stop-loss'),'stop-loss-val');
+  syncRange(document.getElementById('f-take-profit'),'take-profit-val');
+  goStep(1);
+}
+
+/* ── range + chip helpers ── */
+function syncRange(el, labelId) {
+  document.getElementById(labelId).textContent = el.value + '%';
+}
+
+function getSelectedChips(groupId) {
+  return Array.from(document.querySelectorAll('#'+groupId+' .chip.selected')).map(c => c.dataset.val);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', function () {
+      this.classList.toggle('selected');
+      updatePreview();
+    });
+  });
+  ['f-max-dd','f-pos-size','f-stop-loss','f-take-profit'].forEach(id => {
+    const el = document.getElementById(id);
+    const labelId = id.replace('f-','') + '-val';
+    syncRange(el, labelId);
+  });
+});
+</script>
+<script>
+/* ── build config object ── */
+function buildConfig() {
+  return {
+    name:        document.getElementById('f-name').value.trim() || 'unnamed',
+    symbols:     getSelectedChips('chips-symbols'),
+    timeframe:   document.getElementById('f-timeframe').value,
+    model_type:  document.getElementById('f-model-type').value,
+    description: document.getElementById('f-description').value.trim(),
+    risk: {
+      max_drawdown_pct:  parseFloat(document.getElementById('f-max-dd').value),
+      position_size_pct: parseFloat(document.getElementById('f-pos-size').value),
+      stop_loss_pct:     parseFloat(document.getElementById('f-stop-loss').value),
+      take_profit_pct:   parseFloat(document.getElementById('f-take-profit').value),
+    },
+    execution: {
+      lookback_days:  parseInt(document.getElementById('f-lookback').value, 10),
+      rebalance:      document.getElementById('f-rebalance').value,
+      mode:           document.getElementById('f-exec-mode').value,
+    },
+    notes: document.getElementById('f-notes').value.trim(),
+    created_at: new Date().toISOString(),
+  };
+}
+
+/* ── syntax-highlight JSON for preview ── */
+function highlightJSON(obj) {
+  return JSON.stringify(obj, null, 2)
+    .replace(/(".*?")(\s*:)/g, '<span class="json-key">$1</span>$2')
+    .replace(/:\s*(".*?")/g, ': <span class="json-str">$1</span>')
+    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+    .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>');
+}
+
+function updatePreview() {
+  const cfg = buildConfig();
+  document.getElementById('jsonPreview').innerHTML = highlightJSON(cfg);
+}
+
+/* ── step 3 review summary ── */
+function renderReviewSummary() {
+  const cfg = buildConfig();
+  const syms = cfg.symbols.length ? cfg.symbols.join(', ') : '—';
+  document.getElementById('review-summary').innerHTML = `
+    <div><b style="color:var(--orange)">Name:</b> ${cfg.name}</div>
+    <div><b style="color:var(--orange)">Symbols:</b> ${syms}</div>
+    <div><b style="color:var(--orange)">Timeframe:</b> ${cfg.timeframe} &nbsp;|&nbsp; <b style="color:var(--orange)">Model:</b> ${cfg.model_type}</div>
+    <div><b style="color:var(--orange)">Max DD:</b> ${cfg.risk.max_drawdown_pct}% &nbsp;|&nbsp;
+         <b style="color:var(--orange)">Position:</b> ${cfg.risk.position_size_pct}% &nbsp;|&nbsp;
+         <b style="color:var(--orange)">SL:</b> ${cfg.risk.stop_loss_pct}% &nbsp;|&nbsp;
+         <b style="color:var(--orange)">TP:</b> ${cfg.risk.take_profit_pct}%</div>
+    <div><b style="color:var(--orange)">Mode:</b> ${cfg.execution.mode} &nbsp;|&nbsp; <b style="color:var(--orange)">Rebalance:</b> ${cfg.execution.rebalance}</div>`;
+}
+</script>
+<script>
+/* ── submit ── */
+async function submitStrategy(status) {
+  const cfg = buildConfig();
+  if (!cfg.name || cfg.name === 'unnamed') { alert('Strategy name is required.'); return; }
+  const msgEl = document.getElementById('submitMsg');
+  msgEl.className = 'msg badge badge-info';
+  msgEl.textContent = '⟳ Submitting…';
+  try {
+    const r = await fetch('/internal/v2/strategies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: cfg.name, spec: cfg, status }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Server error');
+    msgEl.className = 'msg badge badge-ok';
+    msgEl.textContent = '✓ Strategy saved — ID: ' + (d.strategy_id || '—');
+    loadStrategies();
+    if (status === 'backtest_pending') {
+      setTimeout(() => fetch('/api/pipeline/run/backtest', { method: 'POST' }).catch(()=>{}), 500);
+    }
+  } catch (e) {
+    msgEl.className = 'msg badge badge-err';
+    msgEl.textContent = '✗ ' + e.message;
+  }
+}
+
+/* ── status badge helper ── */
+function statusBadge(s) {
+  const m = { approved:'ok', rejected:'err', warning:'warn', human_review:'warn',
+    backtest_pending:'info', backtest_running:'info', validation_pending:'info', draft:'idle' };
+  return `<span class="badge badge-${m[s]||'idle'}">${s||'draft'}</span>`;
+}
+
+/* ── load existing strategies ── */
+async function loadStrategies() {
+  try {
+    const d = await fetch('/internal/v2/strategies?limit=50').then(r => r.json());
+    const rows = (d.strategies || []).map(s => {
+      const spec = s.spec || {};
+      return `<tr>
+        <td style="color:var(--text-primary);font-weight:bold">${s.name||'—'}</td>
+        <td>${spec.model_type||'—'}</td>
+        <td>${statusBadge(s.status)}</td>
+        <td>${s.retry_count||0}</td>
+        <td>${String(s.updated_at||'').slice(0,16)}</td>
+        <td><button class="btn btn-sm" onclick="runBacktest('${s.id}')">▶ Backtest</button></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('strategiesRows').innerHTML =
+      rows || '<tr><td colspan="6" style="color:var(--text-muted)">No strategies yet. Create one above.</td></tr>';
+  } catch(e) {
+    document.getElementById('strategiesRows').innerHTML =
+      '<tr><td colspan="6" style="color:var(--red)">Error loading strategies.</td></tr>';
+  }
+}
+
+async function runBacktest(id) {
+  try {
+    await fetch('/api/pipeline/run/backtest', { method: 'POST' });
+    alert('Backtest started for strategy ' + id);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+/* ── init ── */
+document.addEventListener('DOMContentLoaded', function () {
+  updatePreview();
+  loadStrategies();
+});
+</script>
+<script src="nav.js"></script>
+</body>
+</html>
