@@ -826,6 +826,130 @@ async def get_pipeline_status():
 
 
 
+# ── AI Strategy Assistant ────────────────────────────────────────────────────
+
+class AIChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class AIChatRequest(BaseModel):
+    message: str
+    history: List[AIChatMessage] = []
+
+
+@app.post("/api/chat/ai")
+async def ai_chat(request: AIChatRequest):
+    """AI-powered strategy development assistant using Claude."""
+    import anthropic
+
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return {
+            "response": (
+                "ANTHROPIC_API_KEY non configurata.\n\n"
+                "Aggiungi la variabile d'ambiente ANTHROPIC_API_KEY nel file .env "
+                "o nelle impostazioni di Render per abilitare l'assistente AI."
+            ),
+            "type": "error",
+        }
+
+    # Fetch live context from DB (best-effort — never block the response)
+    ctx_lines: list[str] = []
+    try:
+        summary = get_db().get_dashboard_summary()
+        strategies = get_db().get_strategies()[:8]
+        agents_raw = get_db().get_agent_status()
+
+        ctx_lines.append(f"Equity: ${float(summary.get('current_equity', 0)):,.0f}")
+        ctx_lines.append(f"Total return: {float(summary.get('total_return', 0))*100:.2f}%")
+        ctx_lines.append(f"Sharpe: {float(summary.get('sharpe_ratio', 0)):.2f}")
+        ctx_lines.append(f"Strategies ({len(strategies)}): " + ", ".join(
+            f"{s.get('name','?')} [{s.get('status','?')}]" for s in strategies
+        ))
+        ctx_lines.append("Agents: " + ", ".join(
+            f"{a.get('agent_name','?')}={a.get('last_status','?')}" for a in agents_raw[:6]
+        ))
+    except Exception:
+        ctx_lines.append("(DB not available — answering without live context)")
+
+    system_prompt = f"""You are an expert quantitative trading strategy development assistant for "Agent Trading Expert", an AI-powered algorithmic trading pipeline.
+
+## Live system context
+{chr(10).join(ctx_lines)}
+
+## Pipeline stages
+Research (arXiv) → SpecAgent (YAML spec) → MLEngineer (model code) → ValidationAgent (backtest) → ExecutionEngine (paper trading)
+
+## Your role
+Help the user design, analyze, and improve trading strategies. You can:
+- Generate YAML strategy specs (wrap in ```yaml blocks)
+- Generate Python strategy code (wrap in ```python blocks)
+- Analyze performance metrics (Sharpe, drawdown, win rate, Calmar)
+- Suggest improvements to existing strategies
+- Explain quantitative concepts clearly
+- Trigger actions: instruct the user to use the buttons in the UI
+
+## Strategy spec format
+```yaml
+name: strategy_name
+type: momentum | mean_reversion | ml_based | arbitrage | portfolio_optimization
+description: "..."
+data:
+  symbols: [AAPL, MSFT, GOOG]
+  frequency: 1d | 1h | 5m | 1m
+  lookback_days: 252
+parameters:
+  lookback: 20
+  threshold: 0.02
+  position_size: 0.1
+risk:
+  max_drawdown: 0.15
+  stop_loss: 0.05
+  position_limit: 0.25
+validation:
+  backtest_years: 2
+  sharpe_target: 1.0
+  win_rate_target: 0.55
+```
+
+Be concise and technical. Prioritize actionable output."""
+
+    messages = []
+    for msg in request.history[-12:]:
+        messages.append({"role": msg.role, "content": msg.content})
+    messages.append({"role": "user", "content": request.message})
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=system_prompt,
+            messages=messages,
+        )
+        return {"response": response.content[0].text, "type": "ai"}
+    except Exception as e:
+        logger.error("AI chat error: %s", e, exc_info=True)
+        return {"response": f"Errore AI: {e}", "type": "error"}
+
+
+@app.post("/api/strategies/create-from-spec")
+async def create_strategy_from_spec(request: StrategyCreateRequest):
+    """Create a strategy in the pipeline from an AI-generated spec."""
+    try:
+        from data.repositories import StrategyRepository
+        repo = StrategyRepository()
+        strategy_id = repo.create(
+            {"name": request.name, "spec": request.spec, "status": "draft"}
+        )
+        logger.info("Strategy created from AI spec: %s (id=%s)", request.name, strategy_id)
+        return {"status": "created", "strategy_id": strategy_id, "name": request.name}
+    except Exception as e:
+        logger.error("Error creating strategy from spec: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
