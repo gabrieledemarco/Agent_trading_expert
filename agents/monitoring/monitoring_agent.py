@@ -1,6 +1,7 @@
 """Monitoring Agent - Real-time performance monitoring and alerting in production."""
 
 import logging
+import os
 import time
 import json
 import threading
@@ -467,10 +468,32 @@ class MonitoringAgent(BaseAgent):
         except Exception as _e:
             logger.warning(f"Could not log alert to Neon: {_e}")
 
-        # Note: In production, implement webhook/email notifications here
-        # Example webhook (disabled):
-        # if os.getenv("ALERT_WEBHOOK_URL"):
-        #     self._send_webhook(critical_alerts)
+        if os.getenv("ALERT_WEBHOOK_URL"):
+            self._send_webhook(critical_alerts)
+
+    def _send_webhook(self, alerts: list[Alert]) -> None:
+        """POST alerts as JSON to ALERT_WEBHOOK_URL (Slack, Discord, or any webhook)."""
+        url = os.getenv("ALERT_WEBHOOK_URL", "")
+        if not url:
+            return
+
+        payload = {
+            "system": "Agent Trading Expert",
+            "timestamp": datetime.now().isoformat(),
+            "env": os.getenv("TRADING_ENV", "paper"),
+            "alerts_count": len(alerts),
+            "critical_count": sum(1 for a in alerts if a.severity == "CRITICAL"),
+            "warning_count": sum(1 for a in alerts if a.severity == "WARNING"),
+            "alerts": [asdict(a) for a in alerts],
+        }
+
+        try:
+            import requests
+            resp = requests.post(url, json=payload, timeout=10)
+            resp.raise_for_status()
+            logger.info("Webhook delivered: %d alerts → %s (HTTP %s)", len(alerts), url, resp.status_code)
+        except Exception as e:
+            logger.warning("Webhook delivery failed: %s", e)
 
     def _log_alert(self, alert: Alert):
         """Log alert to history."""
