@@ -1,477 +1,371 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
-    <title>Performance | Trading Agent</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="colors_and_type.css">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;}
-        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
-        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns 0.3s ease;}
-        .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
-        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
-        .topbar-left{display:flex;align-items:center;gap:12px;}
-        .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:6px 10px;font-size:14px;font-family:var(--font);transition:all 0.2s;}
-        .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
-        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
-        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
-        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:scroll;}
-        .sidebar-section{margin-bottom:10px;}
-        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;transition:opacity 0.2s;}
-        .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
-        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all 0.2s;}
-        .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;gap:0;}
-        .sidebar-collapsed .sidebar-item span:first-child{margin:0;}
-        .sidebar-collapsed .sidebar-item span:not(:first-child),.sidebar-collapsed .sidebar-item .badge{display:none;}
-        .sidebar-item:hover{background:var(--bg-tertiary);}
-        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
-        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
-        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;transition:all 0.2s;}
-        .sidebar-collapsed .status-indicator{padding:8px 0;justify-content:center;overflow:hidden;}
-        .sidebar-collapsed .status-indicator span:not(.status-dot){display:none;}
-        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-        .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
-        .stats-row{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:8px;}
-        .stat-box{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;text-align:center;}
-        .stat-box-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
-        .stat-box-value{font-size:16px;font-weight:bold;}
-        .stat-box-sub{color:var(--text-muted);font-size:9px;margin-top:2px;}
-        .positive{color:var(--green);}
-        .negative{color:var(--red);}
-        .neutral{color:var(--text-primary);}
-        .section-tabs{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
-        .section-tab{background:transparent;border:none;color:var(--text-muted);padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--font);}
-        .section-tab:hover{color:var(--text-secondary);}
-        .section-tab.active{color:var(--orange);border-bottom:2px solid var(--orange);margin-bottom:-5px;}
-        .tab-content{display:none;}
-        .tab-content.active{display:block;}
-        .charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
-        .charts-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
-        .card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;}
-        .card-title{color:var(--orange);font-size:11px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
-        .chart-tabs{display:flex;gap:4px;}
-        .chart-tab{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 8px;font-size:10px;cursor:pointer;font-family:var(--font);}
-        .chart-tab.active{background:var(--orange);color:#000;border-color:var(--orange);}
-        .chart-container{height:140px;position:relative;}
-        .chart-container-sm{height:100px;position:relative;}
-        table{width:100%;border-collapse:collapse;font-size:11px;}
-        th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:normal;font-size:10px;text-transform:uppercase;}
-        td{padding:5px 8px;border-bottom:1px solid var(--bg-tertiary);}
-        tr:hover{background:var(--bg-tertiary);}
-        .badge{padding:1px 6px;border-radius:3px;font-size:9px;}
-        .badge-approved{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
-        .badge-testing{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
-        .model-detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;}
-        .model-card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;}
-        .model-card-name{color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:6px;}
-        .model-card-type{color:var(--text-muted);font-size:9px;margin-bottom:8px;}
-        .model-metrics{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;}
-        .metric-label{color:var(--text-muted);}
-        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
-        .progress-bar{height:3px;background:var(--bg-tertiary);border-radius:2px;margin-top:4px;}
-        .progress-fill{height:3px;border-radius:2px;}
-        /* Custom scrollbar styles - always visible */
-        ::-webkit-scrollbar{width:12px;height:12px;}
-        ::-webkit-scrollbar-track{background:var(--bg-primary);border-left:1px solid var(--border);}
-        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
-        ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
-        *{scrollbar-width:thin;scrollbar-color:var(--border) var(--bg-primary);}
-        .main{min-height:calc(100vh - 64px);}
-        .terminal { transition:grid-template-columns 0.3s ease; }
-        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
-        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
-        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
-        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
-        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
-        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
-        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
-        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
-        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
-        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
-    </style>
-    <script src="config.js"></script>
-    <script src="dashboard_data.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+  <title>Performance | Agent Trading</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+    .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns .3s ease;}
+    .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
+    .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+    .topbar-left{display:flex;align-items:center;gap:10px;}
+    .topbar-right{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text-muted);}
+    .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:5px 9px;font-size:13px;font-family:var(--font);transition:all .2s;}
+    .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
+    .brand{color:var(--orange);font-size:13px;font-weight:bold;}
+    .brand span{background:var(--orange);color:#000;padding:1px 5px;border-radius:2px;font-size:9px;margin-right:4px;}
+    .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+    .sidebar-section{margin-bottom:10px;}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+    .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
+    .sidebar-item{padding:6px 12px;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all .2s;}
+    .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;}
+    .sidebar-item:hover{background:var(--bg-tertiary);}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+    .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;}
+    .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
+    .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+    ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-track{background:var(--bg-primary);} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    .kpi-row{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:8px;}
+    .kpi{background:var(--bg-secondary);border:1px solid var(--border);padding:8px;text-align:center;}
+    .kpi-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:4px;}
+    .kpi-value{font-size:15px;font-weight:bold;}
+    .kpi-sub{color:var(--text-muted);font-size:9px;margin-top:2px;}
+    .positive{color:var(--green);} .negative{color:var(--red);} .neutral{color:var(--text-primary);}
+    .tab-bar{display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+    .tab-btn{background:transparent;border:none;color:var(--text-muted);padding:4px 14px;font-size:11px;cursor:pointer;font-family:var(--font);}
+    .tab-btn:hover{color:var(--text-secondary);}
+    .tab-btn.active{color:var(--orange);border-bottom:2px solid var(--orange);margin-bottom:-5px;}
+    .tab-pane{display:none;} .tab-pane.active{display:block;}
+    .charts-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+    .card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;margin-bottom:8px;}
+    .card-title{color:var(--orange);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+    .chart-h140{height:140px;position:relative;}
+    .period-bar{display:flex;gap:3px;}
+    .period-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 7px;font-size:9px;cursor:pointer;font-family:var(--font);}
+    .period-btn:hover,.period-btn.active{border-color:var(--orange);color:var(--orange);}
+    .models-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;}
+    .model-card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;}
+    .model-name{color:var(--text-primary);font-size:11px;font-weight:bold;margin-bottom:2px;}
+    .model-type{color:var(--text-muted);font-size:9px;margin-bottom:8px;}
+    .model-metrics{display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:10px;}
+    .ml{color:var(--text-muted);}
+    .progress-bar{height:3px;background:var(--bg-tertiary);border-radius:2px;margin-top:6px;}
+    .progress-fill{height:3px;border-radius:2px;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;font-weight:normal;}
+    td{padding:4px 8px;border-bottom:1px solid var(--bg-tertiary);}
+    tr:hover{background:var(--bg-tertiary);}
+    .badge{padding:2px 6px;border-radius:2px;font-size:9px;}
+    .badge-ok{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .badge-err{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+    .badge-info{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
+    .badge-idle{background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border);}
+  </style>
 </head>
 <body>
 <div class="terminal">
-    <header class="topbar">
-        <div class="topbar-left">
-            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
-            <div class="topbar-brand"><span>TA</span> PERFORMANCE ANALYTICS</div>
-        </div>
-        <div style="font-size:10px;">Last Update: <span id="lastUpdate" style="color:var(--orange)">--:--:--</span></div>
-    </header>
-
-    <nav class="sidebar"></nav>
-
-    <main class="main">
-        <!-- KPI Row -->
-        <!-- Portfolio-level KPIs — consistent with Overview page -->
-        <div class="stats-row">
-            <div class="stat-box"><div class="stat-box-label">Total Trades</div><div class="stat-box-value neutral">44</div><div class="stat-box-sub">all models</div></div>
-            <div class="stat-box"><div class="stat-box-label">Win Rate</div><div class="stat-box-value positive">55%</div><div class="stat-box-sub">target &gt;55%</div></div>
-            <div class="stat-box"><div class="stat-box-label">Sharpe Ratio</div><div class="stat-box-value positive">0.52</div><div class="stat-box-sub">portfolio weighted</div></div>
-            <div class="stat-box"><div class="stat-box-label">Sortino Ratio</div><div class="stat-box-value positive">0.68</div><div class="stat-box-sub">portfolio weighted</div></div>
-            <div class="stat-box"><div class="stat-box-label">Calmar Ratio</div><div class="stat-box-value positive">2.82</div><div class="stat-box-sub">ann. return/maxDD</div></div>
-            <div class="stat-box"><div class="stat-box-label">Max DD</div><div class="stat-box-value neutral">1.8%</div><div class="stat-box-sub">from peak</div></div>
-            <div class="stat-box"><div class="stat-box-label">Alpha (SPY)</div><div class="stat-box-value positive">+0.77%</div><div class="stat-box-sub">Beta: 0.42</div></div>
-            <div class="stat-box"><div class="stat-box-label">Profit Factor</div><div class="stat-box-value positive">1.35</div><div class="stat-box-sub">gross P/L ratio</div></div>
-        </div>
-
-        <!-- Section tabs -->
-        <div class="section-tabs">
-            <button class="section-tab active" onclick="switchTab('portfolio')">Portfolio</button>
-            <button class="section-tab" onclick="switchTab('models')">Per-Model</button>
-            <button class="section-tab" onclick="switchTab('trades')">Trade Log</button>
-        </div>
-
-        <!-- Portfolio Tab -->
-        <div class="tab-content active" id="tab-portfolio">
-            <div class="charts-2col">
-                <div class="card">
-                    <div class="card-title">
-                        <span>EQUITY CURVE VS BENCHMARK</span>
-                        <div class="chart-tabs">
-                            <button class="chart-tab" onclick="setEqPeriod('5m',this)">5m</button>
-                            <button class="chart-tab" onclick="setEqPeriod('15m',this)">15m</button>
-                            <button class="chart-tab" onclick="setEqPeriod('1h',this)">1h</button>
-                            <button class="chart-tab" onclick="setEqPeriod('4h',this)">4h</button>
-                            <button class="chart-tab active" onclick="setEqPeriod('1W',this)">1W</button>
-                            <button class="chart-tab" onclick="setEqPeriod('1M',this)">1M</button>
-                            <button class="chart-tab" onclick="setEqPeriod('3M',this)">3M</button>
-                        </div>
-                    </div>
-                    <div class="chart-container"><canvas id="equityChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title"><span>DRAWDOWN OVER TIME</span></div>
-                    <div class="chart-container"><canvas id="ddChart"></canvas></div>
-                </div>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="brand"><span>TA</span> PERFORMANCE ANALYTICS</div>
+    </div>
+    <div class="topbar-right">
+      Last update: <span id="lastUpdate" style="color:var(--orange)">—</span>
+      <button style="background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:3px 8px;font-size:9px;cursor:pointer;font-family:var(--font);" onclick="refreshAll()">↻</button>
+    </div>
+  </header>
+  <nav class="sidebar"></nav>
+  <main class="main">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('portfolio',this)">Portfolio</button>
+      <button class="tab-btn" onclick="switchTab('models',this)">Per-Model</button>
+      <button class="tab-btn" onclick="switchTab('trades',this)">Trade Log</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total Trades</div><div class="kpi-value neutral" id="kpi-trades">—</div><div class="kpi-sub">all models</div></div>
+      <div class="kpi"><div class="kpi-label">Win Rate</div><div class="kpi-value" id="kpi-winrate">—</div><div class="kpi-sub">target &gt;55%</div></div>
+      <div class="kpi"><div class="kpi-label">Sharpe Ratio</div><div class="kpi-value" id="kpi-sharpe">—</div><div class="kpi-sub">portfolio</div></div>
+      <div class="kpi"><div class="kpi-label">Sortino</div><div class="kpi-value" id="kpi-sortino">—</div><div class="kpi-sub">downside risk</div></div>
+      <div class="kpi"><div class="kpi-label">Calmar</div><div class="kpi-value" id="kpi-calmar">—</div><div class="kpi-sub">ann/maxDD</div></div>
+      <div class="kpi"><div class="kpi-label">Max DD</div><div class="kpi-value" id="kpi-maxdd">—</div><div class="kpi-sub">from peak</div></div>
+      <div class="kpi"><div class="kpi-label">VaR 95%</div><div class="kpi-value" id="kpi-var">—</div><div class="kpi-sub">daily est.</div></div>
+      <div class="kpi"><div class="kpi-label">Volatility</div><div class="kpi-value" id="kpi-vol">—</div><div class="kpi-sub">annualised</div></div>
+    </div>
+    <!-- S4-B6: Portfolio tab -->
+    <div class="tab-pane active" id="tab-portfolio">
+      <div class="charts-2">
+        <div class="card">
+          <div class="card-title">
+            <span>EQUITY CURVE VS BENCHMARK</span>
+            <div class="period-bar">
+              <button class="period-btn" onclick="setEqPeriod('1D',this)">1D</button>
+              <button class="period-btn" onclick="setEqPeriod('1W',this)">1W</button>
+              <button class="period-btn active" onclick="setEqPeriod('1M',this)">1M</button>
+              <button class="period-btn" onclick="setEqPeriod('3M',this)">3M</button>
+              <button class="period-btn" onclick="setEqPeriod('6M',this)">6M</button>
             </div>
-            <div class="charts-2col">
-                <div class="card">
-                    <div class="card-title"><span>MONTHLY RETURNS</span></div>
-                    <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
-                </div>
-                <div class="card">
-                    <div class="card-title"><span>ROLLING SHARPE (20-DAY)</span></div>
-                    <div class="chart-container"><canvas id="sharpeChart"></canvas></div>
-                </div>
-            </div>
+          </div>
+          <div class="chart-h140"><canvas id="equityChart"></canvas></div>
         </div>
-
-        <!-- Models Tab -->
-        <div class="tab-content" id="tab-models">
-            <div class="model-detail-grid">
-                <div class="model-card">
-                    <div class="model-card-name">Intraday Momentum</div>
-                    <div class="model-card-type">LSTM | 5m/15m | arXiv:2401.12345</div>
-                    <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span class="positive">52%</span>
-                        <span class="metric-label">Sharpe</span><span class="positive">0.34</span>
-                        <span class="metric-label">Sortino</span><span class="positive">0.45</span>
-                        <span class="metric-label">Max DD</span><span>1.8%</span>
-                        <span class="metric-label">Trades</span><span>6</span>
-                        <span class="metric-label">Avg Hold</span><span>2.1h</span>
-                        <span class="metric-label">Avg Win</span><span class="positive">+$72</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$53</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:52%;background:var(--green);"></div></div>
-                </div>
-                <div class="model-card">
-                    <div class="model-card-name">High Frequency</div>
-                    <div class="model-card-type">Cointegration | 1m | arXiv:2402.09876</div>
-                    <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span class="positive">63%</span>
-                        <span class="metric-label">Sharpe</span><span class="positive">0.89</span>
-                        <span class="metric-label">Sortino</span><span class="positive">1.12</span>
-                        <span class="metric-label">Max DD</span><span>0.8%</span>
-                        <span class="metric-label">Trades</span><span>24</span>
-                        <span class="metric-label">Avg Hold</span><span>12m</span>
-                        <span class="metric-label">Avg Win</span><span class="positive">+$31</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$18</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:63%;background:var(--green);"></div></div>
-                </div>
-                <div class="model-card">
-                    <div class="model-card-name">Dynamic Time</div>
-                    <div class="model-card-type">RL (PPO) | Adaptive | arXiv:2403.11111</div>
-                    <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span class="positive">55%</span>
-                        <span class="metric-label">Sharpe</span><span class="positive">0.25</span>
-                        <span class="metric-label">Sortino</span><span class="positive">0.33</span>
-                        <span class="metric-label">Max DD</span><span>2.0%</span>
-                        <span class="metric-label">Trades</span><span>11</span>
-                        <span class="metric-label">Avg Hold</span><span>4.5h</span>
-                        <span class="metric-label">Avg Win</span><span class="positive">+$88</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$79</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:55%;background:var(--green);"></div></div>
-                </div>
-                <div class="model-card">
-                    <div class="model-card-name">Momentum Sharpness</div>
-                    <div class="model-card-type">XGBoost | Daily | arXiv:2404.05555</div>
-                    <div class="model-metrics">
-                        <span class="metric-label">Win Rate</span><span>47%</span>
-                        <span class="metric-label">Sharpe</span><span class="negative">-0.18</span>
-                        <span class="metric-label">Sortino</span><span class="negative">-0.22</span>
-                        <span class="metric-label">Max DD</span><span>1.2%</span>
-                        <span class="metric-label">Trades</span><span>3</span>
-                        <span class="metric-label">Avg Hold</span><span>2.1d</span>
-                        <span class="metric-label">Avg Win</span><span class="positive">+$145</span>
-                        <span class="metric-label">Avg Loss</span><span class="negative">-$100</span>
-                    </div>
-                    <div class="progress-bar"><div class="progress-fill" style="width:47%;background:var(--orange);"></div></div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title"><span>MODEL COMPARISON — RISK-ADJUSTED RETURNS</span></div>
-                <div class="chart-container"><canvas id="modelRadar"></canvas></div>
-            </div>
+        <div class="card">
+          <div class="card-title"><span>DRAWDOWN OVER TIME</span></div>
+          <div class="chart-h140"><canvas id="ddChart"></canvas></div>
         </div>
-
-        <!-- Trades Tab -->
-        <div class="tab-content" id="tab-trades">
-            <div class="card" style="margin-bottom:8px;">
-                <div class="card-title"><span>TRADE HISTORY (ALL MODELS)</span><span style="color:var(--text-muted);font-size:10px;">44 trades</span></div>
-                <table>
-                    <thead><tr><th>#</th><th>Date</th><th>Model</th><th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th><th>Qty</th><th>P&amp;L</th><th>Return</th><th>Hold</th></tr></thead>
-                    <tbody>
-                        <tr><td style="color:var(--text-muted)">044</td><td>2026-04-16</td><td>HF</td><td style="color:var(--text-primary)">AAPL</td><td class="positive">BUY</td><td>$263.11</td><td>open</td><td>3.8</td><td class="positive">+$212</td><td class="positive">+2.1%</td><td>2d</td></tr>
-                        <tr><td style="color:var(--text-muted)">043</td><td>2026-04-15</td><td>IM</td><td style="color:var(--text-primary)">MSFT</td><td class="negative">SHORT</td><td>$418.54</td><td>open</td><td>2.1</td><td class="negative">-$142</td><td class="negative">-1.6%</td><td>1d</td></tr>
-                        <tr><td style="color:var(--text-muted)">042</td><td>2026-04-15</td><td>DT</td><td style="color:var(--text-primary)">GOOG</td><td class="positive">BUY</td><td>$175.23</td><td>open</td><td>5.2</td><td class="positive">+$122</td><td class="positive">+1.3%</td><td>3h</td></tr>
-                        <tr><td style="color:var(--text-muted)">041</td><td>2026-04-14</td><td>MS</td><td style="color:var(--text-primary)">NVDA</td><td class="positive">BUY</td><td>$890.20</td><td>$878.00</td><td>1.1</td><td class="negative">-$134</td><td class="negative">-1.4%</td><td>6h</td></tr>
-                        <tr><td style="color:var(--text-muted)">040</td><td>2026-04-14</td><td>HF</td><td style="color:var(--text-primary)">SPY</td><td class="positive">BUY</td><td>$523.10</td><td>$526.80</td><td>4.0</td><td class="positive">+$148</td><td class="positive">+0.7%</td><td>45m</td></tr>
-                        <tr><td style="color:var(--text-muted)">039</td><td>2026-04-13</td><td>IM</td><td style="color:var(--text-primary)">TSLA</td><td class="negative">SHORT</td><td>$245.60</td><td>$249.10</td><td>3.5</td><td class="negative">-$123</td><td class="negative">-1.4%</td><td>1.5h</td></tr>
-                        <tr><td style="color:var(--text-muted)">038</td><td>2026-04-11</td><td>DT</td><td style="color:var(--text-primary)">META</td><td class="positive">BUY</td><td>$510.00</td><td>$519.50</td><td>2.0</td><td class="positive">+$190</td><td class="positive">+1.9%</td><td>1d</td></tr>
-                    </tbody>
-                </table>
-            </div>
+      </div>
+      <div class="charts-2">
+        <div class="card">
+          <div class="card-title"><span>MONTHLY RETURNS</span></div>
+          <div class="chart-h140"><canvas id="monthlyChart"></canvas></div>
         </div>
-    </main>
-
-    <footer class="bottombar">
-        <div>TOTAL TRADES: 44 | WIN: 24 | LOSS: 20 | OPEN: 3</div>
-        <div>Trading Agent v1.1 | Research Use Only</div>
-    </footer>
+        <div class="card">
+          <div class="card-title"><span>ROLLING SHARPE (20-DAY)</span></div>
+          <div class="chart-h140"><canvas id="sharpeChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <!-- S4-B7: Per-Model tab -->
+    <div class="tab-pane" id="tab-models">
+      <div class="models-grid" id="modelsGrid">
+        <div class="model-card"><div class="model-name" style="color:var(--text-muted)">Loading…</div></div>
+      </div>
+    </div>
+    <!-- S4-B8: Trade Log tab -->
+    <div class="tab-pane" id="tab-trades">
+      <div class="card">
+        <div class="card-title">TRADE HISTORY</div>
+        <table>
+          <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>PnL</th><th>Model</th><th>Status</th></tr></thead>
+          <tbody id="tradeRows"><tr><td colspan="9" style="color:var(--text-muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <!-- S4-B8: bottombar -->
+  <footer class="bottombar">
+    <div>Performance Analytics | auto-refresh 15s</div>
+    <div>Agent Trading Expert — V2</div>
+  </footer>
 </div>
-        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">&#9776;</button>
-
+<!-- S4-B9 B10 B11 B12: scripts -->
 <script>
-function updateTime(){document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString();}
-setInterval(updateTime,1000); updateTime();
+let eqPeriod = '1M';
+const charts = {};
 
-function switchTab(id){
-    document.querySelectorAll('.section-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-    document.querySelector(`.section-tab[onclick="switchTab('${id}')"]`).classList.add('active');
-    document.getElementById('tab-'+id).classList.add('active');
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
 }
 
-// Equity: initial=$10,000, current=$10,127 (+1.27%), peak=$10,255, max DD=1.8%
-// (10,255 - 10,066) / 10,255 = 1.84% ≈ 1.8% max DD
-
-// Fetch equity curve from API for a given period and map to eqData format
-async function fetchPerformanceData(period) {
-    // Map tab period names to the equity-curve API parameter (1D|1W|1M|3M|6M|1Y)
-    const periodMap = {'5m':'1W','15m':'1W','1h':'1M','4h':'1M','1W':'1W','1M':'1M','3M':'3M'};
-    const apiPeriod = periodMap[period] || '1M';
-    try {
-        const response = await fetch((window.TRADING_API_BASE||'') + `/api/equity-curve?period=${apiPeriod}`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data.labels && data.equity && data.labels.length > 0) {
-                return { labels: data.labels, eq: data.equity, bm: data.benchmark || [] };
-            }
-        }
-    } catch(e) {
-        console.log('API unavailable, using static data');
-    }
-    return null;
+function setEqPeriod(p, btn) {
+  eqPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  fetchEquity();
 }
-const eqData = {
-    // Intraday timeframes
-    '5m': { labels:['10:00','10:05','10:10','10:15','10:20','10:25','10:30','10:35','10:40','10:45','10:50','10:55'], eq:[10000,10012,10025,10035,10042,10050,10055,10062,10070,10082,10090,10105], bm:[10000,10002,10005,10008,10010,10012,10015,10018,10020,10022,10025,10028] },
-    '15m': { labels:['10:00','10:15','10:30','10:45','11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45'], eq:[10000,10018,10032,10045,10052,10060,10072,10085,10095,10108,10118,10132], bm:[10000,10005,10010,10015,10018,10022,10025,10028,10032,10035,10038,10042] },
-    '1h': { labels:['9:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'], eq:[10000,10025,10045,10058,10062,10075,10088,10102,10115,10125,10138,10152], bm:[10000,10008,10015,10022,10025,10028,10032,10035,10038,10042,10045,10048] },
-    '4h': { labels:['00:00','04:00','08:00','12:00','16:00','20:00','00:00','04:00','08:00','12:00','16:00','20:00'], eq:[10000,10018,10035,10052,10068,10085,10102,10118,10135,10152,10168,10185], bm:[10000,10006,10012,10018,10024,10030,10036,10042,10048,10054,10060,10066] },
-    '1W': { labels:['Mon','Tue','Wed','Thu','Fri','Mon','Tue','Wed','Thu','Fri'], eq:[10100,10108,10115,10110,10118,10120,10122,10124,10126,10127], bm:[10100,10105,10108,10106,10110,10112,10114,10116,10118,10120] },
-    '1M': { labels:['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'], eq:[10000,10080,10150,10220,10255,10175,10120,10066,10085,10100,10115,10127], bm:[10000,10020,10015,10035,10040,10048,10045,10055,10058,10062,10058,10065] },
-    '3M': { labels:['Jan W1','Jan W2','Jan W3','Jan W4','Feb W1','Feb W2','Feb W3','Feb W4','Mar W1','Mar W2','Mar W3','Mar W4','Apr W1','Apr W2'], eq:[10000,10055,10120,10195,10255,10210,10165,10110,10066,10090,10105,10115,10120,10127], bm:[10000,10018,10030,10048,10055,10062,10068,10078,10082,10088,10092,10098,10094,10100] }
+
+async function fetchKPIs() {
+  try {
+    const d = await fetch('/performance').then(r => r.json());
+    const set = (id, val, cls) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = val;
+      if (cls) el.className = 'kpi-value ' + cls;
+    };
+    const pnl = d.total_pnl ?? d.total_return ?? null;
+    set('kpi-trades', d.total_trades ?? '—');
+    const wr = d.win_rate != null ? (d.win_rate * 100).toFixed(1) + '%' : '—';
+    set('kpi-winrate', wr, d.win_rate >= 0.55 ? 'positive' : 'negative');
+    set('kpi-sharpe', d.sharpe_ratio != null ? Number(d.sharpe_ratio).toFixed(2) : '—',
+        d.sharpe_ratio >= 1 ? 'positive' : d.sharpe_ratio < 0 ? 'negative' : 'neutral');
+    set('kpi-sortino', d.sortino_ratio != null ? Number(d.sortino_ratio).toFixed(2) : '—');
+    set('kpi-calmar', d.calmar_ratio != null ? Number(d.calmar_ratio).toFixed(2) : '—');
+    const dd = d.max_drawdown != null ? (d.max_drawdown * 100).toFixed(1) + '%' : '—';
+    set('kpi-maxdd', dd, 'negative');
+    set('kpi-var', d.var_95 != null ? (d.var_95 * 100).toFixed(2) + '%' : '—', 'negative');
+    set('kpi-vol', d.volatility != null ? (d.volatility * 100).toFixed(1) + '%' : '—');
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+  } catch (e) { console.warn('fetchKPIs:', e); }
+}
+</script>
+<!-- S4-B10 -->
+<script>
+const CHART_DEFAULTS = {
+  responsive: true, maintainAspectRatio: false, animation: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { color: '#111' }, ticks: { color: '#555', font: { size: 9 }, maxTicksLimit: 8 } },
+    y: { grid: { color: '#111' }, ticks: { color: '#555', font: { size: 9 } } },
+  },
 };
 
-let eqChart,ddChartObj,monthlyChartObj,sharpeChartObj;
-
-function buildEqChart(period){
-    const d=eqData[period];
-    const ctx=document.getElementById('equityChart').getContext('2d');
-    if(eqChart)eqChart.destroy();
-    eqChart=new Chart(ctx,{type:'line',data:{labels:d.labels,datasets:[
-        {label:'Equity',data:d.eq,borderColor:'#ff9900',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'SPY',data:d.bm,borderColor:'#3399ff',borderWidth:1,borderDash:[4,4],pointRadius:0,tension:0.3,fill:false}
-    ]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#666',font:{family:'Consolas',size:9},boxWidth:15,padding:6}}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>'$'+v.toLocaleString()}}}}});
+function mkChart(id, type, datasets, extraOpts) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  charts[id] = new Chart(canvas.getContext('2d'), {
+    type,
+    data: { labels: [], datasets },
+    options: Object.assign({}, CHART_DEFAULTS, extraOpts || {}),
+  });
+  return charts[id];
 }
 
-function setEqPeriod(p,btn){
-    // Update button state
-    if(btn) {
-        document.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-    }
-    
-    // Check if we have data for this period
-    if (eqData[p]) {
-        buildEqChart(p);
-    } else {
-        // Try to fetch from API for missing periods
-        fetchPerformanceData(p).then(data => {
-            if(data) {
-                eqData[p] = data;
-            }
-            buildEqChart(p);
-        });
-    }
-}
+async function fetchEquity() {
+  try {
+    const d = await fetch('/api/equity-curve?period=' + eqPeriod).then(r => r.json());
+    const labels = d.labels || [];
+    const equity = d.equity || [];
+    const bench  = d.benchmark || [];
+    const c = mkChart('equityChart', 'line', [
+      { label: 'Portfolio', data: equity, borderColor: '#ff9900', backgroundColor: 'rgba(255,153,0,.05)', borderWidth: 1.5, pointRadius: 0, tension: .3 },
+      { label: 'Benchmark', data: bench,  borderColor: '#444',    backgroundColor: 'transparent',         borderWidth: 1,   pointRadius: 0, tension: .3 },
+    ]);
+    if (c) { c.data.labels = labels; c.update('none'); }
 
-function buildStaticCharts(){
-    // Drawdown
-    const ddCtx=document.getElementById('ddChart').getContext('2d');
-    const ddValues=[0,-0.10,-0.05,-0.15,-0.08,-0.73,-1.22,-1.79,-1.61,-1.46,-1.32,-1.20];
-    ddChartObj=new Chart(ddCtx,{type:'line',data:{labels:eqData['1W'].labels,datasets:[{label:'Drawdown %',data:ddValues,borderColor:'#ff0000',borderWidth:1.5,pointRadius:0,tension:0.3,fill:{target:'origin',above:'rgba(255,0,0,0.07)'}}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'},max:0}}}});
-
-    // Monthly Returns (deterministic)
-    const mCtx=document.getElementById('monthlyChart').getContext('2d');
-    const mData=[2.1,-0.8,1.4,0.9,-0.6,1.5,-0.4,0.5];
-    const mLabels=['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
-    monthlyChartObj=new Chart(mCtx,{type:'bar',data:{labels:mLabels,datasets:[{label:'Monthly Return %',data:mData,backgroundColor:mData.map(v=>v>=0?'rgba(0,255,0,0.5)':'rgba(255,0,0,0.5)'),borderColor:mData.map(v=>v>=0?'#00ff00':'#ff0000'),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9},callback:v=>v+'%'}}}}});
-
-    // Rolling Sharpe
-    const sCtx=document.getElementById('sharpeChart').getContext('2d');
-    const sData=[0.20,0.40,0.30,0.60,0.50,0.35,0.40,0.45,0.50,0.52];
-    sharpeChartObj=new Chart(sCtx,{type:'line',data:{labels:eqData['1W'].labels,datasets:[
-        {label:'Rolling Sharpe',data:sData,borderColor:'#ffcc00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
-        {label:'Target (1.0)',data:new Array(10).fill(1.0),borderColor:'#3399ff',borderWidth:1,borderDash:[6,3],pointRadius:0}
-    ]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#666',font:{family:'Consolas',size:9},boxWidth:12,padding:6}}},scales:{x:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}}},y:{grid:{color:'#1a1a1a'},ticks:{color:'#666',font:{family:'Consolas',size:9}},suggestedMin:-1.5,suggestedMax:1.5}}}});
-}
-
-buildEqChart('1W');
-buildStaticCharts();
-
-// ── KPI hydration from /dashboard/summary ─────────────────────────────────
-function updateStatBoxByLabel(label, value, cls) {
-    document.querySelectorAll('.stat-box').forEach(box => {
-        const lbl = box.querySelector('.stat-box-label');
-        if (lbl && lbl.textContent.trim() === label) {
-            const val = box.querySelector('.stat-box-value');
-            if (val) { val.textContent = value; if (cls) val.className = 'stat-box-value ' + cls; }
-        }
+    const dd = equity.map((v, i) => {
+      const peak = Math.max(...equity.slice(0, i + 1));
+      return peak > 0 ? ((v - peak) / peak) * 100 : 0;
     });
+    const dc = mkChart('ddChart', 'line', [
+      { label: 'Drawdown', data: dd, borderColor: '#e05', backgroundColor: 'rgba(238,0,85,.08)', borderWidth: 1.5, pointRadius: 0, fill: true },
+    ]);
+    if (dc) { dc.data.labels = labels; dc.update('none'); }
+  } catch (e) { console.warn('fetchEquity:', e); }
+}
+</script>
+<!-- S4-B11 -->
+<script>
+async function fetchMonthlyAndSharpe() {
+  try {
+    const d = await fetch('/api/equity-curve?period=6M').then(r => r.json());
+    const equity = d.equity || [];
+    const labels = d.labels || [];
+
+    // Monthly returns: group daily equity into months
+    const monthMap = {};
+    labels.forEach((lbl, i) => {
+      const mo = String(lbl).slice(0, 7);
+      if (!monthMap[mo]) monthMap[mo] = { first: equity[i], last: equity[i] };
+      else monthMap[mo].last = equity[i];
+    });
+    const moLabels = Object.keys(monthMap).sort();
+    const moReturns = moLabels.map(mo => {
+      const { first, last } = monthMap[mo];
+      return first ? ((last - first) / first) * 100 : 0;
+    });
+    const mc = mkChart('monthlyChart', 'bar', [{
+      label: 'Monthly %',
+      data: moReturns,
+      backgroundColor: moReturns.map(v => v >= 0 ? 'rgba(0,200,100,.6)' : 'rgba(220,50,50,.6)'),
+      borderWidth: 0,
+    }]);
+    if (mc) { mc.data.labels = moLabels; mc.update('none'); }
+
+    // Rolling Sharpe (20-day window)
+    const rf = 0;
+    const rollSharpe = equity.map((_, i) => {
+      if (i < 20) return null;
+      const slice = equity.slice(i - 20, i);
+      const rets = slice.map((v, j) => j === 0 ? 0 : (v - slice[j - 1]) / slice[j - 1]);
+      const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+      const std  = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / rets.length);
+      return std > 0 ? ((mean - rf) / std) * Math.sqrt(252) : null;
+    });
+    const sc = mkChart('sharpeChart', 'line', [{
+      label: 'Rolling Sharpe',
+      data: rollSharpe,
+      borderColor: '#4af',
+      backgroundColor: 'rgba(64,170,255,.05)',
+      borderWidth: 1.5, pointRadius: 0, tension: .3, spanGaps: true,
+    }]);
+    if (sc) { sc.data.labels = labels; sc.update('none'); }
+  } catch (e) { console.warn('fetchMonthlyAndSharpe:', e); }
+}
+</script>
+<!-- S4-B12 -->
+<script>
+async function fetchModels() {
+  try {
+    const d = await fetch('/models').then(r => r.json());
+    const models = d.models || d.strategies || [];
+    const grid = document.getElementById('modelsGrid');
+    if (!grid) return;
+    if (!models.length) { grid.innerHTML = '<div class="model-card"><div class="model-name" style="color:var(--text-muted)">No models.</div></div>'; return; }
+    grid.innerHTML = models.map(m => {
+      const sh = m.sharpe_ratio != null ? Number(m.sharpe_ratio).toFixed(2) : '—';
+      const wr = m.win_rate != null ? (m.win_rate * 100).toFixed(1) + '%' : '—';
+      const dd = m.max_drawdown != null ? (m.max_drawdown * 100).toFixed(1) + '%' : '—';
+      const tr = m.total_trades ?? m.trade_count ?? '—';
+      const rob = Math.min(100, Math.max(0, ((m.robustness_score || 0) * 100)));
+      const robColor = rob >= 70 ? 'var(--green)' : rob >= 40 ? 'var(--orange)' : 'var(--red)';
+      return `<div class="model-card">
+        <div class="model-name">${m.name || m.model_name || m.id || '?'}</div>
+        <div class="model-type">${m.model_type || m.type || 'strategy'}</div>
+        <div class="model-metrics">
+          <span class="ml">Sharpe</span><span>${sh}</span>
+          <span class="ml">Win Rate</span><span>${wr}</span>
+          <span class="ml">Max DD</span><span class="negative">${dd}</span>
+          <span class="ml">Trades</span><span>${tr}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${rob}%;background:${robColor}"></div></div>
+      </div>`;
+    }).join('');
+  } catch (e) { console.warn('fetchModels:', e); }
 }
 
-async function hydratePerformanceKPIs() {
-    try {
-        const [summaryResp, riskResp] = await Promise.all([
-            fetch((window.TRADING_API_BASE||'') + '/dashboard/summary'),
-            fetch((window.TRADING_API_BASE||'') + '/api/risk/summary'),
-        ]);
-        if (summaryResp.ok) {
-            const s = await summaryResp.json();
-            if (s.total_trades > 0) updateStatBoxByLabel('Total Trades', s.total_trades, 'neutral');
-            if (s.sharpe_ratio) updateStatBoxByLabel('Sharpe Ratio', parseFloat(s.sharpe_ratio).toFixed(2), s.sharpe_ratio >= 0 ? 'positive' : 'negative');
-        }
-        if (riskResp.ok) {
-            const r = await riskResp.json();
-            if (r.max_drawdown_pct != null) updateStatBoxByLabel('Max DD', parseFloat(r.max_drawdown_pct).toFixed(1) + '%', 'neutral');
-        }
-    } catch(e) {}
+async function fetchTrades() {
+  try {
+    const d = await fetch('/api/trades?limit=100').then(r => r.json());
+    const trades = d.trades || d.results || [];
+    const tbody = document.getElementById('tradeRows');
+    if (!tbody) return;
+    if (!trades.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--text-muted)">No trades.</td></tr>'; return; }
+    tbody.innerHTML = trades.map(t => {
+      const pnl = t.pnl ?? t.realized_pnl ?? null;
+      const cls = pnl == null ? '' : pnl >= 0 ? 'positive' : 'negative';
+      const pnlStr = pnl != null ? `<span class="${cls}">${pnl >= 0 ? '+' : ''}${Number(pnl).toFixed(2)}</span>` : '—';
+      const side = (t.side || t.action || '').toUpperCase();
+      const sideColor = side === 'BUY' ? 'var(--green)' : side === 'SELL' ? 'var(--red)' : '';
+      const st = (t.status || '').toLowerCase();
+      const badgeCls = st === 'filled' ? 'badge-ok' : st === 'rejected' ? 'badge-err' : st === 'pending' ? 'badge-info' : 'badge-idle';
+      return `<tr>
+        <td>${String(t.created_at || t.timestamp || '').slice(0, 16)}</td>
+        <td>${t.symbol || '—'}</td>
+        <td style="color:${sideColor}">${side || '—'}</td>
+        <td>${t.quantity ?? t.qty ?? '—'}</td>
+        <td>${t.entry_price != null ? Number(t.entry_price).toFixed(2) : '—'}</td>
+        <td>${t.exit_price  != null ? Number(t.exit_price).toFixed(2)  : '—'}</td>
+        <td>${pnlStr}</td>
+        <td>${t.model_name || t.strategy_name || '—'}</td>
+        <td><span class="badge ${badgeCls}">${st || '—'}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) { console.warn('fetchTrades:', e); }
 }
 
-// ── Trade log hydration from /api/trades ──────────────────────────────────
-async function hydrateTradeLog() {
-    try {
-        const resp = await fetch((window.TRADING_API_BASE||'') + '/api/trades?limit=50');
-        if (!resp.ok) return;
-        const { trades, count } = await resp.json();
-        if (!trades || trades.length === 0) return;
-
-        const tradeTab = document.querySelector('#tab-trades .card-title span:last-child');
-        if (tradeTab) tradeTab.textContent = count + ' trades';
-
-        const footer = document.querySelector('.bottombar div:first-child');
-        if (footer) footer.textContent = `TOTAL TRADES: ${count} | Loaded from DB`;
-
-        const tbody = document.querySelector('#tab-trades tbody');
-        if (!tbody) return;
-        tbody.innerHTML = trades.map((t, i) => {
-            const num = String(count - i).padStart(3, '0');
-            const date = (t.timestamp || '').slice(0, 10);
-            const model = (t.model_name || '').replace('Agent', '').slice(0, 6);
-            const action = (t.action || '').toUpperCase();
-            const actionCls = action === 'BUY' ? 'positive' : 'negative';
-            const price = t.price ? '$' + parseFloat(t.price).toFixed(2) : '—';
-            const qty   = t.quantity ? parseFloat(t.quantity).toFixed(2) : '—';
-            return `<tr>
-                <td style="color:var(--text-muted)">${num}</td>
-                <td>${date}</td>
-                <td>${model}</td>
-                <td style="color:var(--text-primary)">${t.symbol || '—'}</td>
-                <td class="${actionCls}">${action}</td>
-                <td>${price}</td><td>—</td>
-                <td>${qty}</td><td>—</td><td>—</td><td>—</td>
-            </tr>`;
-        }).join('');
-    } catch(e) {}
+function refreshAll() {
+  fetchKPIs();
+  fetchEquity();
+  fetchMonthlyAndSharpe();
+  fetchModels();
+  fetchTrades();
 }
 
-hydratePerformanceKPIs();
-hydrateTradeLog();
-
-        function toggleSidebar() {
-            const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        }
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.querySelector('.terminal').classList.add('sidebar-collapsed');
-        }
-        
-        // Hydrate with real data from API
-        hydratePerformanceFromApi();
-        
-        async function hydratePerformanceFromApi() {
-    try {
-        const response = await fetch((window.TRADING_API_BASE||'') + '/api/equity-curve?period=1M');
-        if (!response.ok) { showDbBanner('API non disponibile ('+response.status+') — dati demo'); return; }
-        const data = await response.json();
-        if (data.labels && data.equity && data.labels.length > 0) {
-            eqData['1W'] = {
-                labels: data.labels.slice(-10),
-                eq: data.equity.slice(-10),
-                bm: (data.benchmark || data.equity.map(v => v * 0.9)).slice(-10)
-            };
-            setEqPeriod('1W', null);
-        } else {
-            showDbBanner('Nessun dato in Neon — mostrando dati demo');
-        }
-    } catch (err) {
-        console.warn('Performance API:', err.message);
-        showDbBanner('Database non raggiungibile — dati demo attivi');
-    }
-}
-
-function showDbBanner(message) {
-    console.warn('⚠️ ' + message);
-    if (document.getElementById('dbBanner')) return;
-    const b = document.createElement('div');
-    b.id = 'dbBanner';
-    b.style.cssText = 'position:fixed;bottom:12px;right:12px;background:#1a1000;border:1px solid #ff9900;padding:8px 14px;color:#ff9900;font-family:Consolas,monospace;font-size:11px;z-index:9999;border-radius:3px;opacity:0.9;';
-    b.innerHTML = '⚠ ' + message + ' <span onclick="this.parentNode.remove()" style="cursor:pointer;margin-left:10px;color:#666">✕</span>';
-    document.body.appendChild(b);
-    setTimeout(() => b && b.remove(), 8000);
-}
+window.addEventListener('load', function () {
+  refreshAll();
+  setInterval(refreshAll, 15000);
+});
 </script>
 <script src="nav.js"></script>
 </body>
