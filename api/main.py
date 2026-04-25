@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
 from pydantic import BaseModel
 
 from configs.paths import Paths
@@ -192,8 +192,7 @@ class StrategyCreateRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
-    return {"message": "Trading Agents API", "version": "0.1.0"}
+    return RedirectResponse(url="/dashboards/")
 
 
 @app.get("/health")
