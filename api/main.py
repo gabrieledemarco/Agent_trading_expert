@@ -321,6 +321,74 @@ async def get_dashboard_summary():
         raise HTTPException(status_code=503, detail="Database unavailable")
 
 
+@app.get("/api/dashboard/summary")
+async def get_api_dashboard_summary():
+    """Aggregated global summary for all dashboard pages."""
+    from datetime import timezone
+    db = get_db()
+
+    def _safe(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except Exception as exc:
+            logger.warning("api_dashboard_summary: %s", exc)
+            return None
+
+    base      = _safe(db.get_dashboard_summary) or {}
+    risk      = _safe(db.get_performance, days=30) or []
+    strats    = _safe(db.get_strategies_v2, limit=500) or []
+    agents    = _safe(db.get_agent_status) or []
+    trades    = _safe(db.get_trades, limit=1) or []
+
+    # Portfolio KPIs
+    latest = risk[0] if risk else {}
+    equity    = float(latest.get("equity") or 0)
+    t_return  = float(latest.get("total_return") or 0)
+    sharpe    = float(latest.get("sharpe_ratio") or 0)
+    max_dd    = float(latest.get("max_drawdown") or 0)
+
+    # Pipeline by_status
+    by_status: dict = {}
+    for s in strats:
+        st = str(s.get("status", "draft"))
+        by_status[st] = by_status.get(st, 0) + 1
+
+    # Agents
+    active = sum(1 for a in agents if str(a.get("status", "")).lower() == "running")
+
+    return {
+        "last_updated": datetime.now(timezone.utc).isoformat(),
+        "portfolio": {
+            "equity":       equity,
+            "total_return": t_return,
+            "sharpe_ratio": sharpe,
+            "max_drawdown": max_dd,
+        },
+        "strategies": {
+            "total":    len(strats),
+            "approved": by_status.get("approved", 0),
+            "deployed": by_status.get("deployed", 0),
+            "by_status": by_status,
+        },
+        "models": {
+            "total":    int(base.get("models_implemented", 0)),
+            "approved": int(base.get("models_validated", 0)),
+        },
+        "research": {
+            "papers": int(base.get("research_papers", 0)),
+            "specs":  int(base.get("specs_created", 0)),
+        },
+        "agents": {
+            "total":  len(agents),
+            "active": active,
+            "idle":   max(0, len(agents) - active),
+        },
+        "trades": {
+            "total": int(base.get("total_trades", 0)),
+        },
+    }
+
+
 @app.get("/dashboard/agent-activity")
 async def get_agent_activity(limit: int = 20):
     """Get agent activity logs from Neon PostgreSQL."""

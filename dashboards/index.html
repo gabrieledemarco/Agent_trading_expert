@@ -207,19 +207,19 @@ function showMsg(txt,ok){
 /* ── KPI ── */
 async function fetchKPI(){
   try{
-    const [sum,risk]=await Promise.all([
-      fetch('/dashboard/summary').then(r=>r.json()),
-      fetch('/api/risk/summary').then(r=>r.json()),
-    ]);
-    const ret=Number(sum.total_return||0);
-    document.getElementById('kpi-equity').textContent=fmt$(sum.current_equity);
-    const retEl=document.getElementById('kpi-return');
-    retEl.textContent=fmtPct(ret);
-    retEl.className='kpi-value '+cls(ret);
-    document.getElementById('kpi-sharpe').textContent=Number(risk.sharpe_ratio||0).toFixed(2);
-    document.getElementById('kpi-dd').textContent='-'+fmtPct2(risk.max_drawdown_pct||0);
-    document.getElementById('kpi-var').textContent=fmt$(risk.var_95);
-    document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString();
+    const sum = await DU.fetchSummary();
+    if (!sum) return;
+    const p = sum.portfolio || {};
+    const ret = Number(p.total_return || 0);
+    document.getElementById('kpi-equity').textContent = DU.formatCurrency(p.equity);
+    const retEl = document.getElementById('kpi-return');
+    retEl.textContent = DU.formatPct(ret * 100);
+    retEl.className = 'kpi-value ' + cls(ret);
+    document.getElementById('kpi-sharpe').textContent = DU.formatSharpe(p.sharpe_ratio);
+    document.getElementById('kpi-dd').textContent = '-' + DU.formatPct(Math.abs(p.max_drawdown * 100), 2).replace('+','');
+    const stEl = document.getElementById('kpi-strats');
+    if (stEl) { stEl.textContent = (sum.strategies || {}).approved || 0; }
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
   }catch(e){console.warn('fetchKPI',e);}
 }
 
@@ -362,6 +362,7 @@ document.addEventListener('DOMContentLoaded',function(){
   setInterval(fetchTicker,30000);
 });
 </script>
+<script src="dashboard_utils.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>
