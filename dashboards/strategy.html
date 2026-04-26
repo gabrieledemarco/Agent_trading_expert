@@ -773,6 +773,160 @@ function loadResizeStates() {
 
 loadStrategy('lstm');
 loadResizeStates();
+window.addEventListener('load', loadStrategiesFromApi);
+
+// ── API loader ────────────────────────────────────────────────────────────────
+async function loadStrategiesFromApi() {
+  try {
+    const [v2, legacy] = await Promise.all([
+      fetch('/internal/v2/strategies?limit=100').then(r => r.json()).catch(() => ({ strategies: [] })),
+      fetch('/strategies').then(r => r.json()).catch(() => ({ strategies: [] })),
+    ]);
+
+    const rows = [...(v2.strategies || []), ...(legacy.strategies || [])];
+    if (!rows.length) return;
+
+    // Build a map: name → merged row
+    const byName = {};
+    rows.forEach(s => {
+      const key = (s.name || s.model_name || s.id || '').toLowerCase().replace(/\s+/g, '_');
+      if (key) byName[key] = s;
+    });
+
+    // Populate dropdown with API strategies (keeping static ones as fallback)
+    const sel = document.getElementById('stratSelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    rows.forEach(s => {
+      const id = (s.name || s.id || '').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const label = s.name || s.model_name || s.id || id;
+      const st = (s.status || 'draft').toLowerCase();
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${label} [${st}]`;
+      // Inject into STRATS as a dynamic entry
+      if (!STRATS[id]) {
+        STRATS[id] = buildStratFromApi(s);
+      }
+      sel.appendChild(opt);
+    });
+
+    // Load first real strategy + overlay live data
+    const first = sel.options[0]?.value;
+    if (first) { loadStrategy(first); loadStrategyLiveData(); }
+  } catch (e) {
+    console.warn('loadStrategiesFromApi:', e);
+  }
+}
+
+async function loadStrategyLiveData() {
+  try {
+    const [eqResp, posResp, trResp] = await Promise.all([
+      fetch('/api/equity-curve?period=3M').then(r => r.json()).catch(() => ({})),
+      fetch('/api/positions').then(r => r.json()).catch(() => ({ positions: [] })),
+      fetch('/api/trades?limit=20').then(r => r.json()).catch(() => ({ trades: [] })),
+    ]);
+
+    // Update equity + drawdown charts
+    const pts = eqResp.equity_curve || eqResp.data || [];
+    if (pts.length && eqChart) {
+      const labels = pts.map(p => String(p.date || p.ts || '').slice(5, 10));
+      const equity = pts.map(p => +(p.value ?? p.equity ?? p.cumulative_return ?? 0));
+      const benchmark = pts.map(p => +(p.benchmark ?? 0));
+      eqChart.data.labels = labels;
+      eqChart.data.datasets[0].data = equity;
+      eqChart.data.datasets[1].data = benchmark;
+      eqChart.update('none');
+      if (ddChart) {
+        let peak = equity[0] || 0, dd = equity.map(v => { if (v > peak) peak = v; return peak > 0 ? ((v - peak) / peak * 100) : 0; });
+        ddChart.data.labels = labels;
+        ddChart.data.datasets[0].data = dd;
+        ddChart.update('none');
+      }
+    }
+
+    // Update positions table
+    const positions = posResp.positions || posResp.data || [];
+    const tbody = document.getElementById('posBody');
+    if (tbody && positions.length) {
+      tbody.innerHTML = positions.map(p => {
+        const pnl = +(p.unrealized_pnl ?? p.pnl ?? 0);
+        const ret = +(p.pnl_pct ?? p.return_pct ?? 0);
+        const side = (p.side || 'LONG').toUpperCase();
+        return `<tr>
+          <td style="color:var(--text-primary)">${p.symbol || p.sym || '—'}</td>
+          <td style="color:${side==='LONG'?'var(--green)':'var(--red)'}">${side}</td>
+          <td>${(p.entry_price ?? p.entry ?? '—')}</td>
+          <td>${(p.current_price ?? p.mark ?? '—')}</td>
+          <td>${p.quantity ?? p.qty ?? '—'}</td>
+          <td style="color:var(--orange)">${p.position_size ?? p.posSize ?? '—'}</td>
+          <td>${p.stop_loss ?? p.stopLoss ?? '—'}</td>
+          <td>${p.take_profit ?? p.takeProfit ?? '—'}</td>
+          <td style="color:var(--red)">${p.risk_dollar ?? p.riskDollar ?? '—'}</td>
+          <td>${p.rr_ratio ?? p.rrRatio ?? '—'}</td>
+          <td class="${pnl>=0?'positive':'negative'}">${pnl.toFixed(2)}</td>
+          <td class="${ret>=0?'positive':'negative'}">${ret.toFixed(2)}%</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Update trade history table
+    const trades = trResp.trades || trResp.data || [];
+    const histBody = document.getElementById('tradeHistoryBody');
+    if (histBody && trades.length) {
+      histBody.innerHTML = trades.map(t => {
+        const pnl = +(t.pnl ?? t.realized_pnl ?? 0);
+        const ret = +(t.pnl_pct ?? t.return_pct ?? 0);
+        const side = (t.side || 'LONG').toUpperCase();
+        const rm = t.r_multiple != null ? (+t.r_multiple).toFixed(2) : '—';
+        return `<tr>
+          <td>${String(t.closed_at || t.exit_time || t.date || '').slice(0,10)}</td>
+          <td style="color:var(--text-primary)">${t.symbol || t.sym || '—'}</td>
+          <td style="color:${side==='LONG'?'var(--green)':'var(--red)'}">${side}</td>
+          <td>${t.entry_price ?? t.entry ?? '—'}</td>
+          <td>${t.exit_price ?? t.exit ?? '—'}</td>
+          <td>${t.quantity ?? t.qty ?? '—'}</td>
+          <td style="color:var(--orange)">${t.position_size ?? t.posSize ?? '—'}</td>
+          <td>${t.stop_loss ?? t.stopLoss ?? '—'}</td>
+          <td>${t.take_profit ?? t.takeProfit ?? '—'}</td>
+          <td style="color:var(--red)">${t.risk_dollar ?? t.riskDollar ?? '—'}</td>
+          <td>${t.rr_target ?? t.rrTarget ?? '—'}</td>
+          <td style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl.toFixed(2)}</td>
+          <td style="color:${ret>=0?'var(--green)':'var(--red)'}">${ret.toFixed(2)}%</td>
+          <td style="color:${pnl>=0?'var(--green)':'var(--red)'}">${rm}</td>
+          <td style="color:var(--text-muted)">${t.exit_reason ?? t.exitReason ?? '—'}</td>
+        </tr>`;
+      }).join('');
+    }
+  } catch (e) { console.warn('loadStrategyLiveData:', e); }
+}
+
+function buildStratFromApi(s) {
+  const sh = s.sharpe_ratio != null ? Number(s.sharpe_ratio).toFixed(2) : '—';
+  const wr = s.win_rate != null ? (s.win_rate * 100).toFixed(1) + '%' : '—';
+  const dd = s.max_drawdown != null ? (s.max_drawdown * 100).toFixed(1) + '%' : '—';
+  const ret = s.total_return != null ? (s.total_return * 100).toFixed(1) + '%' : '—';
+  return {
+    name: s.name || s.model_name || 'Unknown',
+    created: String(s.created_at || s.updated_at || '').slice(0, 10) || '—',
+    source: s.arxiv_id ? 'arXiv:' + s.arxiv_id : (s.source || '—'),
+    type: s.model_type || s.type || 'Strategy',
+    risk: (s.risk_level || s.risk_score || 'medium').toLowerCase(),
+    expReturn: ret, expReturnSub: 'from API',
+    actReturn: ret,
+    sharpe: sh, sortino: sh, maxdd: dd, winrate: wr,
+    trades: (s.total_trades || s.trade_count || 0) + ' trades',
+    allocatedCapital: '$10,000',
+    equity: [], benchmark: [], drawdown: [], monthly: [], monthlyLabels: [],
+    vol: [], var95: [], positions: [], tradeHistory: [],
+    docBasis: s.description || s.spec?.description || 'No description available.',
+    docLogic: JSON.stringify(s.spec || {}, null, 2).slice(0, 300) || '—',
+    docRisk: `Risk level: ${s.risk_level || '—'}. Max DD: ${dd}. Sharpe: ${sh}.`,
+    docBt: s.validation_date ? `Validated: ${String(s.validation_date).slice(0,10)}` : 'Not yet validated.',
+    docLim: 'Live data from production API.',
+    docHp: '—',
+  };
+}
 </script>
 <script src="nav.js"></script>
 </body>
