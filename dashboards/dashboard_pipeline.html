@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,8 +36,13 @@
     .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
     .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
 
-    .phase-actions{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
-    .board{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;}
+    .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px;}
+    .kpi{background:var(--bg-secondary);border:1px solid var(--border);padding:8px;text-align:center;}
+    .kpi-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:3px;}
+    .kpi-value{font-size:15px;font-weight:bold;}
+    .phase-actions{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;}
+    .board-wrap{overflow-x:auto;margin-bottom:8px;}
+    .board{display:grid;grid-template-columns:repeat(9,minmax(150px,1fr));gap:8px;min-width:1200px;}
     .col{background:var(--bg-secondary);border:1px solid var(--border);padding:8px;min-height:200px;}
     .col-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
     .col-title{color:var(--orange);font-size:10px;text-transform:uppercase;font-weight:bold;}
@@ -71,6 +76,13 @@
   <nav class="sidebar"></nav>
 
   <main class="main">
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total Strategies</div><div class="kpi-value neutral" id="kpiTotal">—</div></div>
+      <div class="kpi"><div class="kpi-label">Approved</div><div class="kpi-value" style="color:var(--green)" id="kpiApproved">—</div></div>
+      <div class="kpi"><div class="kpi-label">In Progress</div><div class="kpi-value" style="color:var(--blue)" id="kpiProgress">—</div></div>
+      <div class="kpi"><div class="kpi-label">Human Review</div><div class="kpi-value" style="color:var(--yellow)" id="kpiHuman">—</div></div>
+      <div class="kpi"><div class="kpi-label">Deployed</div><div class="kpi-value" style="color:var(--orange)" id="kpiDeployed">—</div></div>
+    </div>
     <div class="phase-actions">
       <span style="color:var(--text-muted);font-size:10px;align-self:center;">Run phase:</span>
       <button class="btn" onclick="runPhase('research')">Research</button>
@@ -81,7 +93,7 @@
     </div>
     <div id="pipelineMsg" style="display:none;"></div>
 
-    <div class="board" id="board"></div>
+    <div class="board-wrap"><div class="board" id="board"></div></div>
   </main>
 
   <footer class="bottombar">
@@ -94,15 +106,29 @@
 const COLUMNS = [
   'draft', 'backtest_pending', 'backtest_running',
   'validation_pending', 'approved', 'warning',
-  'rejected', 'human_review',
+  'rejected', 'human_review', 'deployed',
 ];
 
 function colColor(status) {
-  if (status === 'approved') return 'var(--green)';
+  if (status === 'approved' || status === 'deployed') return 'var(--green)';
   if (status === 'rejected') return 'var(--red)';
   if (status === 'warning' || status === 'human_review') return 'var(--yellow)';
   if (status.includes('running') || status.includes('pending')) return 'var(--blue)';
   return 'var(--orange)';
+}
+
+async function loadStatus() {
+  try {
+    const d = await fetch('/api/pipeline/overview').then(r => r.json());
+    const by = d.by_status || {};
+    const total = d.total_strategies ?? 0;
+    const progress = (by.backtest_pending||0)+(by.backtest_running||0)+(by.validation_pending||0);
+    document.getElementById('kpiTotal').textContent    = total;
+    document.getElementById('kpiApproved').textContent = by.approved || 0;
+    document.getElementById('kpiProgress').textContent = progress;
+    document.getElementById('kpiHuman').textContent    = by.human_review || 0;
+    document.getElementById('kpiDeployed').textContent = by.deployed || 0;
+  } catch (e) { console.warn('loadStatus:', e); }
 }
 
 async function load() {
@@ -166,8 +192,9 @@ function showMsg(text, type) {
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-load();
-setInterval(load, 10000);
+function refreshAll() { load(); loadStatus(); }
+refreshAll();
+setInterval(refreshAll, 10000);
 </script>
 <script src="nav.js"></script>
 </body>
