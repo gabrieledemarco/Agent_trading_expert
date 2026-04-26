@@ -246,7 +246,7 @@
         </div>
     </main>
 
-    <footer class="bottombar">
+    <footer class="bottombar"><!-- freshness -->
         <div>ALERTS: <span style="color:var(--red)">2 CRITICAL</span> | <span style="color:var(--yellow)">1 WARNING</span> | Limits: 3 active</div>
         <div>Trading Agent v1.1 | Research Use Only</div>
     </footer>
@@ -350,8 +350,9 @@ async function hydrateRiskFromApi() {
     }
 }
 
-hydrateRiskFromApi();
+hydrateRiskFromApi(); if(window.DU) DU.markUpdated();
 </script>
+<script src="dashboard_utils.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>

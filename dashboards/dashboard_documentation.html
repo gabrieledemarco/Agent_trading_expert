@@ -96,7 +96,7 @@
             <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
             <div class="topbar-brand"><span>TA</span> DOCUMENTATION</div>
         </div>
-        <div style="font-size:10px;color:var(--text-muted)">6 papers | 4 models | Last indexed: 2026-04-09</div>
+        <div style="font-size:10px;color:var(--text-muted)" id="doc-meta">6 papers | 4 models | Last indexed: —</div>
     </header>
 
     <nav class="sidebar"></nav>
@@ -110,8 +110,7 @@
 
         <!-- Papers Tab -->
         <div class="tab-content active" id="tab-papers">
-
-            <div class="paper-card">
+        <div id="tab-papers-list"><div class="paper-card">
                 <div class="paper-header"><span class="paper-id">arXiv:2401.12345</span><span class="paper-date">Jan 2024 — indexed 2026-04-09</span></div>
                 <div class="paper-title">"Deep LSTM Networks for Intraday Equity Price Prediction using Technical Indicators"</div>
                 <div class="paper-abstract">This paper proposes a stacked LSTM architecture (128→64 units, dropout 0.2) trained on 5-minute OHLCV bars augmented with RSI, MACD, and Bollinger Band features. The model outperforms a naive benchmark by 2.3% annualized return on SPY/QQQ over a 2-year out-of-sample period. The authors introduce a sharpness-adjusted loss function that penalizes overconfident predictions, reducing average holding time and improving turnover efficiency. Walk-forward validation across 12 monthly windows shows robust performance degradation below 15% in 10/12 windows.</div>
@@ -146,13 +145,11 @@
                 <div class="paper-meta"><span>Relevance: <span>79%</span></span><span>Model: Momentum Sharpness</span><span>Status: <span class="good">DEPLOYED</span></span></div>
                 <div class="relevance-bar"><div class="relevance-fill" style="width:79%"></div></div>
             </div>
-
-        </div>
+        </div></div>
 
         <!-- Models Tab -->
         <div class="tab-content" id="tab-models">
-
-            <div class="model-doc">
+        <div id="tab-models-list"><div class="model-doc">
                 <div class="model-doc-header"><div><div class="model-doc-name">Intraday Momentum (LSTM)</div><div class="model-doc-type">Source: arXiv:2401.12345 | Timeframe: 5m/15m | Universe: SPY, QQQ, AAPL, MSFT</div></div><span class="badge-approved">APPROVED</span></div>
                 <div class="section-subtitle">Architecture</div>
                 <div class="kv-grid">
@@ -198,7 +195,7 @@
                 </table>
             </div>
 
-        </div>
+        </div></div>
 
         <!-- System Tab -->
         <div class="tab-content" id="tab-system">
@@ -233,7 +230,7 @@
     </main>
 
     <footer class="bottombar">
-        <div>Papers: 6 indexed | Models: 4 deployed, 2 in validation</div>
+        <div id="footer-meta">Papers: — indexed | Models: — deployed</div>
         <div>Trading Agent v1.1 | Research Use Only</div>
     </footer>
 </div>
@@ -244,7 +241,66 @@ function switchTab(id){
     document.querySelector(`.tab[onclick="switchTab('${id}')"]`).classList.add('active');
     document.getElementById('tab-'+id).classList.add('active');
 }
+
+async function loadDocs() {
+  try {
+    const [resResp, modResp] = await Promise.all([
+      fetch('/research?limit=30').then(r=>r.json()).catch(()=>({research:[]})),
+      fetch('/models').then(r=>r.json()).catch(()=>({models:[]})),
+    ]);
+    const papers = resResp.research || resResp.papers || [];
+    const models = modResp.models || [];
+    const approved = models.filter(m=>String(m.status||'').includes('approv')).length;
+    const lastDate = papers[0] ? String(papers[0].indexed_at||papers[0].created_at||'').slice(0,10) : '—';
+
+    document.getElementById('doc-meta').textContent =
+      `${papers.length} papers | ${models.length} models | Last indexed: ${lastDate}`;
+    document.getElementById('footer-meta').textContent =
+      `Papers: ${papers.length} indexed | Models: ${approved} deployed`;
+
+    const pList = document.getElementById('tab-papers-list');
+    if (pList) pList.innerHTML = papers.length ? papers.map(p => {
+      const rel = p.relevance_score!=null ? Math.round(p.relevance_score*100) : null;
+      const cls = rel!=null ? (rel>=80?'good':'') : '';
+      return `<div class="paper-card">
+        <div class="paper-header">
+          <span class="paper-id">${p.arxiv_id?'arXiv:'+p.arxiv_id:(p.id||'—')}</span>
+          <span class="paper-date">${String(p.indexed_at||p.created_at||'').slice(0,10)}</span>
+        </div>
+        <div class="paper-title">"${p.title||'Untitled'}"</div>
+        <div class="paper-abstract">${(p.abstract||p.description||'—').slice(0,280)}</div>
+        <div class="paper-meta">
+          ${rel!=null?`<span>Relevance: <span class="${cls}">${rel}%</span></span>`:''}
+          <span>Status: <span class="${String(p.status||'').includes('approv')?'good':''}">${(p.status||'draft').toUpperCase()}</span></span>
+        </div>
+        ${rel!=null?`<div class="relevance-bar"><div class="relevance-fill" style="width:${rel}%"></div></div>`:''}
+      </div>`;
+    }).join('') : '<div style="color:var(--text-muted);padding:20px">No research papers indexed yet.</div>';
+
+    const mList = document.getElementById('tab-models-list');
+    if (mList) mList.innerHTML = models.length ? models.map(m => {
+      const sh = m.sharpe_ratio!=null?Number(m.sharpe_ratio).toFixed(2):'—';
+      const wr = m.win_rate!=null?(m.win_rate*100).toFixed(1)+'%':'—';
+      const dd = m.max_drawdown!=null?(m.max_drawdown*100).toFixed(1)+'%':'—';
+      const ok = String(m.status||'').includes('approv');
+      return `<div class="model-doc">
+        <div class="model-doc-header">
+          <div><div class="model-doc-name">${m.name||m.model_name||m.id||'—'}</div>
+          <div class="model-doc-type">${m.model_type||m.architecture||'—'} | ${String(m.created_at||'').slice(0,10)}</div></div>
+          <span class="${ok?'badge-approved':'badge-pending'}">${(m.status||'draft').toUpperCase()}</span>
+        </div>
+        <table><thead><tr><th>Sharpe</th><th>Win Rate</th><th>Max DD</th></tr></thead>
+        <tbody><tr>
+          <td style="color:${parseFloat(sh)>=0?'var(--green)':'var(--red)'}">${sh}</td>
+          <td>${wr}</td><td style="color:var(--red)">${dd}</td>
+        </tr></tbody></table>
+      </div>`;
+    }).join('') : '<div style="color:var(--text-muted);padding:20px">No models available.</div>';
+  } catch(e){ console.warn('loadDocs:',e); }
+}
+loadDocs();
 </script>
+<script src="dashboard_utils.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>

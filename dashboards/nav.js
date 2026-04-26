@@ -77,10 +77,30 @@
     return html;
   }
 
+  var NAV_BADGE_CSS =
+    '.nav-badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);' +
+    'border:1px solid var(--border);border-radius:2px;font-size:9px;padding:0 5px;' +
+    'min-width:18px;text-align:center;flex-shrink:0;}';
+
+  function injectBadgeStyle() {
+    if (document.getElementById('nav-badge-style')) return;
+    var s = document.createElement('style');
+    s.id = 'nav-badge-style';
+    s.textContent = NAV_BADGE_CSS;
+    document.head.appendChild(s);
+  }
+
   function inject() {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
     sidebar.innerHTML = buildHTML(currentPage());
+    injectBadgeStyle();
+    // Populate live badges via DU if available
+    if (window.DU && window.DU.fetchSummary) {
+      window.DU.fetchSummary().then(function (s) {
+        if (s) window.DU.applyNavBadges(s);
+      });
+    }
   }
 
   window.toggleSidebar = function () {

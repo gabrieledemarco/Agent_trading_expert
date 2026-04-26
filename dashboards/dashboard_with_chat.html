@@ -131,18 +131,19 @@ let KB = {
 async function hydrateKnowledgeBase() {
     try {
         const [summary, strategiesResp, activityResp] = await Promise.all([
-            fetch((window.TRADING_API_BASE||'') + '/dashboard/summary').then(r => r.ok ? r.json() : null),
+            (window.DU ? window.DU.fetchSummary() : fetch('/api/dashboard/summary').then(r=>r.json())),
             fetch((window.TRADING_API_BASE||'') + '/strategies').then(r => r.ok ? r.json() : ({strategies: []})),
             fetch((window.TRADING_API_BASE||'') + '/dashboard/agent-activity?limit=30').then(r => r.ok ? r.json() : ({activities: []})),
         ]);
 
         if (!summary) return;
 
-        const equity = Number(summary.current_equity || 0);
-        const totalReturn = Number(summary.total_return || 0);
-        const sharpe = Number(summary.sharpe_ratio || 0);
-        const trades = Number(summary.total_trades || 0);
-        const validated = Number(summary.models_validated || 0);
+        const p = summary.portfolio || {};
+        const equity = Number(p.equity || summary.current_equity || 0);
+        const totalReturn = Number(p.total_return || summary.total_return || 0);
+        const sharpe = Number(p.sharpe_ratio || summary.sharpe_ratio || 0);
+        const trades = Number((summary.trades||{}).total || summary.total_trades || 0);
+        const validated = Number((summary.models||{}).approved || summary.models_validated || 0);
         const strategies = Array.isArray(strategiesResp?.strategies) ? strategiesResp.strategies : [];
         const approved = strategies.filter((s) => String(s.status || '').toUpperCase() === 'APPROVED');
 
@@ -154,7 +155,7 @@ async function hydrateKnowledgeBase() {
   Trades:       ${trades}
   Models Valid: ${validated}
 
-Fonte: /dashboard/summary`;
+Fonte: /api/dashboard/summary`;
 
         KB.models = `MODELLI ATTIVI (${approved.length}/${strategies.length} approvati):
 
@@ -263,6 +264,7 @@ hydrateKnowledgeBase();
 // Welcome message
 addMessage('bot', 'Ciao! Sono il Chat Assistant del Trading Agent.\n\nPosso risponderti su:\n  • Performance e metriche del portafoglio\n  • Modelli ML attivi e loro statistiche\n  • Stato degli agenti\n  • Paper arXiv ricercati\n  • Rischio e posizioni aperte\n\nUsa i pulsanti rapidi in basso o scrivi la tua domanda.');
 </script>
+<script src="dashboard_utils.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>

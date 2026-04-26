@@ -108,7 +108,7 @@
     </div>
   </main>
 
-  <footer class="bottombar">
+  <footer class="bottombar"><!-- freshness -->
     <div>Execution Engine | Paper Trading Mode</div>
     <div>Agent Trading Expert — V2</div>
   </footer>
@@ -165,8 +165,9 @@ async function executeTrade() {
 }
 
 load();
-setInterval(load, 10000);
+setInterval(load, 10000); if(window.DU) DU.markUpdated();
 </script>
+<script src="dashboard_utils.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>

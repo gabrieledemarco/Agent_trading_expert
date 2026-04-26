@@ -96,7 +96,7 @@
     <div class="board-wrap"><div class="board" id="board"></div></div>
   </main>
 
-  <footer class="bottombar">
+  <footer class="bottombar"><!-- freshness -->
     <div id="boardMeta">Pipeline Kanban — auto-refresh 10s</div>
     <div>Agent Trading Expert — V2</div>
   </footer>
@@ -192,10 +192,11 @@ function showMsg(text, type) {
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-function refreshAll() { load(); loadStatus(); }
+function refreshAll() { load(); loadStatus(); if(window.DU) DU.markUpdated(); }
 refreshAll();
 setInterval(refreshAll, 10000);
 </script>
+<script src="dashboard_utils.js"></script>
 <script src="nav.js"></script>
 </body>
 </html>
