@@ -29,8 +29,8 @@ COPY . .
 # Create directories
 RUN mkdir -p data/research_findings data/market_data models/versions specs tests trading_logs
 
-# Expose ports
-EXPOSE 8000 5000 8080
+# Expose port (Render injects $PORT=10000 at runtime)
+EXPOSE 10000
 
-# Default command — override PORT via env var (Render injects $PORT)
-CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# exec replaces sh so uvicorn is PID 1 — required for Render signal handling & port detection
+CMD ["sh", "-c", "exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1"]
