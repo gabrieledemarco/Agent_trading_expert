@@ -1,400 +1,341 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
-    <title>Agent Monitor | Trading Agent</title>
-    <link rel="stylesheet" href="colors_and_type.css">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;}
-        html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
-        .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns 0.3s ease;}
-        .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
-        .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
-        .topbar-left{display:flex;align-items:center;gap:12px;}
-        .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:6px 10px;font-size:14px;font-family:var(--font);transition:all 0.2s;}
-        .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
-        .topbar-brand{color:var(--orange);font-size:14px;font-weight:bold;}
-        .topbar-brand span{background:var(--orange);color:#000;padding:2px 6px;border-radius:2px;font-size:10px;}
-        .topbar-actions{display:flex;gap:6px;}
-        .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--font);}
-        .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
-        .btn-danger:hover{background:var(--red);border-color:var(--red);}
-        .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:scroll;}
-        .sidebar-section{margin-bottom:10px;}
-        .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;transition:opacity 0.2s;}
-        .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
-        .sidebar-item{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all 0.2s;}
-        .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;gap:0;}
-        .sidebar-collapsed .sidebar-item span:first-child{margin:0;}
-        .sidebar-collapsed .sidebar-item span:not(:first-child),.sidebar-collapsed .sidebar-item .badge{display:none;}
-        .sidebar-item:hover{background:var(--bg-tertiary);}
-        .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
-        .sidebar-item .badge{margin-left:auto;background:var(--bg-tertiary);color:var(--text-muted);padding:1px 5px;border-radius:2px;font-size:9px;}
-        .status-indicator{margin-top:auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;font-size:10px;white-space:nowrap;transition:all 0.2s;}
-        .sidebar-collapsed .status-indicator{padding:8px 0;justify-content:center;overflow:hidden;}
-        .sidebar-collapsed .status-indicator span:not(.status-dot){display:none;}
-        .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-        .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
-        .agents-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
-        .agent-card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;position:relative;}
-        .agent-card.running{border-color:var(--green);}
-        .agent-card.error{border-color:var(--red);}
-        .agent-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
-        .agent-name{color:var(--text-primary);font-size:12px;font-weight:bold;}
-        .agent-type{color:var(--text-muted);font-size:9px;margin-bottom:8px;}
-        .status-badge{font-size:9px;padding:2px 8px;border-radius:3px;}
-        .status-idle{background:var(--bg-tertiary);color:var(--text-muted);}
-        .status-running{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
-        .status-completed{background:var(--blue-a10);color:var(--blue);border:1px solid var(--blue-a20);}
-        .status-error{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
-        .agent-metrics{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;margin-bottom:8px;}
-        .metric-lbl{color:var(--text-muted);}
-        .agent-actions{display:flex;gap:4px;margin-top:6px;}
-        .agent-btn{flex:1;padding:5px;font-size:10px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-secondary);cursor:pointer;font-family:var(--font);text-align:center;}
-        .agent-btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
-        .agent-btn.stop{background:var(--red-a10);border-color:var(--red);color:var(--red);}
-        .agent-btn.stop:hover{background:var(--red);color:#000;}
-        .progress-bar{height:2px;background:var(--bg-tertiary);border-radius:2px;margin-top:6px;}
-        .progress-fill{height:2px;border-radius:2px;transition:width 0.5s ease;}
-        .progress-green{background:var(--green);}
-        .progress-orange{background:var(--orange);}
-        .progress-blue{background:var(--blue);}
-        .last-run{color:var(--text-muted);font-size:9px;margin-top:4px;}
-        .log-panel{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;}
-        .log-title{color:var(--orange);font-size:11px;margin-bottom:8px;display:flex;justify-content:space-between;}
-        .log-console{background:var(--bg-primary);border:1px solid var(--border);padding:8px;height:160px;overflow-y:scroll;font-size:10px;}
-        .log-entry{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02);}
-        .log-time{color:var(--text-muted);}
-        .log-info{color:var(--text-secondary);}
-        .log-success{color:var(--green);}
-        .log-warn{color:var(--yellow);}
-        .log-error{color:var(--red);}
-        .log-tag{color:var(--orange);}
-        .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
-        .resize-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:2px 6px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all 0.2s;}
-        .resize-btn:hover{border-color:var(--orange);color:var(--orange);}
-        .resizable-section{transition:all 0.3s ease;position:relative;}
-        .resizable-section.minimized{height:40px;overflow:hidden;}
-        .resizable-section.minimized .agents-grid,.resizable-section.minimized .log-console{display:none;}
-        .resizable-section.expanded .log-console{height:400px;}
-        .resizable-section.expanded .agents-grid{grid-template-columns:repeat(2,1fr);}
-        /* Custom scrollbar styles */
-        ::-webkit-scrollbar{width:12px;height:12px;}
-        ::-webkit-scrollbar-track{background:var(--bg-primary);border-left:1px solid var(--border);}
-        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
-        ::-webkit-scrollbar-thumb:hover{background:var(--text-muted);}
-        *{scrollbar-width:thin;scrollbar-color:var(--border) var(--bg-primary);}
-        .main{min-height:calc(100vh - 64px);}
-        .terminal { transition:grid-template-columns 0.3s ease; }
-        .terminal.sidebar-collapsed { grid-template-columns:50px 1fr; }
-        .sidebar-toggle { background:transparent; border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; padding:6px 10px; font-size:14px; font-family:var(--font); transition:all 0.2s; }
-        .sidebar-toggle:hover { border-color:var(--orange); color:var(--orange); }
-        .sidebar-collapsed .sidebar { width:50px; overflow-x:hidden; }
-        .sidebar-collapsed .sidebar-title { opacity:0; height:0; padding:0; overflow:hidden; }
-        .sidebar-collapsed .sidebar-item { padding:6px 0; justify-content:center; gap:0; }
-        .sidebar-collapsed .sidebar-item span:first-child { margin:0; }
-        .sidebar-collapsed .sidebar-item span:not(:first-child), .sidebar-collapsed .sidebar-item .badge { display:none; }
-        .sidebar-collapsed .status-indicator { padding:8px 0; justify-content:center; overflow:hidden; }
-        .sidebar-collapsed .status-indicator span:not(.status-dot) { display:none; }
-    </style>
-    <script src="config.js"></script>
-    <script src="dashboard_data.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+  <title>Agents | Agent Trading</title>
+  <link rel="stylesheet" href="colors_and_type.css">
+  <style>
+    /* S6-B2 */
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html,body{background:var(--bg-primary);color:var(--text-secondary);font-family:var(--font);font-size:12px;height:100%;overflow:hidden;}
+    .terminal{display:grid;grid-template-columns:190px 1fr;grid-template-rows:40px 1fr 24px;height:100vh;transition:grid-template-columns .3s ease;}
+    .terminal.sidebar-collapsed{grid-template-columns:50px 1fr;}
+    .topbar{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;}
+    .topbar-left{display:flex;align-items:center;gap:10px;}
+    .topbar-right{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text-muted);}
+    .sidebar-toggle{background:transparent;border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;padding:5px 9px;font-size:13px;font-family:var(--font);transition:all .2s;}
+    .sidebar-toggle:hover{border-color:var(--orange);color:var(--orange);}
+    .brand{color:var(--orange);font-size:13px;font-weight:bold;}
+    .brand span{background:var(--orange);color:#000;padding:1px 5px;border-radius:2px;font-size:9px;margin-right:4px;}
+    .btn{background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);padding:3px 9px;font-size:10px;cursor:pointer;font-family:var(--font);}
+    .btn:hover{background:var(--orange);color:#000;border-color:var(--orange);}
+    .sidebar{background:var(--bg-secondary);border-right:1px solid var(--border);padding:8px 0;display:flex;flex-direction:column;overflow-y:auto;}
+    .sidebar-section{margin-bottom:10px;}
+    .sidebar-title{padding:4px 12px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+    .sidebar-collapsed .sidebar-title{opacity:0;height:0;padding:0;overflow:hidden;}
+    .sidebar-item{padding:6px 12px;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-secondary);font-size:11px;white-space:nowrap;transition:all .2s;}
+    .sidebar-collapsed .sidebar-item{padding:6px 0;justify-content:center;}
+    .sidebar-item:hover{background:var(--bg-tertiary);}
+    .sidebar-item.active{color:var(--orange);background:var(--bg-tertiary);border-left:2px solid var(--orange);}
+    .main{background:var(--bg-primary);overflow-y:scroll;padding:8px;}
+    ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-track{background:var(--bg-primary);} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px;}
+    .kpi{background:var(--bg-secondary);border:1px solid var(--border);padding:8px;text-align:center;}
+    .kpi-label{color:var(--text-muted);font-size:9px;text-transform:uppercase;margin-bottom:3px;}
+    .kpi-value{font-size:15px;font-weight:bold;}
+    .agents-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+    /* S6-B3 */
+    .agent-card{background:var(--bg-secondary);border:1px solid var(--border);padding:12px;cursor:pointer;transition:border-color .2s;}
+    .agent-card:hover{border-color:var(--orange);}
+    .agent-card.active{border-color:var(--green);}
+    .agent-card.error{border-color:var(--red);}
+    .agent-card.idle{border-color:var(--border);}
+    .agent-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+    .agent-name{color:var(--text-primary);font-size:11px;font-weight:bold;}
+    .agent-type{color:var(--text-muted);font-size:9px;margin-bottom:8px;}
+    .agent-meta{display:grid;grid-template-columns:1fr 1fr;gap:2px;font-size:10px;margin-bottom:8px;}
+    .ml{color:var(--text-muted);}
+    .agent-bar{height:2px;background:var(--bg-tertiary);border-radius:1px;margin-top:4px;}
+    .agent-bar-fill{height:2px;border-radius:1px;background:var(--orange);}
+    .badge{padding:2px 6px;border-radius:2px;font-size:9px;}
+    .badge-active,.badge-running{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .badge-error,.badge-failed{background:var(--red-a10);color:var(--red);border:1px solid var(--red-a20);}
+    .badge-idle,.badge-never_run{background:var(--bg-tertiary);color:var(--text-muted);border:1px solid var(--border);}
+    .badge-success,.badge-completed{background:var(--green-a10);color:var(--green);border:1px solid var(--green-a20);}
+    .badge-warning{background:rgba(255,204,0,.1);color:var(--yellow);border:1px solid rgba(255,204,0,.3);}
+    /* Drill-down overlay */
+    .drilldown{position:fixed;top:40px;right:0;bottom:24px;width:380px;background:var(--bg-secondary);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease;z-index:100;}
+    .drilldown.open{transform:translateX(0);}
+    .drilldown-header{padding:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+    .drilldown-title{color:var(--orange);font-size:11px;text-transform:uppercase;font-weight:bold;}
+    .drilldown-close{background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;font-family:var(--font);}
+    .drilldown-body{flex:1;overflow-y:auto;padding:12px;}
+    .drilldown-section{margin-bottom:12px;}
+    .drilldown-section-title{color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+    .stat-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bg-tertiary);font-size:11px;}
+    .stat-row .sk{color:var(--text-muted);}
+    /* Card + activity table */
+    .card{background:var(--bg-secondary);border:1px solid var(--border);padding:10px;margin-bottom:8px;}
+    .card-title{color:var(--orange);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between;}
+    table{width:100%;border-collapse:collapse;font-size:11px;}
+    th{text-align:left;padding:4px 8px;color:var(--text-muted);border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;font-weight:normal;}
+    td{padding:4px 8px;border-bottom:1px solid var(--bg-tertiary);}
+    tr:hover{background:var(--bg-tertiary);}
+    .bottombar{grid-column:1/-1;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;color:var(--text-muted);justify-content:space-between;}
+    .positive{color:var(--green);} .negative{color:var(--red);} .neutral{color:var(--text-primary);}
+  </style>
 </head>
 <body>
 <div class="terminal">
-    <header class="topbar">
-        <div class="topbar-left">
-            <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
-            <div class="topbar-brand"><span>TA</span> AGENT MONITOR</div>
-        </div>
-        <div class="topbar-actions">
-            <button class="btn" id="refreshBtn" onclick="refreshAll()">&#8635; REFRESH</button>
-        </div>
-    </header>
-
-    <nav class="sidebar"></nav>
-
-    <main class="main">
-        <div class="resizable-section" data-section="agents-grid" style="background:var(--bg-secondary);border:1px solid var(--border);padding:12px;margin-bottom:8px;">
-            <div style="color:var(--orange);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;">
-                <span>AGENTS — <span id="agentGridSubtitle" style="color:var(--text-muted);font-size:10px;text-transform:none;">loading…</span></span>
-                <button class="resize-btn" onclick="toggleResize('agents-grid')" title="Minimize/Expand">⊟</button>
-            </div>
-            <div class="agents-grid" id="agentsGrid">
-                <!-- Agents rendered by JS from /api/agents/status -->
-            </div>
-        </div>
-        <div class="log-panel resizable-section" data-section="log-panel">
-            <div class="log-title">
-                <span>AGENT ACTIVITY LOG</span>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <span id="logCount" style="color:var(--text-muted);font-size:10px;">0 events</span>
-                    <button class="resize-btn" onclick="toggleResize('log-panel')" title="Minimize/Expand">⊟</button>
-                </div>
-            </div>
-            <div class="log-console" id="logConsole"></div>
-        </div>
-    </main>
-
-    <footer class="bottombar">
-        <div>ACTIVE: <span id="activeCount" style="color:var(--green)">0</span> | WARNING: <span id="warnCount" style="color:var(--yellow)">0</span> | ERROR: <span id="errorCount" style="color:var(--red)">0</span> | NEVER RUN: <span id="neverCount" style="color:var(--text-muted)">0</span></div>
-        <div>Trading Agent v1.1 | Research Use Only</div>
-    </footer>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="brand"><span>TA</span> AGENT MONITOR</div>
+    </div>
+    <div class="topbar-right">
+      Last update: <span id="lastUpdate" style="color:var(--orange)">—</span>
+      <button class="btn" onclick="refreshAll()">↻ Refresh</button>
+    </div>
+  </header>
+  <nav class="sidebar"></nav>
+  <main class="main">
+    <!-- S6-B5 -->
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total Agents</div><div class="kpi-value neutral" id="kpiTotal">—</div></div>
+      <div class="kpi"><div class="kpi-label">Active</div><div class="kpi-value" style="color:var(--green)" id="kpiActive">—</div></div>
+      <div class="kpi"><div class="kpi-label">Idle</div><div class="kpi-value neutral" id="kpiIdle">—</div></div>
+      <div class="kpi"><div class="kpi-label">Errors</div><div class="kpi-value" style="color:var(--red)" id="kpiErrors">—</div></div>
+      <div class="kpi"><div class="kpi-label">Never Run</div><div class="kpi-value neutral" id="kpiNever">—</div></div>
+    </div>
+    <div class="agents-grid" id="agentsGrid">
+      <div class="agent-card idle"><div class="agent-name" style="color:var(--text-muted)">Loading agents…</div></div>
+    </div>
+    <!-- S6-B6 -->
+    <div class="card">
+      <div class="card-title">
+        <span>RECENT ACTIVITY</span>
+        <span id="logCount" style="color:var(--text-muted);font-size:9px;">—</span>
+      </div>
+      <table>
+        <thead><tr><th>Time</th><th>Agent</th><th>Status</th><th>Message</th><th>Duration</th></tr></thead>
+        <tbody id="activityRows"><tr><td colspan="5" style="color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+  <footer class="bottombar">
+    <div>Agent Monitor | auto-refresh 15s</div>
+    <div>Agent Trading Expert — V2</div>
+  </footer>
 </div>
-
+<div class="drilldown" id="drilldown">
+  <div class="drilldown-header">
+    <span class="drilldown-title" id="ddTitle">Agent Detail</span>
+    <button class="drilldown-close" onclick="closeDrilldown()">✕</button>
+  </div>
+  <div class="drilldown-body">
+    <div class="drilldown-section">
+      <div class="drilldown-section-title">Status</div>
+      <div id="ddStatus"></div>
+    </div>
+    <div class="drilldown-section">
+      <div class="drilldown-section-title">Metrics</div>
+      <div id="ddMetrics"></div>
+    </div>
+    <div class="drilldown-section">
+      <div class="drilldown-section-title">Run History</div>
+      <table>
+        <thead><tr><th>Time</th><th>Status</th><th>Duration</th><th>Records</th></tr></thead>
+        <tbody id="ddHistory"><tr><td colspan="4" style="color:var(--text-muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn" style="width:100%;padding:6px;" id="ddTriggerBtn" onclick="triggerAgent()">▶ Trigger Agent Now</button>
+      <div id="ddTriggerResult" style="margin-top:6px;font-size:10px;"></div>
+    </div>
+  </div>
+</div>
+<!-- S6-B7 -->
 <script>
-// Agent phase → API trigger endpoint mapping
-const AGENT_TRIGGER = {
-    'ResearchAgent':       '/api/agents/research/run',
-    'SpecAgent':           '/api/pipeline/run/spec',
-    'MLEngineerAgent':     '/api/pipeline/run/ml_engineer',
-    'ValidationAgent':     '/api/pipeline/run/validation',
-    'ImprovementAgent':    '/api/pipeline/run/improvement',
-    'TradingExecutorAgent':'/api/pipeline/run/trading',
-    'MonitoringAgent':     '/api/pipeline/run/monitoring',
-    'PipelineOrchestrator':'/api/pipeline/run',
-};
+let allAgents = [];
+let selectedAgent = null;
 
-const AGENT_TYPE = {
-    'ResearchAgent':       'Weekly arXiv scan',
-    'SpecAgent':           'Research → YAML specs',
-    'MLEngineerAgent':     'Model code generation',
-    'ValidationAgent':     'Model validation',
-    'ImprovementAgent':    'Strategy optimisation',
-    'TradingExecutorAgent':'Live paper trading',
-    'MonitoringAgent':     'System health & alerts',
-    'ChatAgent':           'Conversational interface',
-    'PipelineOrchestrator':'Full pipeline coordination',
-};
+const STATUS_ORDER = { running: 0, active: 1, error: 2, failed: 3, warning: 4, completed: 5, success: 6, idle: 7, never_run: 8 };
 
-let logEntryCount = 0;
-
-function escapeHTML(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function agentCardClass(status) {
+  const s = (status || 'idle').toLowerCase();
+  if (s === 'running' || s === 'active') return 'active';
+  if (s === 'error' || s === 'failed') return 'error';
+  return 'idle';
 }
 
-function showDbBanner(msg) {
-    let b = document.getElementById('dbBanner');
-    if (b) b.remove();
-    b = document.createElement('div');
-    b.id = 'dbBanner';
-    b.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1a1200;border:1px solid #cc7700;padding:10px 14px;color:#ff9900;font-family:Consolas,monospace;font-size:11px;z-index:9999;max-width:360px;display:flex;align-items:flex-start;gap:10px;';
-    b.innerHTML = '<span style="flex:1">' + escapeHTML(msg) + '</span><button onclick="document.getElementById(\'dbBanner\').remove()" style="background:none;border:none;color:#ff9900;cursor:pointer;font-size:14px;padding:0;">&#x2715;</button>';
-    document.body.appendChild(b);
-    setTimeout(() => { if (b.parentNode) b.remove(); }, 8000);
+function badgeClass(status) {
+  return 'badge badge-' + (status || 'idle').toLowerCase().replace(/[^a-z_]/g, '');
 }
 
-function addLog(type, agent, msg) {
-    const con = document.getElementById('logConsole');
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    const ts = document.createElement('span'); ts.className='log-time'; ts.textContent='['+new Date().toLocaleTimeString()+'] ';
-    const tag = document.createElement('span'); tag.className='log-tag'; tag.textContent='['+agent+'] ';
-    const txt = document.createElement('span'); txt.className='log-'+type; txt.textContent=msg;
-    entry.append(ts, tag, txt);
-    con.insertBefore(entry, con.firstChild);
-    while (con.children.length > 80) con.removeChild(con.lastChild);
-    logEntryCount++;
-    document.getElementById('logCount').textContent = logEntryCount + ' events';
+function renderAgents(agents) {
+  const grid = document.getElementById('agentsGrid');
+  if (!grid) return;
+  if (!agents.length) { grid.innerHTML = '<div class="agent-card idle"><div class="agent-name" style="color:var(--text-muted)">No agents found.</div></div>'; return; }
+
+  let total = agents.length, active = 0, idle = 0, errors = 0, never = 0;
+  grid.innerHTML = agents.map(a => {
+    const st  = (a.last_status || 'never_run').toLowerCase();
+    const cls = agentCardClass(st);
+    if (st === 'running' || st === 'active') active++;
+    else if (st === 'error' || st === 'failed') errors++;
+    else if (st === 'never_run') never++;
+    else idle++;
+
+    const dur = a.duration_ms ? (a.duration_ms / 1000).toFixed(1) + 's' : '—';
+    const rec = a.records_written ?? '—';
+    const lastRun = a.last_run ? String(a.last_run).slice(0, 16).replace('T', ' ') : 'Never';
+    return `<div class="agent-card ${cls}" onclick="openDrilldown('${a.agent_name}')">
+      <div class="agent-header">
+        <div class="agent-name">${a.agent_name || '?'}</div>
+        <span class="${badgeClass(st)}">${st}</span>
+      </div>
+      <div class="agent-type">${a.last_message ? String(a.last_message).slice(0, 60) : 'No activity'}</div>
+      <div class="agent-meta">
+        <span class="ml">Last run</span><span>${lastRun}</span>
+        <span class="ml">Duration</span><span>${dur}</span>
+        <span class="ml">Records</span><span>${rec}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('kpiTotal').textContent  = total;
+  document.getElementById('kpiActive').textContent  = active;
+  document.getElementById('kpiIdle').textContent    = idle;
+  document.getElementById('kpiErrors').textContent  = errors;
+  document.getElementById('kpiNever').textContent   = never;
 }
 
-// ── Render agent grid from /api/agents/status ──────────────────────────────
+function openDrilldown(agentName) {
+  selectedAgent = agentName;
+  document.getElementById('ddTitle').textContent = agentName;
+  const agent = allAgents.find(a => a.agent_name === agentName) || {};
+  const st = agent.last_status || 'unknown';
 
-function statusMeta(s) {
-    const m = {
-        active:    { cls:'status-running',   lbl:'ACTIVE',    dot:'var(--green)' },
-        warning:   { cls:'status-completed', lbl:'WARNING',   dot:'var(--yellow)' },
-        error:     { cls:'status-error',     lbl:'ERROR',     dot:'var(--red)' },
-        never_run: { cls:'status-idle',      lbl:'NEVER RUN', dot:'var(--text-muted)' },
-    };
-    return m[s] || m['never_run'];
+  document.getElementById('ddStatus').innerHTML =
+    `<span class="${badgeClass(st)}">${st}</span>` +
+    (agent.error_detail ? `<div style="color:var(--red);font-size:10px;margin-top:4px;">${agent.error_detail}</div>` : '');
+
+  document.getElementById('ddMetrics').innerHTML = [
+    ['Last Run',  agent.last_run ? String(agent.last_run).slice(0,16).replace('T',' ') : 'Never'],
+    ['Duration',  agent.duration_ms ? (agent.duration_ms/1000).toFixed(2)+'s' : '—'],
+    ['Records',   agent.records_written ?? '—'],
+    ['Message',   agent.last_message ? String(agent.last_message).slice(0,80) : '—'],
+  ].map(([k,v]) => `<div class="stat-row"><span class="sk">${k}</span><span>${v}</span></div>`).join('');
+
+  document.getElementById('drilldown').classList.add('open');
+  document.getElementById('ddTriggerResult').textContent = '';
+  loadHistory(agentName);
 }
 
-function renderAgentCard(a) {
-    const name = a.agent_name || '?';
-    const sm = statusMeta(a.last_status);
-    const lastRun = a.last_run ? new Date(a.last_run).toLocaleString() : '—';
-    const dur = a.duration_ms ? (a.duration_ms/1000).toFixed(1)+'s' : '—';
-    const rec = a.records_written != null ? a.records_written : '—';
-    const msg = (a.last_message || '').slice(0, 80);
-    const hasTrigger = !!AGENT_TRIGGER[name];
-
-    const card = document.createElement('div');
-    card.className = 'agent-card' + (a.last_status==='active'?' running':a.last_status==='error'?' error':'');
-    card.id = 'card-' + name;
-    card.innerHTML = `
-        <div class="agent-header">
-            <div>
-                <div class="agent-name">${escapeHTML(name)}</div>
-                <div class="agent-type">${escapeHTML(AGENT_TYPE[name]||'Agent')}</div>
-            </div>
-            <span class="status-badge ${sm.cls}">${sm.lbl}</span>
-        </div>
-        <div class="agent-metrics">
-            <span class="metric-lbl">Last run:</span><span>${escapeHTML(lastRun)}</span>
-            <span class="metric-lbl">Duration:</span><span>${escapeHTML(dur)}</span>
-            <span class="metric-lbl">Records:</span><span>${escapeHTML(String(rec))}</span>
-            <span class="metric-lbl">Message:</span><span style="color:var(--text-muted)">${escapeHTML(msg||'—')}</span>
-        </div>
-        <div class="agent-actions">
-            ${hasTrigger ? `<button class="agent-btn" onclick="triggerAgent('${escapeHTML(name)}')">&#9654; RUN</button>` : ''}
-            <button class="agent-btn" onclick="viewAgentHistory('${escapeHTML(name)}')">&#128203; LOGS</button>
-        </div>`;
-    return card;
+function closeDrilldown() {
+  document.getElementById('drilldown').classList.remove('open');
+  selectedAgent = null;
+}
+</script>
+<!-- S6-B8 -->
+<script>
+async function loadHistory(agentName) {
+  const tbody = document.getElementById('ddHistory');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">Loading…</td></tr>';
+  try {
+    const d = await fetch(`/api/agents/${encodeURIComponent(agentName)}/history?limit=15`).then(r => r.json());
+    const rows = d.history || [];
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">No history.</td></tr>'; return; }
+    tbody.innerHTML = rows.map(r => {
+      const st  = (r.status || r.last_status || 'unknown').toLowerCase();
+      const dur = r.duration_ms ? (r.duration_ms / 1000).toFixed(1) + 's' : '—';
+      const rec = r.records_written ?? '—';
+      const ts  = String(r.timestamp || r.last_run || '').slice(0, 16).replace('T', ' ');
+      return `<tr>
+        <td>${ts}</td>
+        <td><span class="${badgeClass(st)}">${st}</span></td>
+        <td>${dur}</td>
+        <td>${rec}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--red)">Error loading history.</td></tr>';
+  }
 }
 
-function renderAgentsGrid(agents) {
-    const grid = document.getElementById('agentsGrid');
-    grid.innerHTML = '';
-    let active=0, warn=0, err=0, never=0;
-    agents.forEach(a => {
-        grid.appendChild(renderAgentCard(a));
-        const s = a.last_status;
-        if (s==='active') active++;
-        else if (s==='warning') warn++;
-        else if (s==='error') err++;
-        else if (s==='never_run') never++;
-    });
-    document.getElementById('agentGridSubtitle').textContent = agents.length + ' agents registered';
-    document.getElementById('activeCount').textContent = active;
-    document.getElementById('warnCount').textContent   = warn;
-    document.getElementById('errorCount').textContent  = err;
-    document.getElementById('neverCount').textContent  = never;
+async function triggerAgent() {
+  if (!selectedAgent) return;
+  const btn = document.getElementById('ddTriggerBtn');
+  const res = document.getElementById('ddTriggerResult');
+  btn.disabled = true;
+  btn.textContent = 'Triggering…';
+  res.style.color = 'var(--text-muted)';
+  res.textContent = 'Sending request…';
+  const phaseMap = {
+    ResearchAgent:       'research',
+    SpecAgent:           'spec',
+    MLEngineerAgent:     'ml',
+    ValidationAgent:     'validation',
+    ImprovementAgent:    'improvement',
+    TradingExecutorAgent:'trading',
+    MonitoringAgent:     'monitoring',
+  };
+  const phase = phaseMap[selectedAgent] || selectedAgent.toLowerCase().replace('agent', '');
+  try {
+    const r = await fetch(`/api/pipeline/run/${encodeURIComponent(phase)}`, { method: 'POST' });
+    const d = await r.json();
+    res.style.color = 'var(--green)';
+    res.textContent = '✓ ' + (d.message || 'Agent triggered in background');
+    setTimeout(refreshAll, 3000);
+  } catch (e) {
+    res.style.color = 'var(--red)';
+    res.textContent = '✗ ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Trigger Agent Now';
+  }
 }
 
-// ── Fetch agent status ─────────────────────────────────────────────────────
-
-function loadAgentStatus() {
-    fetch('/api/agents/status')
-        .then(r => r.json())
-        .then(data => renderAgentsGrid(data.agents || []))
-        .catch(err => showDbBanner('Errore caricamento status agenti: ' + err.message));
+async function loadActivity() {
+  try {
+    const d = await fetch('/dashboard/agent-activity?limit=25').then(r => r.json());
+    const logs = d.activities || [];
+    const tbody = document.getElementById('activityRows');
+    const ctr   = document.getElementById('logCount');
+    if (!tbody) return;
+    if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted)">No activity.</td></tr>'; return; }
+    if (ctr) ctr.textContent = logs.length + ' events';
+    tbody.innerHTML = logs.map(l => {
+      const st  = (l.status || 'info').toLowerCase();
+      const dur = l.duration_ms ? (l.duration_ms / 1000).toFixed(1) + 's' : '—';
+      const ts  = String(l.timestamp || '').slice(0, 16).replace('T', ' ');
+      return `<tr>
+        <td>${ts}</td>
+        <td>${l.agent_name || '—'}</td>
+        <td><span class="${badgeClass(st)}">${st}</span></td>
+        <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.message || '—'}</td>
+        <td>${dur}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) { console.warn('loadActivity:', e); }
+}
+</script>
+<!-- S6-B9 -->
+<script>
+async function refreshAll() {
+  try {
+    const d = await fetch('/api/agents/status').then(r => r.json());
+    allAgents = (d.agents || []).sort((a, b) =>
+      (STATUS_ORDER[(a.last_status||'idle').toLowerCase()] ?? 9) -
+      (STATUS_ORDER[(b.last_status||'idle').toLowerCase()] ?? 9)
+    );
+    renderAgents(allAgents);
+    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    if (selectedAgent) loadHistory(selectedAgent);
+  } catch (e) { console.warn('refreshAll:', e); }
+  loadActivity();
 }
 
-// ── Fetch activity log ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrilldown(); });
 
-function loadActivityLog() {
-    fetch('/dashboard/agent-activity?limit=500')
-        .then(r => r.json())
-        .then(data => {
-            const logs = data.activities || [];
-            if (!logs.length) return;
-            const con = document.getElementById('logConsole');
-            con.innerHTML = '';
-            logEntryCount = 0;
-            logs.forEach(l => {
-                const s = (l.status||'info').toLowerCase();
-                const type = s==='error'?'error':s==='warning'?'warn':s==='active'?'success':'info';
-                addLog(type, l.agent_name||'Agent', l.message||'');
-            });
-        })
-        .catch(() => {});
-}
-
-// ── Trigger agent ──────────────────────────────────────────────────────────
-
-function triggerAgent(name) {
-    const url = AGENT_TRIGGER[name];
-    if (!url) return;
-    fetch(url, {method:'POST'})
-        .then(r => r.json())
-        .then(() => {
-            addLog('info', name, 'Triggered — running in background…');
-            setTimeout(loadAgentStatus, 3000);
-        })
-        .catch(err => showDbBanner('Errore trigger ' + name + ': ' + err.message));
-}
-
-// ── View history ───────────────────────────────────────────────────────────
-
-function viewAgentHistory(name) {
-    fetch('/api/agents/' + encodeURIComponent(name) + '/history?limit=20')
-        .then(r => r.json())
-        .then(data => {
-            const con = document.getElementById('logConsole');
-            con.innerHTML = '';
-            logEntryCount = 0;
-            (data.history || []).forEach(l => {
-                const s = (l.status||'info').toLowerCase();
-                const type = s==='error'?'error':s==='warning'?'warn':s==='active'?'success':'info';
-                addLog(type, l.agent_name||name, l.message||'');
-            });
-            addLog('info', 'System', 'Showing history for ' + name + ' (' + (data.count||0) + ' entries)');
-        })
-        .catch(err => showDbBanner('Errore history: ' + err.message));
-}
-
-// ── Refresh all ────────────────────────────────────────────────────────────
-
-function refreshAll() {
-    loadAgentStatus();
-    loadActivityLog();
-}
-
-// ── Resize / sidebar ───────────────────────────────────────────────────────
-
-function toggleResize(sectionId) {
-    const section = document.querySelector(`[data-section="${sectionId}"]`);
-    const btn = section?.querySelector('.resize-btn');
-    if (!section) return;
-
-    const states = ['normal', 'minimized', 'expanded'];
-    const currentState = section.dataset.resizeState || 'normal';
-    const nextState = states[(states.indexOf(currentState) + 1) % states.length];
-
-    section.classList.remove('minimized', 'expanded');
-    if (nextState === 'minimized') {
-        section.classList.add('minimized');
-        if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
-    } else if (nextState === 'expanded') {
-        section.classList.add('expanded');
-        if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
-    } else if (btn) {
-        btn.textContent = '⊟';
-        btn.title = 'Minimize';
-    }
-
-    section.dataset.resizeState = nextState;
-    const resizeStates = JSON.parse(localStorage.getItem('resizeStates_agents') || '{}');
-    resizeStates[sectionId] = nextState;
-    localStorage.setItem('resizeStates_agents', JSON.stringify(resizeStates));
-}
-
-function loadResizeStates() {
-    const resizeStates = JSON.parse(localStorage.getItem('resizeStates_agents') || '{}');
-    Object.entries(resizeStates).forEach(([sectionId, state]) => {
-        const section = document.querySelector(`[data-section="${sectionId}"]`);
-        const btn = section?.querySelector('.resize-btn');
-        if (!section) return;
-
-        section.dataset.resizeState = state;
-        if (state === 'minimized') {
-            section.classList.add('minimized');
-            if (btn) { btn.textContent = '⊞'; btn.title = 'Expand'; }
-        } else if (state === 'expanded') {
-            section.classList.add('expanded');
-            if (btn) { btn.textContent = '⊟'; btn.title = 'Minimize'; }
-        }
-    });
-}
-
-
-
-// ── Bootstrap ──────────────────────────────────────────────────────────────
-loadAgentStatus();
-loadActivityLog();
-loadResizeStates();
-setInterval(refreshAll, 30000);
-function toggleSidebar() {
-    const isCollapsed = document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-    localStorage.setItem('sidebarCollapsed', isCollapsed);
-}
-if (localStorage.getItem('sidebarCollapsed') === 'true') {
-    document.querySelector('.terminal').classList.add('sidebar-collapsed');
-}
+window.addEventListener('load', function () {
+  refreshAll();
+  setInterval(refreshAll,   15000);
+  setInterval(loadActivity, 20000);
+});
 </script>
 <script src="nav.js"></script>
 </body>

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
-    <title>Backtest | Trading Agent</title>
+    <title>Backtest | Agent Trading</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="colors_and_type.css">
     <style>
@@ -627,11 +627,6 @@ function updateDetail(modelId) {
     `<span class="badge badge-rejected">✗ REJECTED</span><br/>Failed: ${m.anomalies.filter(a => a.severity === 'high').length} high-severity anomalies (${m.anomalies.filter(a => a.severity === 'high').map(a => a.type).join(', ')})`;
   document.getElementById('detailDecision').innerHTML = decision;
 }
-
-function toggleSidebar() {
-  document.querySelector('.terminal').classList.toggle('sidebar-collapsed');
-}
-
 // ── Hydrate from /api/backtest/results ────────────────────────────────────
 async function hydrateBacktestFromApi() {
   try {
