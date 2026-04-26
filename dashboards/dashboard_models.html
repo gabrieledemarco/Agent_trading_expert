@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <title>Models | Agent Trading</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="colors_and_type.css">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -76,6 +77,11 @@
       <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-value" style="color:var(--blue)" id="kpiPending">—</div></div>
     </div>
 
+    <div class="card" style="margin-bottom:8px;">
+      <div class="card-title">Performance Comparison — Sharpe Ratio</div>
+      <div style="height:180px;position:relative;"><canvas id="modelsChart"></canvas></div>
+    </div>
+
     <div class="card">
       <div class="card-title">ML Models Registry</div>
       <table>
@@ -97,6 +103,38 @@
 </div>
 
 <script>
+let modelsChartInst = null;
+
+function buildModelsChart(models) {
+  const ctx = document.getElementById('modelsChart');
+  if (!ctx) return;
+  const top = models.slice(0, 12);
+  const labels = top.map(m => (m.id || m.name || '?').slice(0, 14));
+  const sharpes = top.map(m => m.sharpe_ratio != null ? +Number(m.sharpe_ratio).toFixed(3) : 0);
+  if (modelsChartInst) modelsChartInst.destroy();
+  modelsChartInst = new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Sharpe Ratio',
+        data: sharpes,
+        backgroundColor: sharpes.map(v => v >= 1 ? 'rgba(0,255,0,0.5)' : v >= 0 ? 'rgba(255,153,0,0.5)' : 'rgba(255,0,0,0.5)'),
+        borderColor:     sharpes.map(v => v >= 1 ? '#00ff00'           : v >= 0 ? '#ff9900'           : '#ff0000'),
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 } } },
+        y: { grid: { color: '#1a1a1a' }, ticks: { color: '#666', font: { family: 'Consolas', size: 9 } } },
+      },
+    },
+  });
+}
+
 function badgeClass(status) {
   if (!status) return 'badge-draft';
   const s = status.toLowerCase();
@@ -142,6 +180,7 @@ async function load() {
     document.getElementById('kpiApproved').textContent = approved;
     document.getElementById('kpiRejected').textContent = rejected;
     document.getElementById('kpiPending').textContent = pending;
+    buildModelsChart(allModels);
   } catch (e) {
     document.getElementById('rows').innerHTML = '<tr><td colspan="6" style="color:var(--red)">Error loading models.</td></tr>';
   }
