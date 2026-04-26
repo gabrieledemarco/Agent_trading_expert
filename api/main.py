@@ -160,7 +160,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.mount("/dashboards", StaticFiles(directory=str(Paths.DASHBOARDS_DIR), html=True), name="dashboards")
+_DASHBOARDS_DIR = str(Paths.DASHBOARDS_DIR)
+if os.path.isdir(_DASHBOARDS_DIR):
+    app.mount("/dashboards", StaticFiles(directory=_DASHBOARDS_DIR, html=True), name="dashboards")
+else:
+    logger.warning("Dashboards directory not found at %s — static files disabled", _DASHBOARDS_DIR)
 
 
 class TradeRequest(BaseModel):
@@ -197,8 +201,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": "2.0"}
 
 
 @app.post("/research")
