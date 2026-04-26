@@ -59,11 +59,25 @@
     });
   }
 
+  function markUpdated() {
+    var bar = document.querySelector('.bottombar');
+    if (!bar) return;
+    var el = document.getElementById('du-stamp');
+    if (!el) {
+      el = document.createElement('span');
+      el.id = 'du-stamp';
+      el.style.cssText = 'margin-left:auto;color:var(--text-muted);font-size:9px;';
+      bar.appendChild(el);
+    }
+    el.textContent = '↻ ' + new Date().toLocaleTimeString();
+  }
+
   window.DU = {
     formatCurrency: formatCurrency,
     formatPct: formatPct,
     formatSharpe: formatSharpe,
     fetchSummary: fetchSummary,
     applyNavBadges: applyNavBadges,
+    markUpdated: markUpdated,
   };
 })();
