@@ -186,26 +186,42 @@ class TradingExecutorAgent(BaseAgent):
         return model_file
 
     def fetch_realtime_data(self, symbol: str, interval: str = "1m") -> dict:
-        """Fetch real-time market data."""
+        """Fetch real-time market data.
+
+        Source priority:
+        1. Alpaca REST bars (real-time IEX feed, requires ALPACA_API_KEY)
+        2. yfinance fallback (15-min delayed, no credentials needed)
+        """
+        # 1. Alpaca
+        try:
+            from data.providers.alpaca_client import get_bars, get_latest_quote
+            tf_map = {"1m": "1Min", "5m": "5Min", "1h": "1Hour", "1d": "1Day"}
+            tf = tf_map.get(interval, "1Min")
+            bars = get_bars(symbol, timeframe=tf, limit=50)
+            if bars:
+                return {
+                    "symbol": symbol,
+                    "data": bars,
+                    "latest_price": bars[-1]["close"],
+                }
+        except Exception as e:
+            logger.debug(f"Alpaca fetch failed for {symbol}: {e}")
+
+        # 2. yfinance fallback
         try:
             import yfinance as yf
-
-            ticker = yf.Ticker(symbol)
-            data = ticker.history(period="1d", interval=interval)
-
+            data = yf.Ticker(symbol).history(period="1d", interval=interval)
             if data.empty:
                 return {}
-
             df = data.reset_index()
             df.columns = [c.lower().replace(" ", "_") for c in df.columns]
-
             return {
                 "symbol": symbol,
                 "data": df.to_dict(orient="records"),
                 "latest_price": float(df["close"].iloc[-1]),
             }
         except Exception as e:
-            logger.error(f"Error fetching data: {e}")
+            logger.error(f"Error fetching data for {symbol}: {e}")
             return {}
 
     def generate_signal(self, model, data: dict) -> str:
@@ -251,11 +267,19 @@ class TradingExecutorAgent(BaseAgent):
             model_name=model_name or (self.active_strategy.model_name if self.active_strategy else "default"),
         )
 
-        if not self.paper_trading:
-            logger.warning("Real trading not implemented - using paper trading")
-            # In production, connect to broker API here
+        # Submit to Alpaca paper trading (fire-and-forget, non-blocking)
+        if action in ("buy", "sell"):
+            try:
+                from data.providers.alpaca_client import submit_paper_order
+                result = submit_paper_order(symbol, quantity, action)
+                if "id" in result:
+                    logger.info(f"Alpaca paper order submitted: {result['id']}")
+                elif "error" not in result:
+                    logger.debug(f"Alpaca order response: {result}")
+            except Exception as e:
+                logger.debug(f"Alpaca order skipped: {e}")
 
-        # Update positions and capital under lock to prevent race conditions
+        # Update internal positions and capital under lock
         with self._lock:
             self.trade_history.append(trade)
             if action == "buy":
