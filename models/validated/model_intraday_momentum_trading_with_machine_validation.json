@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "model_name": "model_intraday_momentum_trading_with_machine",
   "validation_status": "APPROVED",
-  "validation_timestamp": "2026-04-27T12:21:56.539076",
+  "validation_timestamp": "2026-04-27T16:49:20.549499",
   "code_quality": {
     "issues": [],
     "warnings": [],
@@ -11,23 +11,23 @@
   "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": 0.1034,
-    "volatility": 0.1153,
-    "sharpe_ratio": 0.723,
-    "max_drawdown": 0.0842,
-    "win_rate": 0.5442,
-    "risk_score": "LOW",
-    "return_score": "MODERATE",
-    "risk_return_ratio": 0.8964
+    "expected_return": 0.2835,
+    "volatility": 0.1847,
+    "sharpe_ratio": 1.427,
+    "max_drawdown": 0.0708,
+    "win_rate": 0.5308,
+    "risk_score": "MEDIUM",
+    "return_score": "GOOD",
+    "risk_return_ratio": 1.5353
   },
   "statistical_robustness": {
-    "mean_return": -0.0254238007435332,
-    "std_return": 0.4678427512551251,
-    "percentile_5": -0.9041305994615493,
-    "percentile_95": 0.566155055481554,
-    "prob_positive_return": 0.55,
+    "mean_return": 0.024806519865876807,
+    "std_return": 0.5521989591481439,
+    "percentile_5": -0.9033936923408807,
+    "percentile_95": 0.7135952692925789,
+    "prob_positive_return": 0.54,
     "prob_negative_10": 0.37,
-    "coefficient_of_variation": 0.05434261976984022,
+    "coefficient_of_variation": 0.044923155784547066,
     "robustness_score": "LOW"
   }
 }
