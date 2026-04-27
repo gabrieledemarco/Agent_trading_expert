@@ -21,7 +21,7 @@ def _mock_agent_db(request):
     real class never raises an exception when the URL is present.
     """
     # Skip for tests that manage DataStorageManager themselves.
-    skip_modules = ("test_db_schema", "test_api_contracts")
+    skip_modules = ("test_db_schema", "test_api_contracts", "/smoke/")
     if any(m in request.node.nodeid for m in skip_modules):
         yield
         return

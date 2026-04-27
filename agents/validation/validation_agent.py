@@ -22,8 +22,9 @@ class ValidationAgent(BaseAgent):
     """Agent responsible for validating ML models and their scientific basis."""
 
     STRATEGY_THRESHOLDS = {
-        "min_sharpe": 0.5,            # L3
-        "max_drawdown": 0.20,         # L4
+        "min_sharpe": 0.5,               # L3
+        "min_profit_factor": 1.2,        # L3
+        "max_drawdown": 0.20,            # L4
         "max_monte_carlo_pvalue": 0.05,  # L5
     }
 
@@ -456,8 +457,9 @@ The model generates trading signals based on:
                 "details": "Backtest method missing",
             })
 
-        # L2 - execution realism proxy (trade list should exist, even if empty list)
-        if report.get("trades") is None:
+        # L2 - execution realism: trades present + timestamps monotonically ordered
+        trades = report.get("trades")
+        if trades is None:
             findings.append({
                 "level": "L2",
                 "status": "warning",
@@ -466,8 +468,21 @@ The model generates trading signals based on:
                 "actual_value": None,
                 "details": "Missing trade log payload in report",
             })
+        elif isinstance(trades, list) and len(trades) > 1:
+            ts_keys = ("timestamp", "date", "ts", "executed_at")
+            timestamps = [next((t[k] for k in ts_keys if k in t), None) for t in trades]
+            timestamps = [str(ts) for ts in timestamps if ts is not None]
+            if timestamps and timestamps != sorted(timestamps):
+                findings.append({
+                    "level": "L2",
+                    "status": "failed",
+                    "metric_name": "trade_timestamps",
+                    "expected_threshold": "monotonically ordered",
+                    "actual_value": "out-of-order",
+                    "details": "Trade timestamps not monotonically ordered — possible lookahead bias",
+                })
 
-        # L3 - performance
+        # L3 - performance: sharpe + profit_factor
         sharpe = float(report.get("sharpe_ratio") or 0)
         if sharpe < self.STRATEGY_THRESHOLDS["min_sharpe"]:
             findings.append({
@@ -477,6 +492,17 @@ The model generates trading signals based on:
                 "expected_threshold": f">={self.STRATEGY_THRESHOLDS['min_sharpe']}",
                 "actual_value": sharpe,
                 "details": "Risk-adjusted return below threshold",
+            })
+
+        profit_factor = float(report.get("profit_factor") or 0)
+        if 0 < profit_factor < self.STRATEGY_THRESHOLDS["min_profit_factor"]:
+            findings.append({
+                "level": "L3",
+                "status": "failed",
+                "metric_name": "profit_factor",
+                "expected_threshold": f">={self.STRATEGY_THRESHOLDS['min_profit_factor']}",
+                "actual_value": profit_factor,
+                "details": "Profit factor below threshold — gross losses exceed acceptable ratio to gross profits",
             })
 
         # L4 - risk
