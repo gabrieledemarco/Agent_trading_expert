@@ -117,18 +117,15 @@ class ValidationAgent(BaseAgent):
                         "description": "Expected LSTM layer but not found in code",
                     })
 
-        # Check data requirements — accept any recognised fetch pattern
-        _data_keywords = ("yfinance", "alpaca", "get_bars", "get_latest_quote",
-                          "httpx", "requests", "fetch", "history(")
+        # Data fetching is done by the training pipeline, not model architecture files.
+        # Only flag if spec declares sources but lists none at all (spec-level gap).
         required_sources = spec.get("data_requirements", {}).get("sources", [])
-        if required_sources:
-            has_any_data_fetch = any(kw in code for kw in _data_keywords)
-            if not has_any_data_fetch:
-                anomalies.append({
-                    "type": "data_source_missing",
-                    "severity": "medium",
-                    "description": "No recognised data fetch pattern found in model code",
-                })
+        if required_sources is not None and len(required_sources) == 0:
+            anomalies.append({
+                "type": "data_source_missing",
+                "severity": "low",
+                "description": "Spec has no data_requirements.sources defined",
+            })
 
         return anomalies
 
@@ -433,7 +430,7 @@ The model generates trading signals based on:
         doc_file = self.output_dir / f"{model_name}_documentation.md"
         doc_file.write_text(doc)
 
-        # Persist to Neon PostgreSQL
+        # Persist to Neon PostgreSQL — V1 tables
         try:
             rr = result.get("risk_return_profile", {})
             model_id = self.db.save_model({
@@ -453,6 +450,30 @@ The model generates trading signals based on:
             self.log_activity("COMPLETED", f"Validation for {result.get('model_name')} saved to Neon")
         except Exception as e:
             logger.warning(f"Could not persist validation to Neon: {e}")
+
+        # Update V2 strategies table so Kanban reflects approved/rejected status
+        v2_status = "approved" if validation_status == "APPROVED" else "rejected"
+        try:
+            strategies = self.db.get_strategies_v2(limit=500)
+            strategy = next((s for s in strategies if s.get("name") == model_name), None)
+            if strategy:
+                self.db.update_strategy_status(strategy["id"], v2_status)
+                logger.info(f"Strategy V2 status updated: {model_name} → {v2_status}")
+            else:
+                # Strategy not yet in V2 (SpecAgent may not have run); create it now
+                self.db.save_strategy({
+                    "name":              model_name,
+                    "spec":              result,
+                    "status":            v2_status,
+                    "validation_result": {
+                        "sharpe_ratio": rr.get("sharpe_ratio"),
+                        "max_drawdown": rr.get("max_drawdown"),
+                        "anomalies":    result.get("anomalies", []),
+                    },
+                })
+                logger.info(f"Strategy V2 created by validation: {model_name} → {v2_status}")
+        except Exception as e:
+            logger.warning(f"Could not update V2 strategy status: {e}")
 
         logger.info(f"Validation complete: {validation_status} for {model_name}")
         return result

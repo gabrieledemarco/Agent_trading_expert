@@ -23,19 +23,38 @@ class SpecAgent(BaseAgent):
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def read_latest_research(self) -> Optional[str]:
-        """Read the most recent research findings."""
-        if not self.research_dir.exists():
-            logger.warning(f"Research directory {self.research_dir} does not exist")
-            return None
+        """Read the most recent research findings.
 
-        md_files = sorted(self.research_dir.glob("research_*.md"), reverse=True)
-        if not md_files:
-            logger.warning("No research files found")
-            return None
+        Tries local markdown first (fast path), then falls back to the Neon
+        research table so SpecAgent works after a Render restart (no persistent disk).
+        """
+        if self.research_dir.exists():
+            md_files = sorted(self.research_dir.glob("research_*.md"), reverse=True)
+            if md_files:
+                logger.info(f"Reading research from {md_files[0]}")
+                return md_files[0].read_text()
 
-        latest = md_files[0]
-        logger.info(f"Reading research from {latest}")
-        return latest.read_text()
+        # Fallback: rebuild markdown from DB research rows
+        try:
+            papers = self.db.get_research(limit=10)
+            if papers:
+                logger.info(f"Building research text from DB ({len(papers)} papers)")
+                lines = ["# Research Findings — DB\n"]
+                for i, p in enumerate(papers, 1):
+                    lines.append(f"### {i}. {p.get('title', 'Unknown')} (score: {p.get('relevance_score', 0):.2f})\n")
+                    lines.append(f"- **ID**: {p.get('id', '')}")
+                    lines.append(f"- **Published**: {p.get('published', '')}")
+                    lines.append(f"- **Authors**: {p.get('authors', '')}")
+                    lines.append(f"- **Categories**: {p.get('categories', '')}")
+                    lines.append(f"\nAbstract\n\n{p.get('abstract', '')[:500]}")
+                    lines.append(f"\n- **PDF**: {p.get('pdf_url', '')}")
+                    lines.append("\n---\n")
+                return "\n".join(lines)
+        except Exception as e:
+            logger.warning(f"Could not read research from DB: {e}")
+
+        logger.warning("No research files or DB data available")
+        return None
 
     def extract_paper_info(self, research_text: str) -> list[dict]:
         """Extract structured paper information from markdown."""
@@ -276,7 +295,7 @@ class SpecAgent(BaseAgent):
             plan_file.write_text(action_plan)
             logger.info(f"Saved action plan to {plan_file}")
 
-            # Persist to DB
+            # Persist to V1 specs table
             try:
                 row_id = self.db.save_spec({
                     "model_name":      spec["model"]["name"],
@@ -287,6 +306,18 @@ class SpecAgent(BaseAgent):
                 self.log_activity("active", f"Spec saved to DB: {spec['model']['name']} (id={row_id})")
             except Exception as e:
                 self.log_activity("warning", f"Could not save spec to DB: {e}")
+
+            # Persist to V2 strategies table so Kanban shows draft card
+            try:
+                strategy_id = self.db.save_strategy({
+                    "name":   spec["model"]["name"],
+                    "spec":   spec,
+                    "status": "draft",
+                })
+                spec["strategy_id"] = strategy_id
+                self.log_activity("active", f"Strategy V2 created: {spec['model']['name']} (id={strategy_id})")
+            except Exception as e:
+                self.log_activity("warning", f"Could not save strategy V2: {e}")
 
         return spec_files
 

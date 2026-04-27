@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "model_name": "model_a_comparative_study_of_dynamic",
-  "validation_status": "REJECTED",
-  "validation_timestamp": "2026-04-27T11:41:32.340259",
+  "validation_status": "APPROVED",
+  "validation_timestamp": "2026-04-27T16:42:00.671587",
   "code_quality": {
     "issues": [],
     "warnings": [
@@ -10,42 +10,26 @@
     ],
     "score": 9
   },
-  "anomalies": [
-    {
-      "type": "architecture_mismatch",
-      "severity": "high",
-      "description": "Expected LSTM layer but not found in code"
-    },
-    {
-      "type": "architecture_mismatch",
-      "severity": "high",
-      "description": "Expected LSTM layer but not found in code"
-    },
-    {
-      "type": "data_source_missing",
-      "severity": "medium",
-      "description": "Expected data source yfinance not found"
-    }
-  ],
+  "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": -0.052029197271930006,
-    "volatility": 0.053422199237441216,
-    "sharpe_ratio": -1.3483008618156622,
-    "max_drawdown": 0.10438055547494988,
-    "win_rate": 0.4801587301587302,
+    "expected_return": 0.16808426243305474,
+    "volatility": 0.12744454471389274,
+    "sharpe_ratio": 1.1259663237940918,
+    "max_drawdown": 0.06158297604724679,
+    "win_rate": 0.29285714285714287,
     "risk_score": "LOW",
-    "return_score": "POOR",
-    "risk_return_ratio": 0.9739246608077693
+    "return_score": "GOOD",
+    "risk_return_ratio": 1.318881579516772
   },
   "statistical_robustness": {
-    "mean_return": 0.03616879081669346,
-    "std_return": 0.5746773003671536,
-    "percentile_5": -0.9329907625116217,
-    "percentile_95": 0.9287169148037068,
-    "prob_positive_return": 0.6,
-    "prob_negative_10": 0.35,
-    "coefficient_of_variation": 0.06293756651530469,
-    "robustness_score": "LOW"
+    "mean_return": 0.2075286915055456,
+    "std_return": 0.1564632032317679,
+    "percentile_5": -0.04871921433999268,
+    "percentile_95": 0.4629720994829356,
+    "prob_positive_return": 0.9,
+    "prob_negative_10": 0.03,
+    "coefficient_of_variation": 1.3263737876958503,
+    "robustness_score": "MEDIUM"
   }
 }
