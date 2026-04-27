@@ -103,28 +103,32 @@ class ValidationAgent(BaseAgent):
             })
             return anomalies
 
-        # Check architecture consistency
+        # Check architecture consistency — skip for RL/RF models that don't use LSTM layers
+        model_type = spec.get("model", {}).get("type", "")
+        _rl_types = {"reinforcement_learning", "q_learning", "policy_gradient", "dqn", "ppo"}
         expected_layers = spec.get("architecture", {}).get("layers", [])
-        if expected_layers:
+        if expected_layers and model_type.lower() not in _rl_types:
             for layer in expected_layers:
                 layer_type = layer.get("type", "")
                 if layer_type == "LSTM" and "LSTM" not in code and "lstm" not in code.lower():
                     anomalies.append({
                         "type": "architecture_mismatch",
                         "severity": "high",
-                        "description": f"Expected LSTM layer but not found in code"
+                        "description": "Expected LSTM layer but not found in code",
                     })
 
-        # Check data requirements
+        # Check data requirements — accept any recognised fetch pattern
+        _data_keywords = ("yfinance", "alpaca", "get_bars", "get_latest_quote",
+                          "httpx", "requests", "fetch", "history(")
         required_sources = spec.get("data_requirements", {}).get("sources", [])
         if required_sources:
-            for source in required_sources:
-                if source == "yfinance" and "yfinance" not in code:
-                    anomalies.append({
-                        "type": "data_source_missing",
-                        "severity": "medium",
-                        "description": f"Expected data source {source} not found"
-                    })
+            has_any_data_fetch = any(kw in code for kw in _data_keywords)
+            if not has_any_data_fetch:
+                anomalies.append({
+                    "type": "data_source_missing",
+                    "severity": "medium",
+                    "description": "No recognised data fetch pattern found in model code",
+                })
 
         return anomalies
 

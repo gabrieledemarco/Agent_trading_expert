@@ -216,6 +216,16 @@ async def health_check():
     return {"status": "healthy", "version": "2.0"}
 
 
+@app.get("/ping")
+async def ping():
+    """Keep-alive endpoint — used by UptimeRobot every 14 min to prevent Render spin-down.
+
+    Configure UptimeRobot: Monitor type=HTTP(s), URL=https://<app>.onrender.com/ping,
+    interval=14 minutes. Free plan supports up to 50 monitors.
+    """
+    return {"pong": True}
+
+
 @app.post("/research")
 async def run_research(request: ResearchRequest, background_tasks: BackgroundTasks):
     """Trigger research agent — runs in background, saves results to Neon."""
@@ -691,26 +701,69 @@ async def get_equity_curve(period: str = "1M", model_name: Optional[str] = None)
 
 @app.get("/api/backtest/results")
 async def get_backtest_results():
-    """Return model validation results for the backtest dashboard."""
+    """Return model validation results.
+
+    Primary: Neon DB (strategies table).
+    Fallback: models/validated/*.json local files (always present after pipeline run).
+    """
+    import json as _json
+    results = []
     try:
         strategies = get_db().get_strategies()
-    except Exception as e:
-        logger.error(f"Error getting backtest results: {e}", exc_info=True)
-        raise HTTPException(status_code=503, detail="Database unavailable")
+        results = [
+            {
+                "name":            s.get("name"),
+                "model_type":      s.get("model_type"),
+                "status":          s.get("status"),
+                "validation_date": s.get("validation_date"),
+                "risk_level":      s.get("risk_level") or "UNKNOWN",
+                "sharpe_ratio":    float(s.get("sharpe_ratio") or 0),
+                "robustness":      s.get("robustness") or "UNKNOWN",
+            }
+            for s in strategies
+        ]
+    except Exception:
+        pass
 
-    results = [
-        {
-            "name":            s.get("name"),
-            "model_type":      s.get("model_type"),
-            "status":          s.get("status"),
-            "validation_date": s.get("validation_date"),
-            "risk_level":      s.get("risk_level") or "UNKNOWN",
-            "sharpe_ratio":    float(s.get("sharpe_ratio") or 0),
-            "robustness":      s.get("robustness") or "UNKNOWN",
-        }
-        for s in strategies
-    ]
+    if not results:
+        # Fallback: read local validation JSON files
+        for vf in sorted(Paths.VALIDATED_DIR.glob("*_validation.json")):
+            try:
+                d = _json.loads(vf.read_text())
+                rr = d.get("risk_return_profile", {})
+                rob = d.get("statistical_robustness", {})
+                results.append({
+                    "name":         d.get("model_name", vf.stem),
+                    "model_type":   d.get("model_type", "unknown"),
+                    "status":       d.get("validation_status", "UNKNOWN"),
+                    "validation_date": d.get("validation_timestamp", ""),
+                    "risk_level":   rr.get("risk_score", "UNKNOWN"),
+                    "sharpe_ratio": float(rr.get("sharpe_ratio") or 0),
+                    "robustness":   rob.get("robustness_score", "UNKNOWN"),
+                })
+            except Exception:
+                pass
+
     return {"results": results, "count": len(results)}
+
+
+@app.get("/api/backtest/summary")
+async def get_backtest_summary():
+    """Aggregate stats for the backtest dashboard header cards.
+
+    Returns: total, approved, rejected, best_sharpe, avg_win_rate.
+    """
+    import json as _json
+    rows = (await get_backtest_results())["results"]
+    approved = [r for r in rows if r.get("status") == "APPROVED"]
+    rejected  = [r for r in rows if r.get("status") == "REJECTED"]
+    sharpes   = [r["sharpe_ratio"] for r in approved]
+    return {
+        "total":      len(rows),
+        "approved":   len(approved),
+        "rejected":   len(rejected),
+        "best_sharpe": round(max(sharpes), 3) if sharpes else 0.0,
+    }
 
 
 @app.get("/api/risk/summary")

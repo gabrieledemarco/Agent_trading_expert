@@ -840,18 +840,99 @@ if __name__ == "__main__":
 
         return {"passed": len(reasons) == 0, "reasons": reasons}
 
+    def train_and_save(self, model_name: str, symbol: str = "SPY", epochs: int = 20) -> bool:
+        """Fetch real price data, train the LSTM model, save weights to models/versions/.
+
+        Returns True on success. Silently skips non-LSTM models (RL/RF).
+        """
+        import importlib.util, inspect, numpy as np
+        from pathlib import Path
+
+        model_file = Path("models") / f"{model_name}.py"
+        if not model_file.exists():
+            logger.warning(f"train_and_save: model file not found: {model_file}")
+            return False
+
+        # Fetch price data
+        prices = None
+        try:
+            from data.providers.alpaca_client import get_bars
+            bars = get_bars(symbol, timeframe="1Day", limit=300)
+            if bars:
+                prices = np.array([b["close"] for b in bars], dtype=np.float32)
+        except Exception:
+            pass
+        if prices is None or len(prices) < 30:
+            try:
+                import yfinance as yf
+                df = yf.Ticker(symbol).history(period="2y", interval="1d")
+                prices = df["Close"].to_numpy(dtype=np.float32)
+            except Exception as e:
+                logger.warning(f"train_and_save: could not fetch prices: {e}")
+                return False
+
+        # Normalise and build sequences (window=20)
+        prices = prices / prices[0]
+        seq_len = 20
+        X = np.array([prices[i:i+seq_len] for i in range(len(prices)-seq_len-1)], dtype=np.float32)
+        y = np.array([prices[i+seq_len] for i in range(len(prices)-seq_len-1)], dtype=np.float32)
+        X = X.reshape(len(X), seq_len, 1)
+
+        try:
+            import torch, torch.nn as nn
+            spec_imp = importlib.util.spec_from_file_location(f"_train_{model_name}", model_file)
+            mod  = importlib.util.module_from_spec(spec_imp)      # type: ignore[arg-type]
+            spec_imp.loader.exec_module(mod)                       # type: ignore[union-attr]
+
+            # Find first nn.Module class
+            model_cls = next(
+                (cls for _, cls in inspect.getmembers(mod, inspect.isclass)
+                 if issubclass(cls, nn.Module) and cls.__module__ == mod.__name__),
+                None
+            )
+            if model_cls is None:
+                logger.info(f"train_and_save: no nn.Module in {model_name}, skipping")
+                return False
+
+            model = model_cls()
+            Xt = torch.tensor(X); yt = torch.tensor(y)
+            opt = torch.optim.Adam(model.parameters(), lr=1e-3)
+            loss_fn = nn.MSELoss()
+
+            model.train()
+            for epoch in range(epochs):
+                opt.zero_grad()
+                pred = model(Xt).squeeze()
+                loss = loss_fn(pred, yt)
+                loss.backward()
+                opt.step()
+                if (epoch + 1) % 5 == 0:
+                    logger.info(f"  {model_name} epoch {epoch+1}/{epochs} loss={loss.item():.6f}")
+
+            out_path = Path("models/versions") / f"{model_name}.pt"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            torch.save(model.state_dict(), out_path)
+            logger.info(f"train_and_save: weights saved → {out_path}")
+            return True
+        except Exception as e:
+            logger.warning(f"train_and_save({model_name}): {e}")
+            return False
+
     def run(self) -> list[str]:
         """Alias for run_implementation — satisfies BaseAgent contract."""
         return self.run_implementation()
 
     def run_implementation(self) -> list[str]:
-        """Run model implementation for all specs."""
+        """Run model implementation for all specs, then train LSTM models."""
         specs = self.read_specs()
         implemented = []
 
         for spec in specs:
             model_file = self.implement_model(spec)
             implemented.append(model_file)
+            model_name = spec.get("model", {}).get("name")
+            if model_name:
+                self.train_and_save(model_name)
 
         return implemented
 
