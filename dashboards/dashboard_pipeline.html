@@ -103,6 +103,7 @@
 </div>
 
 <script>
+const esc = window.DU ? DU.escape : function(s){var m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};return String(s==null?'':s).replace(/[&<>"']/g,function(c){return m[c];});};
 const COLUMNS = [
   'draft', 'backtest_pending', 'backtest_running',
   'validation_pending', 'approved', 'warning',
@@ -143,8 +144,8 @@ async function load() {
       const cardHtml = cards.length
         ? cards.map(s => `
           <div class="kanban-card">
-            <div class="kanban-card-name">${s.name || s.id || '—'}</div>
-            <div class="kanban-card-meta">retry: ${s.retry_count || 0} · ${String(s.updated_at || '').slice(0, 10)}</div>
+            <div class="kanban-card-name">${esc(s.name || s.id || '—')}</div>
+            <div class="kanban-card-meta">retry: ${s.retry_count || 0} · ${esc(String(s.updated_at || '').slice(0, 10))}</div>
           </div>`).join('')
         : '<div class="empty">empty</div>';
       return `
