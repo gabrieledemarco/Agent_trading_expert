@@ -76,13 +76,44 @@ class TradingExecutorAgent(BaseAgent):
         self.initial_capital = initial_capital
         self.paper_trading = paper_trading
 
-        self.current_capital = initial_capital
         self.positions = {}
         self.trade_history = []
-        self.equity_curve = [initial_capital]
         self.active_strategy = None
         self.strategy_profiles = {}
         self._lock = threading.Lock()
+
+        # Restore capital from last saved performance snapshot if available
+        self.current_capital = self._restore_capital(initial_capital)
+        self.equity_curve = [self.current_capital]
+
+    def _restore_capital(self, default: float) -> float:
+        """Load last equity from Neon performance table; fall back to default."""
+        try:
+            rows = self.db.get_performance(days=1)
+            if rows:
+                equity = float(rows[0].get("equity") or 0)
+                if equity > 0:
+                    logger.info(f"Capital restored from DB: ${equity:,.2f}")
+                    return equity
+        except Exception:
+            pass
+        return default
+
+    def _persist_capital(self):
+        """Save current equity snapshot to Neon after each trade."""
+        try:
+            self.db.save_performance({
+                "timestamp":    datetime.now().isoformat(),
+                "model_name":   getattr(self.active_strategy, "model_name", "paper"),
+                "equity":       self.current_capital,
+                "total_return": (self.current_capital - self.initial_capital) / self.initial_capital,
+                "sharpe_ratio": 0.0,
+                "max_drawdown": 0.0,
+                "win_rate":     0.0,
+                "num_trades":   len(self.trade_history),
+            })
+        except Exception as e:
+            logger.debug(f"_persist_capital failed: {e}")
 
     def should_run_now(self, min_interval_days: int = 0) -> bool:
         return True  # Trading gira sempre quando chiamato dal loop
@@ -147,43 +178,85 @@ class TradingExecutorAgent(BaseAgent):
         return strategies
 
     def select_strategy(self, risk_tolerance: str = "MEDIUM") -> Optional[StrategyProfile]:
-        """Select appropriate strategy based on risk tolerance."""
-        strategies = self.load_validated_strategies()
+        """Select strategy: prefers APPROVED within risk tolerance, falls back gracefully.
 
+        Fallback chain:
+        1. Best Sharpe among APPROVED strategies matching risk_tolerance
+        2. Best Sharpe among ALL APPROVED strategies (ignore risk)
+        3. Best Sharpe among ALL strategies regardless of status (with warning)
+        4. None — no validated strategies exist at all
+        """
+        strategies = self.load_validated_strategies()
         if not strategies:
-            logger.warning("No validated strategies found, using default")
+            logger.warning("No validated strategies found, returning None")
             return None
 
-        # Filter by risk tolerance
         risk_order = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
         target_level = risk_order.get(risk_tolerance, 1)
+        approved = [s for s in strategies if getattr(s, "status", "APPROVED") == "APPROVED"]
 
-        suitable = [s for s in strategies if risk_order.get(s.risk_level, 1) <= target_level]
+        # 1. APPROVED + matching risk
+        pool = [s for s in approved if risk_order.get(s.risk_level, 1) <= target_level]
+        if not pool:
+            # 2. Any APPROVED
+            pool = approved
+        if not pool:
+            # 3. Any strategy (degraded mode)
+            pool = strategies
+            logger.warning("No APPROVED strategies — using best available (degraded mode)")
 
-        if not suitable:
-            suitable = strategies
-
-        # Select best by Sharpe ratio
-        best = max(suitable, key=lambda s: s.sharpe_ratio)
+        best = max(pool, key=lambda s: s.sharpe_ratio)
         self.active_strategy = best
-
-        logger.info(f"Selected strategy: {best.model_name} (risk: {best.risk_level})")
+        logger.info(f"Selected strategy: {best.model_name} (risk: {best.risk_level}, sharpe: {best.sharpe_ratio:.2f})")
         return best
 
     def load_model(self, model_name: str):
-        """Load a trained model."""
-        import torch
-        import sys
+        """Dynamically import the model module and instantiate the first nn.Module subclass found.
 
-        sys.path.insert(0, str(self.model_path.parent))
+        Also loads pre-trained weights from models/versions/{model_name}.pt if present.
+        Returns the model instance, or None if the file is missing or import fails.
+        """
+        import importlib.util, inspect
+        from pathlib import Path
 
-        model_file = self.model_path / f"{model_name}.py"
+        # Model source lives in models/, not models/versions/
+        model_file = Path("models") / f"{model_name}.py"
         if not model_file.exists():
-            logger.warning(f"Model file {model_file} not found")
+            logger.warning(f"Model file not found: {model_file}")
             return None
 
-        logger.info(f"Loading model: {model_name}")
-        return model_file
+        try:
+            spec = importlib.util.spec_from_file_location(f"_model_{model_name}", model_file)
+            mod  = importlib.util.module_from_spec(spec)   # type: ignore[arg-type]
+            spec.loader.exec_module(mod)                   # type: ignore[union-attr]
+
+            # Find the first nn.Module subclass defined in the module
+            model_instance = None
+            try:
+                import torch.nn as nn
+                for name, cls in inspect.getmembers(mod, inspect.isclass):
+                    if issubclass(cls, nn.Module) and cls.__module__ == mod.__name__:
+                        model_instance = cls()
+                        break
+            except Exception:
+                pass
+
+            # Load saved weights if available
+            weights_path = self.model_path / f"{model_name}.pt"
+            if model_instance is not None and weights_path.exists():
+                try:
+                    import torch
+                    model_instance.load_state_dict(torch.load(weights_path, map_location="cpu"))
+                    model_instance.eval()
+                    logger.info(f"Loaded weights for {model_name} from {weights_path}")
+                except Exception as e:
+                    logger.debug(f"Could not load weights for {model_name}: {e}")
+
+            logger.info(f"Model loaded: {model_name} → {type(model_instance).__name__ if model_instance else 'None'}")
+            return model_instance
+        except Exception as e:
+            logger.warning(f"load_model({model_name}) failed: {e}")
+            return None
 
     def fetch_realtime_data(self, symbol: str, interval: str = "1m") -> dict:
         """Fetch real-time market data.
@@ -311,8 +384,9 @@ class TradingExecutorAgent(BaseAgent):
                 self.current_capital += value
                 self.positions[symbol] = max(0, self.positions.get(symbol, 0) - quantity)
 
-        # Log trade
+        # Log trade and persist capital to Neon
         self._log_trade(trade)
+        self._persist_capital()
 
         logger.info(f"Executed {action} {quantity} {symbol} at {price} using model {trade.model_name}")
         return trade
@@ -389,9 +463,11 @@ class TradingExecutorAgent(BaseAgent):
                 price = data["latest_price"]
                 latest_prices[symbol] = price
 
-                # Generate signal
-                model = None  # Load actual model in production
-                signal = self.generate_signal(model, data)
+                # Generate signal using the loaded active model
+                _model = None
+                if self.active_strategy is not None:
+                    _model = self.load_model(self.active_strategy.model_name)
+                signal = self.generate_signal(_model, data)
 
                 # Execute trade if signal is buy or sell
                 if signal in ["buy", "sell"]:

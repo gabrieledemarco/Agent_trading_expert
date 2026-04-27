@@ -8,6 +8,7 @@ Triggered by:
 """
 
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -66,21 +67,34 @@ class ResearchAgent(BaseAgent):
         search_query: str = "trading OR quantitative finance OR portfolio optimization",
         max_results: int = 20,
     ) -> list[dict]:
-        """Fetch papers from arXiv API."""
-        base_url = "http://export.arxiv.org/api/query"
+        """Fetch papers from arXiv API with 3-attempt retry and exponential backoff."""
+        base_url = "https://export.arxiv.org/api/query"
+        # Prefix with all: to search across title, abstract and comments
+        prefixed = " OR ".join(
+            f"all:{term.strip()}" for term in search_query.replace(" OR ", "|").split("|")
+        )
         params = {
-            "search_query": search_query,
+            "search_query": prefixed,
             "max_results": max_results,
             "sortBy": "submittedDate",
             "sortOrder": "descending",
         }
-        try:
-            response = requests.get(base_url, params=params, timeout=30)
-            response.raise_for_status()
-            return self._parse_arxiv_response(response.text)
-        except Exception as e:
-            logger.error(f"arXiv fetch failed: {e}")
-            return []
+        last_exc: Exception = RuntimeError("no attempts made")
+        for attempt in range(3):
+            try:
+                response = requests.get(base_url, params=params, timeout=30)
+                response.raise_for_status()
+                papers = self._parse_arxiv_response(response.text)
+                if papers:
+                    logger.info(f"arXiv: fetched {len(papers)} papers (attempt {attempt+1})")
+                    return papers
+                logger.warning(f"arXiv returned empty feed (attempt {attempt+1}), retrying…")
+            except Exception as e:
+                last_exc = e
+                logger.warning(f"arXiv attempt {attempt+1} failed: {e}")
+            time.sleep(2 ** attempt)   # 1s, 2s, 4s
+        logger.error(f"arXiv fetch failed after 3 attempts: {last_exc}")
+        return []
 
     def _parse_arxiv_response(self, xml_content: str) -> list[dict]:
         import xml.etree.ElementTree as ET
