@@ -36,8 +36,17 @@ def client():
     mock_db.get_strategies.return_value = []
     mock_db.get_agent_logs.return_value = []
 
-    import sys
+    import sys, types
     sys.path.insert(0, str(ROOT))
+
+    # data.storage.data_manager needs psycopg2 to import; inject a stub so
+    # patch() can resolve the target without a real DB driver installed.
+    if "data.storage.data_manager" not in sys.modules:
+        _stub = types.ModuleType("data.storage.data_manager")
+        _stub.DataStorageManager = type("DataStorageManager", (), {})
+        sys.modules["data.storage.data_manager"] = _stub
+        import data.storage as _ds_pkg
+        _ds_pkg.data_manager = _stub
 
     with patch("data.storage.data_manager.DataStorageManager", return_value=mock_db):
         with patch("api.main.get_db", return_value=mock_db):
