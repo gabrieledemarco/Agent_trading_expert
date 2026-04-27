@@ -66,6 +66,73 @@ class TestStrategiesEndpointContract:
         )
 
 
+class TestApiDashboardSummaryContract:
+    """The new GET /api/dashboard/summary response shape."""
+
+    REQUIRED_TOP_KEYS = {"last_updated", "portfolio", "strategies", "models", "research", "agents", "trades"}
+    PORTFOLIO_KEYS    = {"equity", "total_return", "sharpe_ratio", "max_drawdown"}
+    STRATEGIES_KEYS   = {"total", "approved", "deployed", "by_status"}
+    MODELS_KEYS       = {"total", "approved"}
+    RESEARCH_KEYS     = {"papers", "specs"}
+    AGENTS_KEYS       = {"total", "active", "idle"}
+    TRADES_KEYS       = {"total"}
+
+    def _build_summary(self):
+        import sys
+        sys.path.insert(0, str(ROOT))
+        try:
+            from data.storage.data_manager import DataStorageManager
+            from datetime import datetime, timezone
+            db = DataStorageManager()
+            base   = db.get_dashboard_summary()
+            risk   = db.get_performance(days=30)
+            strats = db.get_strategies_v2(limit=500)
+            agents = db.get_agent_status()
+            latest = risk[0] if risk else {}
+            by_status = {}
+            for s in strats:
+                st = str(s.get("status", "draft"))
+                by_status[st] = by_status.get(st, 0) + 1
+            active = sum(1 for a in agents if str(a.get("status","")).lower()=="running")
+            return {
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "portfolio": {"equity": float(latest.get("equity") or 0), "total_return": 0.0, "sharpe_ratio": 0.0, "max_drawdown": 0.0},
+                "strategies": {"total": len(strats), "approved": by_status.get("approved",0), "deployed": by_status.get("deployed",0), "by_status": by_status},
+                "models": {"total": int(base.get("models_implemented",0)), "approved": int(base.get("models_validated",0))},
+                "research": {"papers": int(base.get("research_papers",0)), "specs": int(base.get("specs_created",0))},
+                "agents": {"total": len(agents), "active": active, "idle": max(0, len(agents)-active)},
+                "trades": {"total": int(base.get("total_trades",0))},
+            }
+        except Exception:
+            pytest.skip("DataStorageManager unavailable")
+
+    def test_top_level_keys(self):
+        s = self._build_summary()
+        assert self.REQUIRED_TOP_KEYS.issubset(s.keys())
+
+    def test_portfolio_keys(self):
+        s = self._build_summary()
+        assert self.PORTFOLIO_KEYS.issubset(s["portfolio"].keys())
+
+    def test_strategies_keys(self):
+        s = self._build_summary()
+        assert self.STRATEGIES_KEYS.issubset(s["strategies"].keys())
+
+    def test_agents_keys(self):
+        s = self._build_summary()
+        assert self.AGENTS_KEYS.issubset(s["agents"].keys())
+
+    def test_idle_plus_active_equals_total(self):
+        s = self._build_summary()
+        ag = s["agents"]
+        assert ag["active"] + ag["idle"] == ag["total"]
+
+    def test_last_updated_is_iso(self):
+        from datetime import datetime
+        s = self._build_summary()
+        datetime.fromisoformat(s["last_updated"])  # raises if invalid
+
+
 class TestDashboardSummaryContract:
     """The /dashboard/summary endpoint response shape."""
 

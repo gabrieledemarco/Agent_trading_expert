@@ -1,9 +1,14 @@
 /**
  * dashboard_utils.js — shared formatters + global summary fetcher.
- * Exposes window.DU = { formatCurrency, formatPct, formatSharpe, fetchSummary }
+ * Exposes window.DU = { escape, formatCurrency, formatPct, formatSharpe, fetchSummary, applyNavBadges, markUpdated }
  */
 (function () {
   'use strict';
+
+  var _ESC = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+  function escape(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return _ESC[c]; });
+  }
 
   var _cache = null;
   var _cacheTs = 0;
@@ -73,6 +78,7 @@
   }
 
   window.DU = {
+    escape: escape,
     formatCurrency: formatCurrency,
     formatPct: formatPct,
     formatSharpe: formatSharpe,

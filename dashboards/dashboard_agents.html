@@ -181,12 +181,13 @@ function renderAgents(agents) {
     const dur = a.duration_ms ? (a.duration_ms / 1000).toFixed(1) + 's' : '—';
     const rec = a.records_written ?? '—';
     const lastRun = a.last_run ? String(a.last_run).slice(0, 16).replace('T', ' ') : 'Never';
-    return `<div class="agent-card ${cls}" onclick="openDrilldown('${a.agent_name}')">
+    const esc = window.DU ? DU.escape : function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+    return `<div class="agent-card ${cls}" onclick="openDrilldown('${esc(a.agent_name)}')">
       <div class="agent-header">
-        <div class="agent-name">${a.agent_name || '?'}</div>
-        <span class="${badgeClass(st)}">${st}</span>
+        <div class="agent-name">${esc(a.agent_name) || '?'}</div>
+        <span class="${badgeClass(st)}">${esc(st)}</span>
       </div>
-      <div class="agent-type">${a.last_message ? String(a.last_message).slice(0, 60) : 'No activity'}</div>
+      <div class="agent-type">${a.last_message ? esc(String(a.last_message).slice(0, 60)) : 'No activity'}</div>
       <div class="agent-meta">
         <span class="ml">Last run</span><span>${lastRun}</span>
         <span class="ml">Duration</span><span>${dur}</span>

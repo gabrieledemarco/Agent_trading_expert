@@ -147,11 +147,12 @@ async function load() {
       else if (st.includes('pending') || st.includes('running')) pending++;
       else if (st === 'warning') warning++;
       else if (st === 'human_review') { human++; humanList.push(s.name); }
+      const esc = window.DU ? DU.escape : function(v){return String(v||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
       return `<tr>
-        <td>${s.name || s.id || '—'}</td>
-        <td><span class="badge ${badgeClass(st)}">${st}</span></td>
+        <td>${esc(s.name || s.id || '—')}</td>
+        <td><span class="badge ${badgeClass(st)}">${esc(st)}</span></td>
         <td>${s.retry_count || 0}</td>
-        <td>${String(s.updated_at || '').slice(0, 16)}</td>
+        <td>${esc(String(s.updated_at || '').slice(0, 16))}</td>
       </tr>`;
     }).join('');
 
@@ -165,7 +166,8 @@ async function load() {
     const hrCard = document.getElementById('humanReviewCard');
     if (human > 0) {
       hrCard.style.display = 'block';
-      document.getElementById('humanReviewList').innerHTML = humanList.map(n => `<div style="padding:4px 0;border-bottom:1px solid var(--border);color:var(--yellow)">⚠ ${n}</div>`).join('');
+      const _e = window.DU ? DU.escape : function(v){return String(v||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+      document.getElementById('humanReviewList').innerHTML = humanList.map(n => `<div style="padding:4px 0;border-bottom:1px solid var(--border);color:var(--yellow)">⚠ ${_e(n)}</div>`).join('');
     } else {
       hrCard.style.display = 'none';
     }
