@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "model_name": "model_dynamic_time_window_optimization_for",
   "validation_status": "APPROVED",
-  "validation_timestamp": "2026-04-27T12:21:56.009898",
+  "validation_timestamp": "2026-04-27T16:42:00.716676",
   "code_quality": {
     "issues": [],
     "warnings": [],
@@ -11,23 +11,23 @@
   "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": 0.0995,
-    "volatility": 0.1327,
-    "sharpe_ratio": 0.599,
-    "max_drawdown": 0.0808,
-    "win_rate": 0.5408,
+    "expected_return": 0.16808426243305474,
+    "volatility": 0.12744454471389274,
+    "sharpe_ratio": 1.1259663237940918,
+    "max_drawdown": 0.06158297604724679,
+    "win_rate": 0.29285714285714287,
     "risk_score": "LOW",
-    "return_score": "MODERATE",
-    "risk_return_ratio": 0.7498
+    "return_score": "GOOD",
+    "risk_return_ratio": 1.318881579516772
   },
   "statistical_robustness": {
-    "mean_return": 0.06147966246631634,
-    "std_return": 0.43549309711607964,
-    "percentile_5": -0.6538124672388456,
-    "percentile_95": 0.7937971131210136,
-    "prob_positive_return": 0.55,
-    "prob_negative_10": 0.37,
-    "coefficient_of_variation": 0.1411725303419197,
-    "robustness_score": "LOW"
+    "mean_return": 0.2245349626082599,
+    "std_return": 0.16862719990423541,
+    "percentile_5": -0.044455648816063585,
+    "percentile_95": 0.5325773517864943,
+    "prob_positive_return": 0.88,
+    "prob_negative_10": 0.01,
+    "coefficient_of_variation": 1.3315465282930328,
+    "robustness_score": "MEDIUM"
   }
 }
