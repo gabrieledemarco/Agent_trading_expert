@@ -734,9 +734,10 @@ if __name__ == "__main__":
         test_file = self.models_dir / f"test_{model_name}.py"
         test_file.write_text(test_code)
 
-        # Create backtest code
+        # Create backtest code — write to backtest_generated.py to avoid
+        # clobbering models/backtest.py (used by ValidationAgent metrics)
         backtest_code = self.create_backtest_code(spec)
-        backtest_file = self.models_dir / "backtest.py"
+        backtest_file = self.models_dir / "backtest_generated.py"
         backtest_file.write_text(backtest_code)
 
         logger.info(f"Model implementation complete for {model_name}")
@@ -746,12 +747,17 @@ if __name__ == "__main__":
         gate = self.evaluate_model_gates(metrics)
         model_status = "validated" if gate["passed"] else "rejected"
 
-        # Persist to DB (legacy + V2 write-by-default)
+        # Persist to DB (legacy V1 + V2)
+        # get_specs() is isolated so its failure doesn't prevent model save
+        spec_id = None
         try:
             specs = self.db.get_specs()
             spec_row = next((s for s in specs if s.get("model_name") == model_name), {})
             spec_id = spec_row.get("id")
+        except Exception:
+            pass
 
+        try:
             row_id = self.db.save_model({
                 "model_name": model_name,
                 "spec_id":    spec_id,
@@ -759,22 +765,20 @@ if __name__ == "__main__":
                 "status":     "implemented",
                 "metrics":    metrics,
             })
-
             v2_row_id = self.db.save_model_v2({
-                "strategy_id": spec.get("strategy_id"),
-                "architecture": model_type,
-                "hyperparams": spec.get("training", {}),
+                "strategy_id":         spec.get("strategy_id"),
+                "architecture":        model_type,
+                "hyperparams":         spec.get("training", {}),
                 "directional_accuracy": metrics["directional_accuracy"],
-                "r2_score": metrics["r2_score"],
-                "mse": metrics["mse"],
-                "train_test_gap": metrics["train_test_gap"],
-                "artifact_path": str(model_file),
-                "status": model_status,
+                "r2_score":            metrics["r2_score"],
+                "mse":                 metrics["mse"],
+                "train_test_gap":      metrics["train_test_gap"],
+                "artifact_path":       str(model_file),
+                "status":              model_status,
             })
-
             self.log_activity(
                 "active",
-                f"Model saved to DB: {model_name} (legacy={row_id}, v2={v2_row_id}, status={model_status})",
+                f"Model saved: {model_name} (v1={row_id}, v2={v2_row_id}, status={model_status})",
             )
             if not gate["passed"]:
                 self.log_activity("warning", f"Model rejected by ML gates: {model_name} — {gate['reasons']}")
@@ -784,7 +788,13 @@ if __name__ == "__main__":
         return str(model_file)
 
     def compute_model_metrics(self, spec: dict) -> dict:
-        """Compute/derive model-level predictive metrics (ML-only, no trading KPIs)."""
+        """Compute model-level predictive metrics.
+
+        Priority:
+          1. Injected metrics from spec (tests / external override)
+          2. Real inference on holdout data when a trained .pt exists
+          3. Deterministic hash-based synthetic baseline
+        """
         injected = spec.get("model_validation_metrics")
         if injected:
             return {
@@ -794,33 +804,80 @@ if __name__ == "__main__":
                 "train_test_gap": float(injected.get("train_test_gap", 1.0)),
             }
 
-        # Deterministic synthetic baseline while real trainer integration is pending.
         model_name = spec.get("model", {}).get("name", "model")
+
+        # Try real inference on trained .pt weights
+        pt_path = Path("models/versions") / f"{model_name}.pt"
+        if pt_path.exists():
+            try:
+                import importlib.util, inspect, torch, torch.nn as nn
+                import yfinance as yf
+
+                model_file = Path("models") / f"{model_name}.py"
+                spec_imp = importlib.util.spec_from_file_location(f"_eval_{model_name}", model_file)
+                mod = importlib.util.module_from_spec(spec_imp)   # type: ignore[arg-type]
+                spec_imp.loader.exec_module(mod)                   # type: ignore[union-attr]
+                model_cls = next(
+                    (cls for _, cls in inspect.getmembers(mod, inspect.isclass)
+                     if issubclass(cls, nn.Module) and cls.__module__ == mod.__name__),
+                    None,
+                )
+                if model_cls is not None:
+                    sig = inspect.signature(model_cls.__init__)
+                    required = [p for p, v in sig.parameters.items()
+                                if p != "self" and v.default is inspect.Parameter.empty]
+                    model_inst = model_cls(input_size=1) if required == ["input_size"] else model_cls()
+                    model_inst.load_state_dict(torch.load(pt_path, weights_only=True))
+                    model_inst.eval()
+
+                    df = yf.Ticker("SPY").history(period="6mo", interval="1d")
+                    prices = df["Close"].to_numpy(dtype=np.float32) / df["Close"].iloc[0]
+                    seq_len = 20
+                    X = np.array([prices[i:i+seq_len] for i in range(len(prices)-seq_len-1)], dtype=np.float32)
+                    y = prices[seq_len:][:len(X)]
+                    X_t = torch.tensor(X.reshape(len(X), seq_len, 1))
+                    with torch.no_grad():
+                        y_pred = model_inst(X_t).squeeze().numpy()
+
+                    # Train/test split: first 80% train, last 20% test
+                    split = int(len(y) * 0.8)
+                    y_tr, yp_tr = y[:split], y_pred[:split]
+                    y_te, yp_te = y[split:], y_pred[split:]
+
+                    def _dir_acc(yt, yp):
+                        return float((np.sign(np.diff(yt)) == np.sign(np.diff(yp))).mean()) if len(yt) > 1 else 0.5
+
+                    mse = float(np.mean((y_te - yp_te) ** 2))
+                    ss_tot = float(np.sum((y_te - y_te.mean()) ** 2))
+                    r2 = float(1 - np.sum((y_te - yp_te) ** 2) / ss_tot) if ss_tot > 0 else 0.0
+                    train_da = _dir_acc(y_tr, yp_tr)
+                    test_da  = _dir_acc(y_te, yp_te)
+                    logger.info(f"Real metrics for {model_name}: mse={mse:.4f} r2={r2:.3f} dir_acc={test_da:.3f}")
+                    return {
+                        "mse": mse,
+                        "r2_score": r2,
+                        "directional_accuracy": test_da,
+                        "train_test_gap": float(abs(train_da - test_da)),
+                    }
+            except Exception as e:
+                logger.warning(f"compute_model_metrics real inference failed ({model_name}): {e}")
+
+        # Deterministic hash-based synthetic baseline
         seed = abs(hash(model_name)) % 2**32
         rng = np.random.default_rng(seed)
-
         y_true = rng.normal(0, 1, 200)
-        noise = rng.normal(0, 0.85, 200)
-        y_pred = y_true + noise
-
+        y_pred = y_true + rng.normal(0, 0.85, 200)
         mse = float(np.mean((y_true - y_pred) ** 2))
         ss_tot = float(np.sum((y_true - y_true.mean()) ** 2))
-        ss_res = float(np.sum((y_true - y_pred) ** 2))
-        r2 = float(1 - ss_res / ss_tot) if ss_tot > 0 else 0.0
-
+        r2 = float(1 - np.sum((y_true - y_pred) ** 2) / ss_tot) if ss_tot > 0 else 0.0
         true_dir = np.sign(np.diff(y_true))
         pred_dir = np.sign(np.diff(y_pred))
-        directional_acc = float((true_dir == pred_dir).mean()) if len(true_dir) > 0 else 0.0
-
-        train_acc = directional_acc + 0.05
-        test_acc = directional_acc
-        train_test_gap = float(abs(train_acc - test_acc))
-
+        directional_acc = float((true_dir == pred_dir).mean()) if len(true_dir) > 0 else 0.5
         return {
             "mse": mse,
             "r2_score": r2,
             "directional_accuracy": directional_acc,
-            "train_test_gap": train_test_gap,
+            "train_test_gap": 0.05,
         }
 
     def evaluate_model_gates(self, metrics: dict) -> dict:
