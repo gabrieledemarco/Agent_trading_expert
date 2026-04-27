@@ -561,26 +561,41 @@ async def strategy_backtest(strategy_id: str):
     return {"strategy_id": strategy_id, "reports": reports, "count": len(reports)}
 
 
+_SSE_SYMBOLS = ["AAPL", "MSFT", "GOOG", "NVDA"]
+_SSE_PRICE_INTERVAL = 10   # emit a price event every N heartbeats (1 heartbeat = 2s)
+
 @app.get("/api/events/stream")
 async def events_stream():
-    """Server-sent events stream with recent activity snapshots."""
+    """SSE stream: heartbeat every 2s + agent log snapshot + price tick every 20s."""
     async def event_generator():
+        tick = 0
         while True:
+            ts = datetime.utcnow().isoformat()
+            # Agent activity event
             try:
                 logs = get_db().get_agent_logs(limit=1)
                 latest = logs[0] if logs else {}
             except Exception:
                 latest = {}
-            payload = {
-                "timestamp": datetime.utcnow().isoformat(),
-                "event": latest.get("status", "heartbeat"),
-                "agent": latest.get("agent_name"),
-                "message": latest.get("message"),
-            }
-            yield f"data: {json.dumps(payload)}\n\n"
+            yield f"data: {json.dumps({'type':'agent','timestamp':ts,'event':latest.get('status','heartbeat'),'agent':latest.get('agent_name'),'message':latest.get('message')})}\n\n"
+
+            # Price events (staggered: one symbol per interval tick)
+            if tick % _SSE_PRICE_INTERVAL == 0:
+                sym = _SSE_SYMBOLS[(tick // _SSE_PRICE_INTERVAL) % len(_SSE_SYMBOLS)]
+                try:
+                    import yfinance as yf
+                    data = yf.Ticker(sym).history(period="1d", interval="1m")
+                    price = float(data["Close"].iloc[-1]) if not data.empty else None
+                    if price is not None:
+                        yield f"data: {json.dumps({'type':'price','timestamp':ts,'symbol':sym,'price':round(price,2)})}\n\n"
+                except Exception:
+                    pass
+
+            tick += 1
             await asyncio.sleep(2)
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.get("/api/price")

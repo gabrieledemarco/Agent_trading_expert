@@ -302,6 +302,7 @@ async function fetchModels() {
     const grid = document.getElementById('modelsGrid');
     if (!grid) return;
     if (!models.length) { grid.innerHTML = '<div class="model-card"><div class="model-name" style="color:var(--text-muted)">No models.</div></div>'; return; }
+    const esc = window.DU ? DU.escape : function(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
     grid.innerHTML = models.map(m => {
       const sh = m.sharpe_ratio != null ? Number(m.sharpe_ratio).toFixed(2) : '—';
       const wr = m.win_rate != null ? (m.win_rate * 100).toFixed(1) + '%' : '—';
@@ -310,8 +311,8 @@ async function fetchModels() {
       const rob = Math.min(100, Math.max(0, ((m.robustness_score || 0) * 100)));
       const robColor = rob >= 70 ? 'var(--green)' : rob >= 40 ? 'var(--orange)' : 'var(--red)';
       return `<div class="model-card">
-        <div class="model-name">${m.name || m.model_name || m.id || '?'}</div>
-        <div class="model-type">${m.model_type || m.type || 'strategy'}</div>
+        <div class="model-name">${esc(m.name || m.model_name || m.id || '?')}</div>
+        <div class="model-type">${esc(m.model_type || m.type || 'strategy')}</div>
         <div class="model-metrics">
           <span class="ml">Sharpe</span><span>${sh}</span>
           <span class="ml">Win Rate</span><span>${wr}</span>

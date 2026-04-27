@@ -258,20 +258,21 @@ async function loadDocs() {
     document.getElementById('footer-meta').textContent =
       `Papers: ${papers.length} indexed | Models: ${approved} deployed`;
 
+    const esc = window.DU ? DU.escape : function(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
     const pList = document.getElementById('tab-papers-list');
     if (pList) pList.innerHTML = papers.length ? papers.map(p => {
       const rel = p.relevance_score!=null ? Math.round(p.relevance_score*100) : null;
       const cls = rel!=null ? (rel>=80?'good':'') : '';
       return `<div class="paper-card">
         <div class="paper-header">
-          <span class="paper-id">${p.arxiv_id?'arXiv:'+p.arxiv_id:(p.id||'—')}</span>
+          <span class="paper-id">${esc(p.arxiv_id?'arXiv:'+p.arxiv_id:(p.id||'—'))}</span>
           <span class="paper-date">${String(p.indexed_at||p.created_at||'').slice(0,10)}</span>
         </div>
-        <div class="paper-title">"${p.title||'Untitled'}"</div>
-        <div class="paper-abstract">${(p.abstract||p.description||'—').slice(0,280)}</div>
+        <div class="paper-title">"${esc(p.title||'Untitled')}"</div>
+        <div class="paper-abstract">${esc((p.abstract||p.description||'—').slice(0,280))}</div>
         <div class="paper-meta">
           ${rel!=null?`<span>Relevance: <span class="${cls}">${rel}%</span></span>`:''}
-          <span>Status: <span class="${String(p.status||'').includes('approv')?'good':''}">${(p.status||'draft').toUpperCase()}</span></span>
+          <span>Status: <span class="${String(p.status||'').includes('approv')?'good':''}">${esc((p.status||'draft').toUpperCase())}</span></span>
         </div>
         ${rel!=null?`<div class="relevance-bar"><div class="relevance-fill" style="width:${rel}%"></div></div>`:''}
       </div>`;

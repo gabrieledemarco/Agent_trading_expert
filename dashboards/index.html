@@ -323,10 +323,11 @@ async function fetchAgents(){
       const isRun=a.last_status==='running'||a.last_status==='active';
       const cls=isRun?'running':isErr?'error':'';
       const lastRun=a.last_run?String(a.last_run).slice(0,16):'never';
+      const _e=window.DU?DU.escape:function(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
       return `<div class="agent-card ${cls}">
-        <div class="agent-name">${a.agent_name||'—'}</div>
+        <div class="agent-name">${_e(a.agent_name)||'—'}</div>
         <div style="margin-bottom:3px">${agentBadge(a.last_status)}</div>
-        <div class="agent-meta">${lastRun}</div>
+        <div class="agent-meta">${_e(lastRun)}</div>
       </div>`;
     }).join('');
   }catch(e){console.warn('fetchAgents',e);}
@@ -339,11 +340,12 @@ async function fetchEvents(){
     const rows=(d.activities||[]).map(e=>{
       const st=e.status||'—';
       const color=st==='error'?'var(--red)':st==='success'?'var(--green)':'var(--text-muted)';
+      const _ev=window.DU?DU.escape:function(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
       return `<tr>
         <td style="color:var(--text-muted)">${String(e.timestamp||'').slice(11,19)}</td>
-        <td>${e.agent_name||'—'}</td>
-        <td style="color:${color}">${st}</td>
-        <td style="color:var(--text-muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.message||''}</td>
+        <td>${_ev(e.agent_name)||'—'}</td>
+        <td style="color:${color}">${_ev(st)}</td>
+        <td style="color:var(--text-muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_ev(e.message||'')}</td>
       </tr>`;
     }).join('');
     document.getElementById('eventRows').innerHTML=rows||'<tr><td colspan="4" style="color:var(--text-muted)">No events yet.</td></tr>';
