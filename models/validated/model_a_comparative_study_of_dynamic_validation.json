@@ -1,7 +1,8 @@
 {
+  "schema_version": "1.0",
   "model_name": "model_a_comparative_study_of_dynamic",
   "validation_status": "REJECTED",
-  "validation_timestamp": "2026-04-16T15:48:08.147915",
+  "validation_timestamp": "2026-04-27T11:41:32.340259",
   "code_quality": {
     "issues": [],
     "warnings": [
@@ -28,23 +29,23 @@
   ],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": 0.04718410684485552,
-    "volatility": 0.030008607544508136,
-    "sharpe_ratio": 0.9058769822803883,
-    "max_drawdown": 0.020574487361708683,
-    "win_rate": 0.5396825396825397,
+    "expected_return": -0.052029197271930006,
+    "volatility": 0.053422199237441216,
+    "sharpe_ratio": -1.3483008618156622,
+    "max_drawdown": 0.10438055547494988,
+    "win_rate": 0.4801587301587302,
     "risk_score": "LOW",
-    "return_score": "MODERATE",
-    "risk_return_ratio": 1.5723524250458154
+    "return_score": "POOR",
+    "risk_return_ratio": 0.9739246608077693
   },
   "statistical_robustness": {
-    "mean_return": -0.011219557669217778,
-    "std_return": 0.509937243415515,
-    "percentile_5": -0.6917716216192589,
-    "percentile_95": 0.7371896219597857,
-    "prob_positive_return": 0.43,
-    "prob_negative_10": 0.49,
-    "coefficient_of_variation": 0.022001840057945487,
+    "mean_return": 0.03616879081669346,
+    "std_return": 0.5746773003671536,
+    "percentile_5": -0.9329907625116217,
+    "percentile_95": 0.9287169148037068,
+    "prob_positive_return": 0.6,
+    "prob_negative_10": 0.35,
+    "coefficient_of_variation": 0.06293756651530469,
     "robustness_score": "LOW"
   }
 }

@@ -389,9 +389,24 @@ The model generates trading signals based on:
         # Generate documentation
         doc = self.generate_scientific_documentation(model_name, spec)
 
-        # Determine validation status
+        # Determine validation status — architecture anomalies (L1) + metric thresholds (L3/L4)
         critical_issues = len([a for a in anomalies if a.get("severity") == "high"])
-        validation_status = "REJECTED" if critical_issues > 0 else "APPROVED"
+
+        sharpe   = risk_return.get("sharpe_ratio", 0.0)
+        max_dd   = risk_return.get("max_drawdown", 0.0)
+        metric_failures = []
+        if sharpe < self.STRATEGY_THRESHOLDS["min_sharpe"]:
+            metric_failures.append(
+                f"sharpe_ratio={sharpe:.2f} < min {self.STRATEGY_THRESHOLDS['min_sharpe']}"
+            )
+        if max_dd > self.STRATEGY_THRESHOLDS["max_drawdown"]:
+            metric_failures.append(
+                f"max_drawdown={max_dd:.2%} > max {self.STRATEGY_THRESHOLDS['max_drawdown']:.0%}"
+            )
+
+        validation_status = "REJECTED" if (critical_issues > 0 or metric_failures) else "APPROVED"
+        if metric_failures:
+            logger.info(f"Model {model_name} REJECTED by metric thresholds: {metric_failures}")
 
         result = {
             "schema_version": "1.0",

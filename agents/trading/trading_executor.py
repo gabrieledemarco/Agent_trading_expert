@@ -225,26 +225,48 @@ class TradingExecutorAgent(BaseAgent):
             return {}
 
     def generate_signal(self, model, data: dict) -> str:
-        """Generate trading signal from model and data."""
-        if model is None:
-            # Default to random for testing
-            import numpy as np
+        """Generate trading signal.
 
-            return np.random.choice(["buy", "sell", "hold"], p=[0.3, 0.2, 0.5])
-
-        # In production, use model to predict
-        # For now, use a simple heuristic
+        Priority:
+        1. Loaded model's own predict() / generate_signal() if available and callable.
+        2. MA(5/20) crossover fallback (always safe, no deps).
+        """
         if not data or "latest_price" not in data:
             return "hold"
 
-        # Simple moving average crossover
-        prices = [d["close"] for d in data.get("data", [])]
-        if len(prices) < 20:
+        prices = [float(d["close"]) for d in data.get("data", [])]
+        if len(prices) < 5:
             return "hold"
 
-        ma_5 = sum(prices[-5:]) / 5
-        ma_20 = sum(prices[-20:]) / 20
+        # 1. Try model-specific inference
+        if model is not None and self.active_strategy is not None:
+            try:
+                import importlib.util, numpy as np
+                from pathlib import Path
+                model_path = Path("models") / f"{self.active_strategy.model_name}.py"
+                if model_path.exists():
+                    spec = importlib.util.spec_from_file_location("_active_model", model_path)
+                    mod  = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+                    if hasattr(mod, "generate_signal") and callable(mod.generate_signal):
+                        result = mod.generate_signal(prices)
+                        if result in ("buy", "sell", "hold"):
+                            return result
+                    elif hasattr(mod, "predict") and callable(mod.predict):
+                        arr  = np.array(prices[-20:], dtype=np.float32).reshape(1, -1, 1)
+                        pred = mod.predict(model, arr)  # type: ignore[arg-type]
+                        last = float(prices[-1])
+                        if hasattr(pred, "__len__"):
+                            pred = float(pred[-1]) if len(pred) else last
+                        return "buy" if float(pred) > last * 1.001 else ("sell" if float(pred) < last * 0.999 else "hold")
+            except Exception as e:
+                logger.debug(f"Model inference failed ({type(e).__name__}), using MA crossover")
 
+        # 2. MA(5/20) crossover fallback
+        if len(prices) < 20:
+            return "hold"
+        ma_5  = sum(prices[-5:])  / 5
+        ma_20 = sum(prices[-20:]) / 20
         if ma_5 > ma_20 * 1.02:
             return "buy"
         elif ma_5 < ma_20 * 0.98:
