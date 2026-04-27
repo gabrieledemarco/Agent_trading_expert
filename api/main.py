@@ -14,6 +14,8 @@ from fastapi.responses import StreamingResponse, RedirectResponse
 from pydantic import BaseModel
 
 from configs.paths import Paths
+from data.providers.alpaca_stream import AlpacaStream
+from data.providers.alpaca_client import get_latest_quote, get_account
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,6 +23,10 @@ logger = logging.getLogger(__name__)
 # DB singleton — created once at startup, shared across all requests.
 _db = None
 _event_orchestrator = None
+
+# Alpaca real-time price cache (populated by WebSocket stream at startup)
+_SSE_SYMBOLS = ["AAPL", "MSFT", "GOOG", "NVDA"]
+_alpaca_stream = AlpacaStream(_SSE_SYMBOLS)
 
 
 def is_v2_event_driven_enabled() -> bool:
@@ -126,9 +132,14 @@ def _run_trading_loop():
 async def lifespan(app: FastAPI):
     loop = asyncio.get_event_loop()
 
+    # Always start Alpaca WebSocket stream (independent of background loops flag).
+    # Silently skips if ALPACA_API_KEY is absent.
+    await _alpaca_stream.start()
+
     if not is_background_jobs_enabled():
         logger.info("Background jobs disabled (ENABLE_BACKGROUND_LOOPS=false)")
         yield
+        await _alpaca_stream.stop()
         return
 
     if not can_connect_db():
@@ -151,6 +162,7 @@ async def lifespan(app: FastAPI):
         loop.run_in_executor(None, _run_trading_loop)
 
     yield
+    await _alpaca_stream.stop()
 
 
 app = FastAPI(
@@ -561,12 +573,17 @@ async def strategy_backtest(strategy_id: str):
     return {"strategy_id": strategy_id, "reports": reports, "count": len(reports)}
 
 
-_SSE_SYMBOLS = ["AAPL", "MSFT", "GOOG", "NVDA"]
-_SSE_PRICE_INTERVAL = 10   # emit a price event every N heartbeats (1 heartbeat = 2s)
+_SSE_PRICE_INTERVAL = 5   # emit a price event every N heartbeats (1 heartbeat = 2s → every 10s)
 
 @app.get("/api/events/stream")
 async def events_stream():
-    """SSE stream: heartbeat every 2s + agent log snapshot + price tick every 20s."""
+    """SSE stream: heartbeat every 2s + agent log + price tick every 10s.
+
+    Price source priority:
+    1. AlpacaStream WebSocket cache (real-time, ~100ms latency)
+    2. Alpaca REST fallback (if WebSocket not yet connected)
+    3. yfinance fallback (if Alpaca credentials absent)
+    """
     async def event_generator():
         tick = 0
         while True:
@@ -579,17 +596,21 @@ async def events_stream():
                 latest = {}
             yield f"data: {json.dumps({'type':'agent','timestamp':ts,'event':latest.get('status','heartbeat'),'agent':latest.get('agent_name'),'message':latest.get('message')})}\n\n"
 
-            # Price events (staggered: one symbol per interval tick)
+            # Price event — one symbol per interval, cycling through all symbols
             if tick % _SSE_PRICE_INTERVAL == 0:
                 sym = _SSE_SYMBOLS[(tick // _SSE_PRICE_INTERVAL) % len(_SSE_SYMBOLS)]
-                try:
-                    import yfinance as yf
-                    data = yf.Ticker(sym).history(period="1d", interval="1m")
-                    price = float(data["Close"].iloc[-1]) if not data.empty else None
-                    if price is not None:
-                        yield f"data: {json.dumps({'type':'price','timestamp':ts,'symbol':sym,'price':round(price,2)})}\n\n"
-                except Exception:
-                    pass
+                price = _alpaca_stream.get(sym)   # 1. WebSocket cache
+                if price is None:
+                    price = get_latest_quote(sym)  # 2. Alpaca REST
+                if price is None:
+                    try:                           # 3. yfinance fallback
+                        import yfinance as yf
+                        data = yf.Ticker(sym).history(period="1d", interval="1m")
+                        price = float(data["Close"].iloc[-1]) if not data.empty else None
+                    except Exception:
+                        price = None
+                if price is not None:
+                    yield f"data: {json.dumps({'type':'price','timestamp':ts,'symbol':sym,'price':round(price,2)})}\n\n"
 
             tick += 1
             await asyncio.sleep(2)
@@ -600,20 +621,29 @@ async def events_stream():
 
 @app.get("/api/price")
 async def get_price(symbol: str):
-    """Get real-time stock price via yfinance."""
-    try:
-        import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        data = ticker.history(period="1d", interval="1m")
-        if data.empty:
-            raise HTTPException(status_code=404, detail=f"No price data for {symbol}")
-        price = float(data["Close"].iloc[-1])
-        return {"symbol": symbol, "price": price}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching price for {symbol}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    """Return latest price for symbol. Source: Alpaca WebSocket cache → REST → yfinance."""
+    sym = symbol.upper()
+    price = _alpaca_stream.get(sym) or get_latest_quote(sym)
+    if price is None:
+        try:
+            import yfinance as yf
+            data = yf.Ticker(sym).history(period="1d", interval="1m")
+            price = float(data["Close"].iloc[-1]) if not data.empty else None
+        except Exception:
+            price = None
+    if price is None:
+        raise HTTPException(status_code=404, detail=f"No price data for {sym}")
+    source = "alpaca_ws" if _alpaca_stream.get(sym) else ("alpaca_rest" if get_latest_quote(sym) else "yfinance")
+    return {"symbol": sym, "price": round(price, 2), "source": source}
+
+
+@app.get("/api/alpaca/account")
+async def get_alpaca_account():
+    """Return Alpaca paper account snapshot: equity, cash, buying_power."""
+    data = get_account()
+    if not data:
+        raise HTTPException(status_code=503, detail="Alpaca credentials not configured or unavailable")
+    return data
 
 
 @app.get("/research")
