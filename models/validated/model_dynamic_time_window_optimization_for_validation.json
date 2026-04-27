@@ -1,7 +1,8 @@
 {
+  "schema_version": "1.0",
   "model_name": "model_dynamic_time_window_optimization_for",
-  "validation_status": "APPROVED",
-  "validation_timestamp": "2026-04-16T15:48:08.127344",
+  "validation_status": "REJECTED",
+  "validation_timestamp": "2026-04-27T11:41:32.376982",
   "code_quality": {
     "issues": [],
     "warnings": [],
@@ -16,23 +17,23 @@
   ],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": -0.014969455296551137,
-    "volatility": 0.04372901175490677,
-    "sharpe_ratio": -0.7996854695127491,
-    "max_drawdown": 0.05207992537889887,
-    "win_rate": 0.4880952380952381,
+    "expected_return": 0.012379068988377595,
+    "volatility": 0.027972732468202914,
+    "sharpe_ratio": -0.2724414220271562,
+    "max_drawdown": 0.021810997257318058,
+    "win_rate": 0.5119047619047619,
     "risk_score": "LOW",
     "return_score": "POOR",
-    "risk_return_ratio": 0.3423232013669149
+    "risk_return_ratio": 0.4425405706235204
   },
   "statistical_robustness": {
-    "mean_return": -0.018583116193113116,
-    "std_return": 0.43806684613955205,
-    "percentile_5": -0.6970395003152042,
-    "percentile_95": 0.8075982172539363,
-    "prob_positive_return": 0.44,
-    "prob_negative_10": 0.38,
-    "coefficient_of_variation": 0.04242073180583316,
+    "mean_return": 0.010656323208398337,
+    "std_return": 0.4316827437756708,
+    "percentile_5": -0.6786382793178651,
+    "percentile_95": 0.6818415373001653,
+    "prob_positive_return": 0.56,
+    "prob_negative_10": 0.34,
+    "coefficient_of_variation": 0.02468554363603662,
     "robustness_score": "LOW"
   }
 }
