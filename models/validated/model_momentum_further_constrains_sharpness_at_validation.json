@@ -1,38 +1,33 @@
 {
+  "schema_version": "1.0",
   "model_name": "model_momentum_further_constrains_sharpness_at",
   "validation_status": "APPROVED",
-  "validation_timestamp": "2026-04-16T15:48:08.168425",
+  "validation_timestamp": "2026-04-27T12:21:56.783029",
   "code_quality": {
     "issues": [],
     "warnings": [],
     "score": 10
   },
-  "anomalies": [
-    {
-      "type": "data_source_missing",
-      "severity": "medium",
-      "description": "Expected data source yfinance not found"
-    }
-  ],
+  "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": 0.06362160196775068,
-    "volatility": 0.06427035396207757,
-    "sharpe_ratio": 0.6787204251821829,
-    "max_drawdown": 0.08726265204771608,
-    "win_rate": 0.5158730158730159,
+    "expected_return": 0.1999,
+    "volatility": 0.1473,
+    "sharpe_ratio": 1.221,
+    "max_drawdown": 0.0992,
+    "win_rate": 0.5592,
     "risk_score": "LOW",
-    "return_score": "MODERATE",
-    "risk_return_ratio": 0.9899058904404092
+    "return_score": "GOOD",
+    "risk_return_ratio": 1.3567
   },
   "statistical_robustness": {
-    "mean_return": 0.0008067644557673415,
-    "std_return": 0.4178405902396612,
-    "percentile_5": -0.6121902665543296,
-    "percentile_95": 0.6456429051726855,
-    "prob_positive_return": 0.52,
-    "prob_negative_10": 0.44,
-    "coefficient_of_variation": 0.0019307948404548368,
+    "mean_return": 0.05158868003370255,
+    "std_return": 0.4235316118876532,
+    "percentile_5": -0.5336591053326999,
+    "percentile_95": 0.7763528547660596,
+    "prob_positive_return": 0.5,
+    "prob_negative_10": 0.4,
+    "coefficient_of_variation": 0.12180597288541253,
     "robustness_score": "LOW"
   }
 }

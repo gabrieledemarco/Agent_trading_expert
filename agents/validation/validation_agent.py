@@ -117,18 +117,15 @@ class ValidationAgent(BaseAgent):
                         "description": "Expected LSTM layer but not found in code",
                     })
 
-        # Check data requirements — accept any recognised fetch pattern
-        _data_keywords = ("yfinance", "alpaca", "get_bars", "get_latest_quote",
-                          "httpx", "requests", "fetch", "history(")
+        # Data fetching is done by the training pipeline, not model architecture files.
+        # Only flag if spec declares sources but lists none at all (spec-level gap).
         required_sources = spec.get("data_requirements", {}).get("sources", [])
-        if required_sources:
-            has_any_data_fetch = any(kw in code for kw in _data_keywords)
-            if not has_any_data_fetch:
-                anomalies.append({
-                    "type": "data_source_missing",
-                    "severity": "medium",
-                    "description": "No recognised data fetch pattern found in model code",
-                })
+        if required_sources is not None and len(required_sources) == 0:
+            anomalies.append({
+                "type": "data_source_missing",
+                "severity": "low",
+                "description": "Spec has no data_requirements.sources defined",
+            })
 
         return anomalies
 

@@ -841,12 +841,27 @@ if __name__ == "__main__":
         return {"passed": len(reasons) == 0, "reasons": reasons}
 
     def train_and_save(self, model_name: str, symbol: str = "SPY", epochs: int = 20) -> bool:
-        """Fetch real price data, train the LSTM model, save weights to models/versions/.
+        """Fetch real price data, train the nn.Module model, save weights to models/versions/.
 
-        Returns True on success. Silently skips non-LSTM models (RL/RF).
+        Returns True on success. Silently skips RL/DQN models that require env args.
         """
         import importlib.util, inspect, numpy as np
         from pathlib import Path
+
+        # Skip RL models — they require environment args and a different training loop
+        _rl_types = {"reinforcement_learning", "rl", "dqn", "ppo", "a2c", "a3c"}
+        yaml_path = Path("specs") / f"{model_name}.yaml"
+        if yaml_path.exists():
+            try:
+                import yaml
+                with open(yaml_path) as f:
+                    spec_yaml = yaml.safe_load(f)
+                model_type = spec_yaml.get("model", {}).get("type", "").lower()
+                if model_type in _rl_types:
+                    logger.info(f"train_and_save: skipping RL model {model_name}")
+                    return False
+            except Exception:
+                pass
 
         model_file = Path("models") / f"{model_name}.py"
         if not model_file.exists():
@@ -871,12 +886,13 @@ if __name__ == "__main__":
                 logger.warning(f"train_and_save: could not fetch prices: {e}")
                 return False
 
-        # Normalise and build sequences (window=20)
+        # Normalise and build sequences (window=20, 1 feature = close price)
         prices = prices / prices[0]
         seq_len = 20
+        n_features = 1
         X = np.array([prices[i:i+seq_len] for i in range(len(prices)-seq_len-1)], dtype=np.float32)
         y = np.array([prices[i+seq_len] for i in range(len(prices)-seq_len-1)], dtype=np.float32)
-        X = X.reshape(len(X), seq_len, 1)
+        X = X.reshape(len(X), seq_len, n_features)
 
         try:
             import torch, torch.nn as nn
@@ -884,7 +900,7 @@ if __name__ == "__main__":
             mod  = importlib.util.module_from_spec(spec_imp)      # type: ignore[arg-type]
             spec_imp.loader.exec_module(mod)                       # type: ignore[union-attr]
 
-            # Find first nn.Module class
+            # Find first nn.Module class defined in this file
             model_cls = next(
                 (cls for _, cls in inspect.getmembers(mod, inspect.isclass)
                  if issubclass(cls, nn.Module) and cls.__module__ == mod.__name__),
@@ -894,7 +910,23 @@ if __name__ == "__main__":
                 logger.info(f"train_and_save: no nn.Module in {model_name}, skipping")
                 return False
 
-            model = model_cls()
+            # Instantiate: try with input_size first (covers LSTM), then no-args
+            sig = inspect.signature(model_cls.__init__)
+            params = list(sig.parameters.keys())  # includes 'self'
+            required = [
+                p for p, v in sig.parameters.items()
+                if p != "self" and v.default is inspect.Parameter.empty
+            ]
+            if required == ["input_size"]:
+                model = model_cls(input_size=n_features)
+            elif not required:
+                model = model_cls()
+            else:
+                logger.info(
+                    f"train_and_save: {model_name} requires args {required}, skipping"
+                )
+                return False
+
             Xt = torch.tensor(X); yt = torch.tensor(y)
             opt = torch.optim.Adam(model.parameters(), lr=1e-3)
             loss_fn = nn.MSELoss()

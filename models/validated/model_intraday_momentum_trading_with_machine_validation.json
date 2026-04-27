@@ -1,38 +1,33 @@
 {
+  "schema_version": "1.0",
   "model_name": "model_intraday_momentum_trading_with_machine",
   "validation_status": "APPROVED",
-  "validation_timestamp": "2026-04-16T15:48:08.209440",
+  "validation_timestamp": "2026-04-27T12:21:56.539076",
   "code_quality": {
     "issues": [],
     "warnings": [],
     "score": 10
   },
-  "anomalies": [
-    {
-      "type": "data_source_missing",
-      "severity": "medium",
-      "description": "Expected data source yfinance not found"
-    }
-  ],
+  "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": 0.0071488297874457984,
-    "volatility": 0.03308049950274192,
-    "sharpe_ratio": -0.3884817462169523,
-    "max_drawdown": 0.03571889930710415,
-    "win_rate": 0.5079365079365079,
+    "expected_return": 0.1034,
+    "volatility": 0.1153,
+    "sharpe_ratio": 0.723,
+    "max_drawdown": 0.0842,
+    "win_rate": 0.5442,
     "risk_score": "LOW",
-    "return_score": "POOR",
-    "risk_return_ratio": 0.21610404603634414
+    "return_score": "MODERATE",
+    "risk_return_ratio": 0.8964
   },
   "statistical_robustness": {
-    "mean_return": -0.022093169341698297,
-    "std_return": 0.43852830381995583,
-    "percentile_5": -0.6623534253178575,
-    "percentile_95": 0.570595008111535,
-    "prob_positive_return": 0.47,
-    "prob_negative_10": 0.46,
-    "coefficient_of_variation": 0.050380258581368485,
+    "mean_return": -0.0254238007435332,
+    "std_return": 0.4678427512551251,
+    "percentile_5": -0.9041305994615493,
+    "percentile_95": 0.566155055481554,
+    "prob_positive_return": 0.55,
+    "prob_negative_10": 0.37,
+    "coefficient_of_variation": 0.05434261976984022,
     "robustness_score": "LOW"
   }
 }

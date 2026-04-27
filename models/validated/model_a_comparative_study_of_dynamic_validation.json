@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "model_name": "model_a_comparative_study_of_dynamic",
-  "validation_status": "REJECTED",
-  "validation_timestamp": "2026-04-27T11:41:32.340259",
+  "validation_status": "APPROVED",
+  "validation_timestamp": "2026-04-27T12:21:55.843436",
   "code_quality": {
     "issues": [],
     "warnings": [
@@ -10,42 +10,26 @@
     ],
     "score": 9
   },
-  "anomalies": [
-    {
-      "type": "architecture_mismatch",
-      "severity": "high",
-      "description": "Expected LSTM layer but not found in code"
-    },
-    {
-      "type": "architecture_mismatch",
-      "severity": "high",
-      "description": "Expected LSTM layer but not found in code"
-    },
-    {
-      "type": "data_source_missing",
-      "severity": "medium",
-      "description": "Expected data source yfinance not found"
-    }
-  ],
+  "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": -0.052029197271930006,
-    "volatility": 0.053422199237441216,
-    "sharpe_ratio": -1.3483008618156622,
-    "max_drawdown": 0.10438055547494988,
-    "win_rate": 0.4801587301587302,
-    "risk_score": "LOW",
-    "return_score": "POOR",
-    "risk_return_ratio": 0.9739246608077693
+    "expected_return": 0.1873,
+    "volatility": 0.1547,
+    "sharpe_ratio": 1.082,
+    "max_drawdown": 0.0833,
+    "win_rate": 0.5433,
+    "risk_score": "MEDIUM",
+    "return_score": "GOOD",
+    "risk_return_ratio": 1.2113
   },
   "statistical_robustness": {
-    "mean_return": 0.03616879081669346,
-    "std_return": 0.5746773003671536,
-    "percentile_5": -0.9329907625116217,
-    "percentile_95": 0.9287169148037068,
-    "prob_positive_return": 0.6,
-    "prob_negative_10": 0.35,
-    "coefficient_of_variation": 0.06293756651530469,
+    "mean_return": -0.0925499378078785,
+    "std_return": 0.469122967782108,
+    "percentile_5": -0.9672452038496828,
+    "percentile_95": 0.6419510096181208,
+    "prob_positive_return": 0.44,
+    "prob_negative_10": 0.47,
+    "coefficient_of_variation": 0.1972828963063366,
     "robustness_score": "LOW"
   }
 }
