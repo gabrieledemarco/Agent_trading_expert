@@ -66,32 +66,93 @@ class ComputationService:
 
     # ── Risk / Return ─────────────────────────────────────────────────────────
 
+    def _fetch_prices(self, symbol: str = "SPY", period: str = "1y") -> "np.ndarray | None":
+        """Fetch closing prices via Alpaca → yfinance fallback. Returns None on failure."""
+        try:
+            from data.providers.alpaca_client import get_bars
+            bars = get_bars(symbol, timeframe="1Day", limit=252)
+            if bars:
+                return np.array([b["close"] for b in bars])
+        except Exception:
+            pass
+        try:
+            import yfinance as yf
+            df = yf.Ticker(symbol).history(period=period, interval="1d")
+            if not df.empty:
+                return df["Close"].to_numpy()
+        except Exception:
+            pass
+        return None
+
+    def _ma_backtest_metrics(self, prices: "np.ndarray") -> dict:
+        """Run MA(5/20) crossover backtest on price array; return standard metrics dict."""
+        from models.backtest import calculate_sharpe, calculate_max_drawdown
+        import pandas as pd
+
+        n = len(prices)
+        equity = [10_000.0]
+        position = 0.0
+        for i in range(19, n - 1):
+            ma5  = prices[i - 4 : i + 1].mean()
+            ma20 = prices[i - 19: i + 1].mean()
+            ret  = (prices[i + 1] - prices[i]) / prices[i]
+            if ma5 > ma20 * 1.01:
+                position = 1.0
+            elif ma5 < ma20 * 0.99:
+                position = 0.0
+            equity.append(equity[-1] * (1 + position * ret))
+
+        eq_arr  = np.array(equity)
+        rets    = pd.Series(np.diff(eq_arr) / eq_arr[:-1])
+        total_r = (eq_arr[-1] / 10_000) - 1
+        ann_ret = (1 + total_r) ** (252 / max(len(rets), 1)) - 1
+        ann_vol = float(rets.std() * np.sqrt(252))
+        sharpe  = calculate_sharpe(rets)
+        max_dd  = calculate_max_drawdown(eq_arr)
+        win_r   = float((rets > 0).mean())
+
+        return {
+            "expected_return":   float(ann_ret),
+            "volatility":        ann_vol,
+            "sharpe_ratio":      float(sharpe),
+            "max_drawdown":      float(max_dd),
+            "win_rate":          win_r,
+            "risk_score":        self._risk_score(max_dd, sharpe, ann_vol),
+            "return_score":      self._return_score(ann_ret, sharpe),
+            "risk_return_ratio": float(abs(ann_ret / ann_vol)) if ann_vol > 0 else 0.0,
+        }
+
     def analyze_risk_return_profile(self, model_name: str) -> dict:
-        """Return risk/return metrics for *model_name* (deterministic via hash seed)."""
+        """Risk/return metrics: real market backtest (SPY 1y MA crossover).
+
+        Falls back to hash-seeded simulation when price data is unavailable.
+        """
+        prices = self._fetch_prices(symbol="SPY", period="1y")
+        if prices is not None and len(prices) >= 25:
+            try:
+                return self._ma_backtest_metrics(prices)
+            except Exception:
+                pass
+
+        # Fallback: deterministic hash-seeded simulation
         np.random.seed(hash(model_name) % 2**32)
         n_days = 252
-
         base_return = (hash(model_name) % 100 + 5) / 2000
         volatility  = 0.02 + (hash(model_name + "v") % 100) / 2000
-
         returns = np.random.normal(base_return / 252, volatility / np.sqrt(252), n_days)
         equity  = (1 + returns).cumprod() * 10_000
-
         total_return  = (equity[-1] / 10_000) - 1
         annual_return = (1 + total_return) ** (252 / n_days) - 1
         annual_vol    = returns.std() * np.sqrt(252)
         sharpe        = (annual_return - 0.02) / annual_vol if annual_vol > 0 else 0.0
-
-        peak        = np.maximum.accumulate(equity)
-        max_drawdown = float(np.max((peak - equity) / peak))
-        win_rate     = float((returns > 0).mean())
-
+        peak          = np.maximum.accumulate(equity)
+        max_drawdown  = float(np.max((peak - equity) / peak))
         return {
             "expected_return":   float(annual_return),
             "volatility":        float(annual_vol),
             "sharpe_ratio":      float(sharpe),
             "max_drawdown":      max_drawdown,
-            "win_rate":          win_rate,
+            "win_rate":          float((returns > 0).mean()),
             "risk_score":        self._risk_score(max_drawdown, sharpe, annual_vol),
             "return_score":      self._return_score(annual_return, sharpe),
             "risk_return_ratio": float(abs(annual_return / annual_vol)) if annual_vol > 0 else 0.0,
@@ -116,16 +177,27 @@ class ComputationService:
     # ── Statistical Robustness ────────────────────────────────────────────────
 
     def evaluate_statistical_robustness(self, model_name: str) -> dict:
-        """Monte Carlo robustness analysis (100 simulations, deterministic)."""
-        np.random.seed(hash(model_name + "robust") % 2**32)
-        n_simulations = 100
+        """Monte Carlo robustness: bootstrap from real daily returns (SPY 1y).
 
-        scenarios = []
-        for _ in range(n_simulations):
-            market_bias    = np.random.choice([-0.001, 0.0, 0.001])
-            vol_multiplier = np.random.uniform(0.5, 2.0)
-            returns        = np.random.normal(market_bias, 0.02 * vol_multiplier, 252)
-            scenarios.append(float(returns.sum()))
+        Each scenario resamples 252 daily returns with replacement to model
+        regime uncertainty. Falls back to pure random if data unavailable.
+        """
+        n_simulations = 100
+        prices = self._fetch_prices(symbol="SPY", period="1y")
+        if prices is not None and len(prices) >= 25:
+            daily_returns = np.diff(prices) / prices[:-1]
+            rng = np.random.default_rng(seed=abs(hash(model_name)) % 2**32)
+            scenarios = [
+                float(rng.choice(daily_returns, size=252, replace=True).sum())
+                for _ in range(n_simulations)
+            ]
+        else:
+            np.random.seed(hash(model_name + "robust") % 2**32)
+            scenarios = []
+            for _ in range(n_simulations):
+                bias = np.random.choice([-0.001, 0.0, 0.001])
+                returns = np.random.normal(bias, 0.02 * np.random.uniform(0.5, 2.0), 252)
+                scenarios.append(float(returns.sum()))
 
         arr = np.array(scenarios)
 
