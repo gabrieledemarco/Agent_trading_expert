@@ -45,6 +45,19 @@ class DataStorageManager:
     def _cursor(self, conn):
         return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+    @staticmethod
+    def _serialize_row(row: dict) -> dict:
+        """Convert psycopg2 UUID / datetime objects to JSON-safe strings."""
+        result = {}
+        for k, v in row.items():
+            if hasattr(v, 'isoformat'):  # datetime, date
+                result[k] = v.isoformat()
+            elif hasattr(v, 'hex'):       # uuid.UUID
+                result[k] = str(v)
+            else:
+                result[k] = v
+        return result
+
     def _init_schema(self):
         """Ensure all tables exist (idempotent)."""
         conn = self._connect()
@@ -234,7 +247,7 @@ class DataStorageManager:
             )
         else:
             cur.execute("SELECT * FROM strategies ORDER BY created_at DESC LIMIT %s", (limit,))
-        rows = [dict(r) for r in cur.fetchall()]
+        rows = [self._serialize_row(dict(r)) for r in cur.fetchall()]
         conn.close()
         return rows
 
@@ -245,7 +258,7 @@ class DataStorageManager:
         cur.execute("SELECT * FROM strategies WHERE id = %s", (strategy_id,))
         row = cur.fetchone()
         conn.close()
-        return dict(row) if row else None
+        return self._serialize_row(dict(row)) if row else None
 
     def update_strategy_status(self, strategy_id: str, status: str) -> None:
         conn = self._connect()
@@ -316,7 +329,7 @@ class DataStorageManager:
             cur.execute("SELECT * FROM models_v2 WHERE status = %s ORDER BY created_at DESC LIMIT %s", (status, limit))
         else:
             cur.execute("SELECT * FROM models_v2 ORDER BY created_at DESC LIMIT %s", (limit,))
-        rows = [dict(r) for r in cur.fetchall()]
+        rows = [self._serialize_row(dict(r)) for r in cur.fetchall()]
         conn.close()
         return rows
 
@@ -360,7 +373,7 @@ class DataStorageManager:
             )
         else:
             cur.execute("SELECT * FROM backtest_reports ORDER BY created_at DESC LIMIT %s", (limit,))
-        rows = [dict(r) for r in cur.fetchall()]
+        rows = [self._serialize_row(dict(r)) for r in cur.fetchall()]
         conn.close()
         return rows
 
@@ -400,7 +413,7 @@ class DataStorageManager:
             )
         else:
             cur.execute("SELECT * FROM validations_v2 ORDER BY created_at DESC LIMIT %s", (limit,))
-        rows = [dict(r) for r in cur.fetchall()]
+        rows = [self._serialize_row(dict(r)) for r in cur.fetchall()]
         conn.close()
         return rows
 
