@@ -152,14 +152,12 @@ async def lifespan(app: FastAPI):
         loop.run_in_executor(None, _run_event_listener_loop)
     else:
         logger.info("Starting API in legacy scheduler mode")
-        # Thread 1: pipeline chain settimanale (non-blocking)
+        # Pipeline chain settimanale (non-blocking)
         loop.run_in_executor(None, _run_pipeline_if_due)
 
-        # Thread 2: monitoring loop ogni ora
-        loop.run_in_executor(None, _run_monitoring_loop)
-
-        # Thread 3: trading loop ogni 5 minuti
-        loop.run_in_executor(None, _run_trading_loop)
+    # Trading and monitoring loops run regardless of V2/legacy mode
+    loop.run_in_executor(None, _run_monitoring_loop)
+    loop.run_in_executor(None, _run_trading_loop)
 
     yield
     await _alpaca_stream.stop()
