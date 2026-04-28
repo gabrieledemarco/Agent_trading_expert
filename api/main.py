@@ -459,13 +459,10 @@ async def list_strategies():
 async def create_strategy_v2(request: StrategyCreateRequest):
     """Internal API: create strategy record in V2 table."""
     try:
-        from data.repositories import StrategyRepository
-
-        repo = StrategyRepository()
-        strategy_id = repo.create(
+        strategy_id = get_db().save_strategy(
             {"name": request.name, "spec": request.spec, "status": request.status}
         )
-        return {"status": "created", "strategy_id": strategy_id}
+        return {"status": "created", "strategy_id": str(strategy_id)}
     except Exception as e:
         logger.error(f"Error creating V2 strategy: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Database unavailable")
@@ -475,10 +472,7 @@ async def create_strategy_v2(request: StrategyCreateRequest):
 async def list_strategies_v2(status: Optional[str] = None, limit: int = 100):
     """Internal API: list strategies from V2 table."""
     try:
-        from data.repositories import StrategyRepository
-
-        repo = StrategyRepository()
-        rows = repo.list(status=status, limit=limit)
+        rows = get_db().get_strategies_v2(status=status, limit=limit)
         return {"count": len(rows), "strategies": rows}
     except Exception as e:
         logger.error(f"Error reading V2 strategies: {e}", exc_info=True)
