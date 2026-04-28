@@ -27,21 +27,45 @@ class MLEngineerAgent(BaseAgent):
         self.models_dir.mkdir(parents=True, exist_ok=True)
 
     def read_specs(self) -> list[dict]:
-        """Read all specification files."""
-        if not self.specs_dir.exists():
-            logger.warning(f"Specs directory {self.specs_dir} does not exist")
-            return []
+        """Read specification files; falls back to DB when local files are absent (Render restart)."""
+        if self.specs_dir.exists():
+            yaml_files = list(self.specs_dir.glob("*.yaml"))
+            if yaml_files:
+                specs = []
+                for spec_file in yaml_files:
+                    with open(spec_file) as f:
+                        spec = yaml.safe_load(f)
+                        spec["_source_file"] = str(spec_file)
+                        specs.append(spec)
+                return specs
 
-        yaml_files = list(self.specs_dir.glob("*.yaml"))
-        specs = []
+        # DB fallback: rebuild minimal spec structure from V1 specs table
+        try:
+            db_specs = self.db.get_specs(status="pending")
+            if db_specs:
+                logger.info(f"read_specs: local YAML absent — rebuilding from DB ({len(db_specs)} rows)")
+                return [
+                    {
+                        "model": {
+                            "name": row.get("model_name"),
+                            "type": row.get("model_type", "time_series_forecasting"),
+                            "description": "",
+                        },
+                        "architecture": {
+                            "input_features": ["close_price", "volume", "price_returns", "moving_averages"],
+                            "layers": [],
+                        },
+                        "data_requirements": {"sources": ["alpaca"], "frequency": "daily"},
+                        "training": {"framework": "pytorch", "epochs": 20},
+                        "_source": "db",
+                    }
+                    for row in db_specs
+                ]
+        except Exception as e:
+            logger.warning(f"read_specs: DB fallback failed: {e}")
 
-        for spec_file in yaml_files:
-            with open(spec_file) as f:
-                spec = yaml.safe_load(f)
-                spec["_source_file"] = str(spec_file)
-                specs.append(spec)
-
-        return specs
+        logger.warning("read_specs: no specs found (local or DB)")
+        return []
 
     def fetch_market_data(
         self,

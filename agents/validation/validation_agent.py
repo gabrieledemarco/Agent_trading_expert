@@ -42,17 +42,39 @@ class ValidationAgent(BaseAgent):
         self._computation = ComputationService()
 
     def load_specs(self) -> list[dict]:
-        """Load all specification files."""
-        if not self.specs_dir.exists():
-            return []
+        """Load specification files; falls back to DB when local files are absent (Render restart)."""
+        if self.specs_dir.exists():
+            specs = []
+            for f in self.specs_dir.glob("*.yaml"):
+                with open(f) as fp:
+                    spec = yaml.safe_load(fp)
+                    spec["_source_file"] = str(f)
+                    specs.append(spec)
+            if specs:
+                return specs
 
-        specs = []
-        for f in self.specs_dir.glob("*.yaml"):
-            with open(f) as fp:
-                spec = yaml.safe_load(fp)
-                spec["_source_file"] = str(f)
-                specs.append(spec)
-        return specs
+        # DB fallback: rebuild minimal spec structure from V1 specs table
+        try:
+            db_specs = self.db.get_specs()
+            if db_specs:
+                logger.info(f"load_specs: local YAML absent — rebuilding from DB ({len(db_specs)} rows)")
+                return [
+                    {
+                        "model": {
+                            "name": row.get("model_name"),
+                            "type": row.get("model_type", "time_series_forecasting"),
+                            "description": "",
+                        },
+                        "architecture": {"input_features": [], "layers": []},
+                        "source_paper": {},
+                        "_source": "db",
+                    }
+                    for row in db_specs
+                ]
+        except Exception as e:
+            logger.warning(f"load_specs: DB fallback failed: {e}")
+
+        return []
 
     def load_model_code(self, model_name: str) -> Optional[str]:
         """Load model source code."""

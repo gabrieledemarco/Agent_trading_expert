@@ -23,3 +23,7 @@ uvicorn>=0.27.0
 # Database
 psycopg2-binary>=2.9.9
 redis>=5.0.0
+
+# Alpaca trading + WebSocket stream
+alpaca-py>=0.28.0
+websockets>=12.0
