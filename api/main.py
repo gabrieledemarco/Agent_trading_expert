@@ -320,11 +320,10 @@ async def get_performance():
     """Get current performance."""
     try:
         from agents.trading.trading_executor import TradingExecutorAgent
-        
         agent = TradingExecutorAgent()
         summary = agent.get_performance_summary()
-        
-        return summary
+        # Coerce numpy scalars to plain Python types so FastAPI can serialize them
+        return {k: (float(v) if hasattr(v, "item") else v) for k, v in summary.items()}
     except Exception as e:
         logger.error(f"Error getting performance: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -345,7 +344,11 @@ async def get_dashboard_summary():
 async def get_api_dashboard_summary():
     """Aggregated global summary for all dashboard pages."""
     from datetime import timezone
-    db = get_db()
+    try:
+        db = get_db()
+    except Exception as e:
+        logger.error(f"api_dashboard_summary: DB unavailable — {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
     def _safe(fn, *a, **kw):
         try:
@@ -491,7 +494,11 @@ async def get_v2_orchestration_metrics():
 @app.get("/api/pipeline/overview")
 async def pipeline_overview():
     """Aggregated pipeline snapshot — per-stage counts + recent agent events."""
-    db = get_db()
+    try:
+        db = get_db()
+    except Exception as e:
+        logger.error(f"pipeline_overview: DB unavailable — {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
     # Query each counter independently so a missing table never blocks the whole response
     def _safe_count(fn, *args, **kwargs):

@@ -27,3 +27,6 @@ redis>=5.0.0
 # Alpaca trading + WebSocket stream
 alpaca-py>=0.28.0
 websockets>=12.0
+
+# LLM (improvement + strategy agents)
+anthropic>=0.34.0
