@@ -75,3 +75,8 @@ mlartifacts/
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Playwright
+playwright-report/
+test-results/
+node_modules/

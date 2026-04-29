@@ -1,0 +1,13 @@
+{
+  "name": "agent-trading-expert-e2e",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for Agent Trading Expert dashboard",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}
