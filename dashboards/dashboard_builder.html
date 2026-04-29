@@ -408,7 +408,7 @@ async function submitStrategy(status) {
     msgEl.textContent = '✓ Strategy saved — ID: ' + (d.strategy_id || '—');
     loadStrategies();
     if (status === 'backtest_pending') {
-      setTimeout(() => fetch('/api/pipeline/run/backtest', { method: 'POST' }).catch(()=>{}), 500);
+      setTimeout(() => fetch('/api/pipeline/run/validation', { method: 'POST' }).catch(()=>{}), 500);
     }
   } catch (e) {
     msgEl.className = 'msg badge badge-err';
@@ -448,7 +448,7 @@ async function loadStrategies() {
 
 async function runBacktest(id) {
   try {
-    await fetch('/api/pipeline/run/backtest', { method: 'POST' });
+    await fetch('/api/pipeline/run/validation', { method: 'POST' });
     alert('Backtest started for strategy ' + id);
   } catch(e) { alert('Error: ' + e.message); }
 }
