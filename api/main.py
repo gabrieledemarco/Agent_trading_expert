@@ -347,7 +347,6 @@ async def get_dashboard_summary():
 async def get_api_dashboard_summary():
     """Aggregated global summary for all dashboard pages."""
     from datetime import timezone
-    db = get_db()
 
     def _safe(fn, *a, **kw):
         try:
@@ -356,11 +355,20 @@ async def get_api_dashboard_summary():
             logger.warning("api_dashboard_summary: %s", exc)
             return None
 
-    base      = _safe(db.get_dashboard_summary) or {}
-    risk      = _safe(db.get_performance, days=30) or []
-    strats    = _safe(db.get_strategies_v2, limit=500) or []
-    agents    = _safe(db.get_agent_status) or []
-    trades    = _safe(db.get_trades, limit=1) or []
+    try:
+        db = get_db()
+    except Exception as exc:
+        logger.warning("api_dashboard_summary: DB unavailable — %s", exc)
+        db = None
+
+    if db is None:
+        base = {}; risk = []; strats = []; agents = []; trades = []
+    else:
+        base      = _safe(db.get_dashboard_summary) or {}
+        risk      = _safe(db.get_performance, days=30) or []
+        strats    = _safe(db.get_strategies_v2, limit=500) or []
+        agents    = _safe(db.get_agent_status) or []
+        trades    = _safe(db.get_trades, limit=1) or []
 
     # Portfolio KPIs
     latest = risk[0] if risk else {}
