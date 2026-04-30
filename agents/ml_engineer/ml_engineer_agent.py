@@ -27,21 +27,45 @@ class MLEngineerAgent(BaseAgent):
         self.models_dir.mkdir(parents=True, exist_ok=True)
 
     def read_specs(self) -> list[dict]:
-        """Read all specification files."""
-        if not self.specs_dir.exists():
-            logger.warning(f"Specs directory {self.specs_dir} does not exist")
-            return []
+        """Read specification files; falls back to DB when local files are absent (Render restart)."""
+        if self.specs_dir.exists():
+            yaml_files = list(self.specs_dir.glob("*.yaml"))
+            if yaml_files:
+                specs = []
+                for spec_file in yaml_files:
+                    with open(spec_file) as f:
+                        spec = yaml.safe_load(f)
+                        spec["_source_file"] = str(spec_file)
+                        specs.append(spec)
+                return specs
 
-        yaml_files = list(self.specs_dir.glob("*.yaml"))
-        specs = []
+        # DB fallback: rebuild minimal spec structure from V1 specs table
+        try:
+            db_specs = self.db.get_specs(status="pending")
+            if db_specs:
+                logger.info(f"read_specs: local YAML absent — rebuilding from DB ({len(db_specs)} rows)")
+                return [
+                    {
+                        "model": {
+                            "name": row.get("model_name"),
+                            "type": row.get("model_type", "time_series_forecasting"),
+                            "description": "",
+                        },
+                        "architecture": {
+                            "input_features": ["close_price", "volume", "price_returns", "moving_averages"],
+                            "layers": [],
+                        },
+                        "data_requirements": {"sources": ["alpaca"], "frequency": "daily"},
+                        "training": {"framework": "pytorch", "epochs": 20},
+                        "_source": "db",
+                    }
+                    for row in db_specs
+                ]
+        except Exception as e:
+            logger.warning(f"read_specs: DB fallback failed: {e}")
 
-        for spec_file in yaml_files:
-            with open(spec_file) as f:
-                spec = yaml.safe_load(f)
-                spec["_source_file"] = str(spec_file)
-                specs.append(spec)
-
-        return specs
+        logger.warning("read_specs: no specs found (local or DB)")
+        return []
 
     def fetch_market_data(
         self,
@@ -782,10 +806,31 @@ if __name__ == "__main__":
             )
             if not gate["passed"]:
                 self.log_activity("warning", f"Model rejected by ML gates: {model_name} — {gate['reasons']}")
+            # Emit V2 event so the event-driven orchestrator can react
+            self._notify_model_validated(model_name, str(v2_row_id), spec.get("strategy_id"))
         except Exception as e:
             self.log_activity("warning", f"Could not save model to DB: {e}")
 
         return str(model_file)
+
+    def _notify_model_validated(self, model_name: str, model_id: str, strategy_id) -> None:
+        """Fire pg_notify('events', ...) so the V2 event listener triggers StrategyEngineer."""
+        import json
+        try:
+            payload = json.dumps({
+                "event":       "model.validated",
+                "model_name":  model_name,
+                "model_id":    model_id,
+                "strategy_id": str(strategy_id) if strategy_id else None,
+            })
+            conn = self.db._connect()
+            conn.autocommit = True
+            cur = self.db._cursor(conn)
+            cur.execute("SELECT pg_notify('events', %s)", (payload,))
+            conn.close()
+            logger.debug("Emitted model.validated for %s", model_name)
+        except Exception as e:
+            logger.debug("pg_notify model.validated skipped: %s", e)
 
     def compute_model_metrics(self, spec: dict) -> dict:
         """Compute model-level predictive metrics.

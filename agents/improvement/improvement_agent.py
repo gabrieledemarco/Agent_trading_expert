@@ -218,20 +218,57 @@ Return ONLY a valid JSON object with the new parameter values. No explanation.""
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _find_targets(self, model_name: Optional[str]) -> list[dict]:
-        """Load REJECTED validations (or all if model_name given)."""
-        if not self.validated_dir.exists():
-            return []
+        """Load REJECTED validations from local JSON files; fall back to DB after Render restart."""
         targets = []
-        for f in self.validated_dir.glob("*_validation.json"):
-            with open(f) as fp:
-                v = json.load(fp)
-            name = v.get("model_name")
-            status = v.get("validation_status")
-            if model_name:
-                if name == model_name:
-                    targets.append(v)
-            elif status == "REJECTED":
-                targets.append(v)
+
+        # Try local validated JSON files first
+        if self.validated_dir.exists():
+            for f in self.validated_dir.glob("*_validation.json"):
+                try:
+                    with open(f) as fp:
+                        v = json.load(fp)
+                    name = v.get("model_name")
+                    status = v.get("validation_status")
+                    if model_name:
+                        if name == model_name:
+                            targets.append(v)
+                    elif status == "REJECTED":
+                        targets.append(v)
+                except Exception as e:
+                    logger.warning("Could not read validation file %s: %s", f, e)
+
+        if targets:
+            return targets
+
+        # DB fallback: after Render restart local files are gone
+        try:
+            # Build id→name map from models table
+            id_to_name = {
+                str(m.get("id")): m.get("model_name")
+                for m in (self.db.get_models() or [])
+            }
+            db_validations = self.db.get_validations(status="rejected")
+            for row in db_validations:
+                name = id_to_name.get(str(row.get("model_id")))
+                if not name:
+                    continue
+                if model_name and name != model_name:
+                    continue
+                targets.append({
+                    "model_name":        name,
+                    "validation_status": "REJECTED",
+                    "risk_return_profile": {
+                        "sharpe_ratio": float(row.get("sharpe_ratio") or 0),
+                        "max_drawdown": 0.25,
+                    },
+                    "anomalies": row.get("anomalies") or [],
+                    "_source": "db",
+                })
+            if targets:
+                logger.info("ImprovementAgent: loaded %d targets from DB fallback", len(targets))
+        except Exception as e:
+            logger.warning("ImprovementAgent: DB fallback failed: %s", e)
+
         return targets
 
     def _extract_params(self, validation: dict) -> dict:

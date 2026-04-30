@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "model_name": "model_a_comparative_study_of_dynamic",
   "validation_status": "APPROVED",
-  "validation_timestamp": "2026-04-27T16:42:00.671587",
+  "validation_timestamp": "2026-04-28T12:40:17.945311",
   "code_quality": {
     "issues": [],
     "warnings": [
@@ -13,23 +13,23 @@
   "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": 0.16808426243305474,
-    "volatility": 0.12744454471389274,
-    "sharpe_ratio": 1.1259663237940918,
-    "max_drawdown": 0.06158297604724679,
-    "win_rate": 0.29285714285714287,
-    "risk_score": "LOW",
-    "return_score": "GOOD",
-    "risk_return_ratio": 1.318881579516772
+    "expected_return": 0.2183,
+    "volatility": 0.1987,
+    "sharpe_ratio": 0.998,
+    "max_drawdown": 0.1133,
+    "win_rate": 0.5733,
+    "risk_score": "MEDIUM",
+    "return_score": "MODERATE",
+    "risk_return_ratio": 1.0987
   },
   "statistical_robustness": {
-    "mean_return": 0.2075286915055456,
-    "std_return": 0.1564632032317679,
-    "percentile_5": -0.04871921433999268,
-    "percentile_95": 0.4629720994829356,
-    "prob_positive_return": 0.9,
-    "prob_negative_10": 0.03,
-    "coefficient_of_variation": 1.3263737876958503,
-    "robustness_score": "MEDIUM"
+    "mean_return": 0.003383186034078762,
+    "std_return": 0.48369372977482,
+    "percentile_5": -0.7182400202132389,
+    "percentile_95": 0.7169760919893533,
+    "prob_positive_return": 0.51,
+    "prob_negative_10": 0.4,
+    "coefficient_of_variation": 0.006994479824358648,
+    "robustness_score": "LOW"
   }
 }

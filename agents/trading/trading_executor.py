@@ -132,48 +132,70 @@ class TradingExecutorAgent(BaseAgent):
         )
 
     def load_validated_strategies(self) -> list[StrategyProfile]:
-        """Load all validated strategies."""
+        """Load all APPROVED strategies from local JSON files; fall back to DB after restart."""
         strategies = []
 
-        if not self.validated_dir.exists():
-            logger.warning(f"Validated directory {self.validated_dir} not found")
+        if self.validated_dir.exists():
+            for validation_file in self.validated_dir.glob("*_validation.json"):
+                try:
+                    with open(validation_file) as f:
+                        validation = json.load(f)
+
+                    if validation.get("schema_version") != "1.0":
+                        logger.warning(
+                            "validation file %s missing schema_version=1.0 (got %r)",
+                            validation_file.name,
+                            validation.get("schema_version"),
+                        )
+
+                    if validation.get("validation_status") == "APPROVED":
+                        risk_profile = validation.get("risk_return_profile", {})
+                        robustness = validation.get("statistical_robustness", {})
+                        doc_file = self.validated_dir / validation_file.name.replace("_validation.json", "_documentation.md")
+                        strategy = StrategyProfile(
+                            model_name=validation.get("model_name"),
+                            risk_level=risk_profile.get("risk_score", "UNKNOWN"),
+                            expected_return=risk_profile.get("expected_return", 0),
+                            max_drawdown=risk_profile.get("max_drawdown", 0),
+                            sharpe_ratio=risk_profile.get("sharpe_ratio", 0),
+                            robustness_score=robustness.get("robustness_score", "UNKNOWN"),
+                            scientific_basis="Based on arXiv paper research",
+                            documentation_path=str(doc_file) if doc_file.exists() else "",
+                        )
+                        strategies.append(strategy)
+                        self.strategy_profiles[strategy.model_name] = strategy
+                        logger.info(f"Loaded validated strategy: {strategy.model_name}")
+                except Exception as e:
+                    logger.error(f"Error loading validation file {validation_file}: {e}")
+
+        if strategies:
             return strategies
 
-        for validation_file in self.validated_dir.glob("*_validation.json"):
-            try:
-                with open(validation_file) as f:
-                    validation = json.load(f)
-
-                if validation.get("schema_version") != "1.0":
-                    logger.warning(
-                        "validation file %s missing schema_version=1.0 (got %r)",
-                        validation_file.name,
-                        validation.get("schema_version"),
-                    )
-
-                if validation.get("validation_status") == "APPROVED":
-                    risk_profile = validation.get("risk_return_profile", {})
-                    robustness = validation.get("statistical_robustness", {})
-
-                    # Get documentation path
-                    doc_file = self.validated_dir / validation_file.name.replace("_validation.json", "_documentation.md")
-                    doc_path = str(doc_file) if doc_file.exists() else ""
-
-                    strategy = StrategyProfile(
-                        model_name=validation.get("model_name"),
-                        risk_level=risk_profile.get("risk_score", "UNKNOWN"),
-                        expected_return=risk_profile.get("expected_return", 0),
-                        max_drawdown=risk_profile.get("max_drawdown", 0),
-                        sharpe_ratio=risk_profile.get("sharpe_ratio", 0),
-                        robustness_score=robustness.get("robustness_score", "UNKNOWN"),
-                        scientific_basis=f"Based on arXiv paper research",
-                        documentation_path=doc_path,
-                    )
-                    strategies.append(strategy)
-                    self.strategy_profiles[strategy.model_name] = strategy
-                    logger.info(f"Loaded validated strategy: {strategy.model_name}")
-            except Exception as e:
-                logger.error(f"Error loading validation file {validation_file}: {e}")
+        # DB fallback: after Render restart local files are gone; read from V2 strategies table
+        try:
+            approved = self.db.get_strategies_v2(status="approved", limit=100)
+            for row in approved:
+                vr = row.get("validation_result") or {}
+                name = row.get("name")
+                if not name:
+                    continue
+                strategy = StrategyProfile(
+                    model_name=name,
+                    risk_level=str(vr.get("risk_score", "MEDIUM")),
+                    expected_return=float(vr.get("expected_return") or 0),
+                    max_drawdown=float(vr.get("max_drawdown") or 0),
+                    sharpe_ratio=float(vr.get("sharpe_ratio") or 0),
+                    robustness_score=str(vr.get("robustness_score", "UNKNOWN")),
+                    scientific_basis="Based on arXiv paper research (DB)",
+                    documentation_path="",
+                )
+                strategies.append(strategy)
+                self.strategy_profiles[strategy.model_name] = strategy
+                logger.info(f"Loaded DB-approved strategy: {strategy.model_name}")
+            if strategies:
+                logger.info(f"TradingExecutor: loaded {len(strategies)} approved strategies from DB fallback")
+        except Exception as e:
+            logger.warning(f"TradingExecutor: DB fallback failed: {e}")
 
         return strategies
 

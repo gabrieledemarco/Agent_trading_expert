@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "model_name": "model_from_pyx_to_py_investigating",
   "validation_status": "APPROVED",
-  "validation_timestamp": "2026-04-27T16:42:00.760662",
+  "validation_timestamp": "2026-04-28T12:40:18.257035",
   "code_quality": {
     "issues": [],
     "warnings": [
@@ -13,23 +13,23 @@
   "anomalies": [],
   "academic_discrepancies": [],
   "risk_return_profile": {
-    "expected_return": 0.16808426243305474,
-    "volatility": 0.12744454471389274,
-    "sharpe_ratio": 1.1259663237940918,
-    "max_drawdown": 0.06158297604724679,
-    "win_rate": 0.29285714285714287,
+    "expected_return": 0.1235,
+    "volatility": 0.118,
+    "sharpe_ratio": 0.877,
+    "max_drawdown": 0.1125,
+    "win_rate": 0.5725,
     "risk_score": "LOW",
-    "return_score": "GOOD",
-    "risk_return_ratio": 1.318881579516772
+    "return_score": "MODERATE",
+    "risk_return_ratio": 1.0465
   },
   "statistical_robustness": {
-    "mean_return": 0.19159731467239993,
-    "std_return": 0.15000948748856602,
-    "percentile_5": -0.03810285903189073,
-    "percentile_95": 0.46281052773142417,
-    "prob_positive_return": 0.92,
-    "prob_negative_10": 0.04,
-    "coefficient_of_variation": 1.2772346461553228,
-    "robustness_score": "MEDIUM"
+    "mean_return": -0.0005744204994332581,
+    "std_return": 0.494382949861308,
+    "percentile_5": -0.8513094427496273,
+    "percentile_95": 0.7517922710116847,
+    "prob_positive_return": 0.52,
+    "prob_negative_10": 0.4,
+    "coefficient_of_variation": 0.0011618938306719587,
+    "robustness_score": "LOW"
   }
 }

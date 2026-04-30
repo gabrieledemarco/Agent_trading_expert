@@ -281,19 +281,12 @@ class SpecAgent(BaseAgent):
         spec_files = []
         for paper in papers[:3]:  # Process top 3 papers
             spec = self.generate_spec(paper)
-
-            # Save spec
             output_file = self.output_dir / f"{spec['model']['name']}.yaml"
-            with open(output_file, "w") as f:
-                yaml.dump(spec, f, default_flow_style=False)
-            logger.info(f"Saved spec to {output_file}")
-            spec_files.append(str(output_file))
 
             # Create action plan
             action_plan = self.create_action_plan(spec)
             plan_file = self.output_dir / f"{spec['model']['name']}_action_plan.md"
             plan_file.write_text(action_plan)
-            logger.info(f"Saved action plan to {plan_file}")
 
             # Persist to V1 specs table
             try:
@@ -314,12 +307,41 @@ class SpecAgent(BaseAgent):
                     "spec":   spec,
                     "status": "draft",
                 })
+                # Set strategy_id on spec BEFORE writing YAML so MLEngineerAgent
+                # can link models_v2 records to the correct strategy row.
                 spec["strategy_id"] = strategy_id
                 self.log_activity("active", f"Strategy V2 created: {spec['model']['name']} (id={strategy_id})")
             except Exception as e:
                 self.log_activity("warning", f"Could not save strategy V2: {e}")
 
+            # Write YAML after strategy_id is set so the file contains the link
+            with open(output_file, "w") as f:
+                yaml.dump(spec, f, default_flow_style=False)
+            logger.info(f"Saved spec to {output_file}")
+            spec_files.append(str(output_file))
+
+            # Emit V2 event so the event-driven orchestrator can react
+            self._notify_spec_created(spec)
+
         return spec_files
+
+    def _notify_spec_created(self, spec: dict) -> None:
+        """Fire pg_notify('events', ...) so the V2 event listener can react."""
+        import json
+        try:
+            payload = json.dumps({
+                "event":       "spec.created",
+                "model_name":  spec.get("model", {}).get("name"),
+                "strategy_id": spec.get("strategy_id"),
+            })
+            conn = self.db._connect()
+            conn.autocommit = True
+            cur = self.db._cursor(conn)
+            cur.execute("SELECT pg_notify('events', %s)", (payload,))
+            conn.close()
+            logger.debug("Emitted spec.created for %s", spec.get("model", {}).get("name"))
+        except Exception as e:
+            logger.debug("pg_notify spec.created skipped: %s", e)
 
 
 if __name__ == "__main__":
