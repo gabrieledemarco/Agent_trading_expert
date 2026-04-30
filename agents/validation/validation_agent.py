@@ -118,10 +118,20 @@ class ValidationAgent(BaseAgent):
         code = self.load_model_code(model_name)
 
         if not code:
+            # After a Render restart the local file is gone but the model may
+            # still be registered in DB as "implemented".  Downgrade to "medium"
+            # so financial-metric gates (L3/L4) can still drive the verdict.
+            in_db = False
+            try:
+                models = self.db.get_models()
+                in_db = any(m.get("model_name") == model_name for m in models)
+            except Exception:
+                pass
             anomalies.append({
                 "type": "missing_code",
-                "severity": "high",
-                "description": f"Model code file not found: {model_name}.py"
+                "severity": "medium" if in_db else "high",
+                "description": f"Model code file not found locally: {model_name}.py"
+                               + (" (model registered in DB)" if in_db else ""),
             })
             return anomalies
 
@@ -645,15 +655,29 @@ The model generates trading signals based on:
         except Exception as e:
             logger.warning(f"V2 strategy validation unavailable, falling back to legacy flow: {e}")
 
-        # Legacy fallback
+        # Legacy fallback — use specs when available, otherwise pull model names from DB
         specs = self.load_specs()
-        results = []
+        if specs:
+            model_names = [s.get("model", {}).get("name") for s in specs]
+        else:
+            # After Render restart: local YAML + model files gone; get names from DB
+            try:
+                db_models = self.db.get_models()
+                model_names = [
+                    m.get("model_name") for m in db_models
+                    if m.get("status") in ("implemented", "validated", "improved")
+                ]
+                if model_names:
+                    logger.info(f"run_validation: local specs absent — validating {len(model_names)} DB models")
+            except Exception as e:
+                logger.warning(f"run_validation: DB model fallback failed: {e}")
+                model_names = []
 
-        for spec in specs:
-            model_name = spec.get("model", {}).get("name")
+        results = []
+        for model_name in model_names:
             if model_name:
                 result = self.validate_model(model_name)
-                results.append(result["validation_status"])
+                results.append(result.get("validation_status", "REJECTED"))
 
         return results
 

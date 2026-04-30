@@ -806,10 +806,31 @@ if __name__ == "__main__":
             )
             if not gate["passed"]:
                 self.log_activity("warning", f"Model rejected by ML gates: {model_name} — {gate['reasons']}")
+            # Emit V2 event so the event-driven orchestrator can react
+            self._notify_model_validated(model_name, str(v2_row_id), spec.get("strategy_id"))
         except Exception as e:
             self.log_activity("warning", f"Could not save model to DB: {e}")
 
         return str(model_file)
+
+    def _notify_model_validated(self, model_name: str, model_id: str, strategy_id) -> None:
+        """Fire pg_notify('events', ...) so the V2 event listener triggers StrategyEngineer."""
+        import json
+        try:
+            payload = json.dumps({
+                "event":       "model.validated",
+                "model_name":  model_name,
+                "model_id":    model_id,
+                "strategy_id": str(strategy_id) if strategy_id else None,
+            })
+            conn = self.db._connect()
+            conn.autocommit = True
+            cur = self.db._cursor(conn)
+            cur.execute("SELECT pg_notify('events', %s)", (payload,))
+            conn.close()
+            logger.debug("Emitted model.validated for %s", model_name)
+        except Exception as e:
+            logger.debug("pg_notify model.validated skipped: %s", e)
 
     def compute_model_metrics(self, spec: dict) -> dict:
         """Compute model-level predictive metrics.
